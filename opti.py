@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # test_name = "zdt1_gen_pindicators"
     list_of_functions = ["mau"]
     list_of_algos = ["bmr","bwr","bmwr"]
-    list_of_psizes = [100]
+    list_of_psizes = []  # add psizes other than default here
     runs = 1
     selection_pool = "archive"
     a_posterior = 1
@@ -51,9 +51,10 @@ if __name__ == "__main__":
             temp_file_path = project_root/f"results/data_dump/{test_name}_{timestamp}/{function_name}" 
             os.makedirs(temp_file_path, exist_ok=True)
 
-            function, n_vars, bounds, n_obj, minmax, max_evals = problem.get[function_name]
+            function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problem.get[function_name]
 
             # max_evals = 40000 # override case definition
+            list_of_psizes.append(def_psize)
 
             _, idx = np.unique(bounds, axis=0, return_index=True)
             ubounds = bounds[np.sort(idx)] 

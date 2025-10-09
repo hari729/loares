@@ -62,11 +62,11 @@ def cf_sensor(population):
 
 
 get = {
-    #"name":[function, n_vars, bounds, n_obj, minmax, max_evals]
+    #"name":[function, n_vars, bounds, n_obj, minmax, max_evals, default_psize]
     
-    "fbg_tactile_sensor": [fbg_tactile_sensor, 5, np.array([[1.3,1.7],[2.6,3],[0.05,0.25],[3,7],[5,8]]),1,1,10000],
-    "torque_sensor": [jtorque_sensor, 8, np.array([[3,4.2],[2,4.2],[5.2,6.2],[3,5.6],[3,5.6],[1.4,4],[1.6,5],[0.5,1.3]]),1,-1,10000],
-    "cf_sensor": [cf_sensor, 5, np.array([[25,29],[7,29],[13,15],[38,41],[1.5,2.5]]),1,1,10000]
+    "fbg_tactile_sensor": [fbg_tactile_sensor, 5, np.array([[1.3,1.7],[2.6,3],[0.05,0.25],[3,7],[5,8]]),1,1,10000,100],
+    "torque_sensor": [jtorque_sensor, 8, np.array([[3,4.2],[2,4.2],[5.2,6.2],[3,5.6],[3,5.6],[1.4,4],[1.6,5],[0.5,1.3]]),1,-1,10000,100],
+    "cf_sensor": [cf_sensor, 5, np.array([[25,29],[7,29],[13,15],[38,41],[1.5,2.5]]),1,1,10000,100]
 
 }
 
