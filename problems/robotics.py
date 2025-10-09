@@ -1,90 +1,6 @@
 import numpy as np
 import scipy as sp
 
-def wall_building_trajectory(population):
-    population = np.atleast_2d(population)
-    delta_t = abs(np.diff(population, axis=1))
-
-    n = 3
-    k = 7
-
-    u0 = np.zeros([population.shape[0],k+1])
-    u1 = np.ones([population.shape[0],k+1])
-
-    ut = []
-    for i in range(0, 3):
-        ut.append(lambda t: 0 + (t - population[:,i])/np.sum(delta_t, axis=1))
-
-    
-def masonry_force_error(population):
-    x,l,v,h = population.T
-
-    f = np.zeros([population.shape[0],2])
-    g = np.zeros([population.shape[0],2])
-
-    f[:,0] = (6222 + 1.41*x - 50.5*l - 2.05*v + 51.9*h - 0.00174*x**2 + 1.667*l**2 +
-                0.00187*v**2 + 0.382*h**2 + 0.0097*x*l + 0.0013*x*v - 0.0285*x*h +
-                0.1472*l*v + 4.773*l*h + 0.2907*v*h)
-
-    f[:,1] = (-6.32 + 0.0176*x - 0.419*l - 0.0219*v + 0.43*h - 0.000026*x**2 -
-                0.0048*l**2 - 0.000059*v**2 - 0.00463*h**2 + 0.000055*x*l +
-                0.000003*x*v - 0.000047*x*h + 0.0011*l*v + 0.00828*l*h + 0.000679*v*h)
-
-    g[:,0] = f[:,0] - 9500
-    g[:,1] = -f[:,1]
-
-    return f, g
-
-def fbg_tactile_sensor(population):
-    a,b,c,d,L = population.T
-
-    d = np.rint(d)
-    
-    Ks = (-516.51195 - 2286.07063*a - 21.03937*c + 2201.6575*b - 82.34433*d - 7114.075*a*c
-            - 845.7875*a*b - 25.06438*a*d + 2117.45*b*c + 207.79687*c*d + 15.5725*b*d
-            + 2874.325 *a*a + 22890.69375*c*c - 707.5375*b*b + 5.66569*d*d 
-            + 1566.3125*a*a*c - 999.4375*a*a*b + 16993.75*a*c*c + 601.65625*a*b*b 
-            - 14273.75*b*c*c - 568.15625*d*c*c - 17.32187*c*d*d)
-
-    Ls = L + 6
-
-    Kf = (72e3 * (np.pi*0.14**2)/4 )/Ls
-
-    g = Ks - 2*Kf
-
-    violations = g < 0
-
-    penalties = np.where(violations, 100*Ls*np.abs(g), 0)
-    
-    return Ks*Ls+penalties, g
-
-def jtorque_sensor(population):
-    h1,h2,l1,l2,l3,b1,b2,b3 = population.T
-
-    f = np.zeros([population.shape[0],1])
-
-    f = (1042.89 - 188.64*h1 - 58.21*h2 + 280.95*l1 + 198.47*l3 
-            + 90.18*b1 - 3017.97*b3 + 32.15*b2 + 20.31*h1*b2
-            + 49.32*h2*b3 - 44.67*l1*b1 + 110.96*l1*b3 - 38.41*l1*b2
-            - 15.57*l3*b1 + 59.14*l3*b3 - 14.41*l3*b2 + 209.57*b1*b3
-            + 19.93*b1*b2 + 143.47*b3*b2 - 13.49*l3**2 - 24.01*b1**2
-            + 239.85*b3**2 - 5.98*b2**2)
-
-    g = np.zeros([population.shape[0],1])
-
-    g = (686.35 - 108.36*h1 - 23*h2 - 71.01*l1 + 11.47*l2
-            - 45.13*l3 - 29.11*b1 - 54.22*b3 - 7.89*b2 + 13.08*h1*l1
-            + 3.47*h1*l3 + 3.52*h1*b1 - 2.35*h2*l2 - 1.4*h2*l3
-            + 10.05*h2*b3 + 4.88*h2*b2 + 3.93*l1*l2 + 5.57*l1*l3 - 4*l1*b2
-            + 1.44*l2*l3 - 2.75*l2*b1 - 5.61*l2*b3 - 4.33*l2*b2
-            - 1.21*l3*b2 + 1.59*b1*b2 + 8.98*b3*b2 + 2.25*b1**2 + 2.27*b2**2)
-
-    violations = g > 101
-
-    penalties = np.where(violations, np.abs(g)*100, 0)
-
-    return -f+penalties, g
-
 def mau(population):
     b,h,l,s = population.T
     f = np.zeros([population.shape[0],2])
@@ -204,16 +120,6 @@ def auv_gep_safe(population):
     
     return np.column_stack([f, 1/v]), np.full((population.shape[0], 1), -1)
 
-def cf_sensor(population):
-    lb,wb,hb,lc,wc = population.T
-    cond_n = (0.006886*lb**2 + 0.0603*hb**2 + 0.005711*lc**2 + 0.806135*wc**2
-                - 0.014728*lb*wb + 0.010668*lb*hb + 0.030426*lb*wc
-                - 0.020664*wb*hb - 0.283394*wb*wc + 0.011607*hb*lc
-                - 0.308332*hb*wc - 0.154665*lc*wc - 0.590118*lb
-                + 1.55853*wb - 2.00243*hb - 0.41139*lc + 10.65159*wc
-                + 19.26557)    
-    return cond_n, np.full((population.shape[0], 1), -1)
-
 def vg_ft(population):
     a,b,c = population.T
     f = (9.40745e-1 - 4.29e-4*a + 4.8329e-2*b
@@ -227,16 +133,13 @@ def vg_ft(population):
 
 get = {
     #"name":[function, n_vars, bounds, n_obj, minmax, max_evals]
-    
-    "fbg_tactile_sensor": [fbg_tactile_sensor, 5, np.array([[1.3,1.7],[2.6,3],[0.05,0.25],[3,7],[5,8]]),1,1,10000],
-    "torque_sensor": [jtorque_sensor, 8, np.array([[3,4.2],[2,4.2],[5.2,6.2],[3,5.6],[3,5.6],[1.4,4],[1.6,5],[0.5,1.3]]),1,-1,10000],
 
     "mau": [mau, 4, np.array([[24.5,45.5],[9,17],[60,110],[0,15]]),2,1,30000],
     "drag_lift": [drag_lift, 4, np.array([[10,50],[20,40],[1,3],[0,40]]),2,np.array([1,-1]),60000],
     "drag_lift_inv": [drag_lift_inv, 4, np.array([[10,50],[20,40],[1,3],[0,40]]),2,np.array([-1,1]),60000],
     "auv": [auv, 4, np.array([[0.148,0.223],[0.185,0.285],[1.5,4],[1.5,3]]),2,1,80000],
     "auv_g": [auv_gep_safe, 4, np.array([[0.148,0.223],[0.185,0.285],[1.5,4],[1.5,3]]),2,1,80000],
-    "cf_sensor": [cf_sensor, 5, np.array([[25,29],[7,29],[13,15],[38,41],[1.5,2.5]]),1,1,10000]
+
 }
 
 def get_true_fronts(function_name,n_vars):
