@@ -29,6 +29,7 @@ if __name__ == "__main__":
     list_of_psizes = []  # add psizes other than default here
     runs = 1
     selection_pool = "archive"
+    modifier_name = "opposition"
     a_posterior = 1
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
@@ -67,7 +68,7 @@ if __name__ == "__main__":
                 tf = problem.get_true_fronts(function_name, n_vars)
                 if a_posterior:
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
-                                    list_of_algos,list_of_psizes,
+                                    list_of_algos,list_of_psizes,modifier_name,
                                     selection_pool,max_evals,
                                     runs,temp_file_path,tf)
                 else:
