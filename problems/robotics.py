@@ -116,7 +116,7 @@ def auv_gep_safe(population):
                                - np.minimum((x1+x2)/2, x2))))
     
     # Clamp g to avoid division by zero
-    v = np.clip(g, 1e-8, None)
+    v = np.clip(v, 1e-8, None)
     
     return np.column_stack([f, 1/v]), np.full((population.shape[0], 1), -1)
 
