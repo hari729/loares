@@ -146,8 +146,8 @@ def get_true_fronts(function_name,n_vars):
     return None
 
 if __name__ == "__main__":
-    population = np.array([[1.332,2.7,0.25,7,6.08]])
-    f,g = fbg_tactile_sensor(population)
+    # population = np.array([[1.332,2.7,0.25,7,6.08]])
+    # f,g = fbg_tactile_sensor(population)
     # population = np.array([[3,3.16,6,3,4.97,1.4,1.68,0.5]])
     # f,g = jtorque_sensor(population)
     # population = np.array([[35,13,87,7.5],[44.6174,9.0015,96.6784,6.1673],[44.6,9,96.7,6.2]])

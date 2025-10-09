@@ -69,3 +69,6 @@ get = {
     "cf_sensor": [cf_sensor, 5, np.array([[25,29],[7,29],[13,15],[38,41],[1.5,2.5]]),1,1,10000]
 
 }
+
+def get_true_fronts(function_name,n_vars):
+    return None
