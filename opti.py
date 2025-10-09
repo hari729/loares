@@ -24,7 +24,7 @@ if __name__ == "__main__":
     test_name = args.test_name
 
     # test_name = "zdt1_gen_pindicators"
-    list_of_functions = ["mau","drag_lift","drage_lift_inv","auv","auv_g"]
+    list_of_functions = ["mau","drag_lift","drag_lift_inv","auv","auv_g"]
     list_of_algos = ["bmr","bwr","bmwr"]
     list_of_psizes = []  # add psizes other than default here
     runs = 1
