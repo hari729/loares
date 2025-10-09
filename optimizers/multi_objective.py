@@ -45,7 +45,7 @@ def single_run(args):
 
     _,metrics = gen_pindicators(population_state.pareto_objectives,ref_pts,tf)
 
-    return metrics,population_stat
+    return metrics,population_state
 
 def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,
                     selection_pool,max_evals,runs,tee_path,tf=None,std_seed=True):
