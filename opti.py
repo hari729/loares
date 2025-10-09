@@ -24,7 +24,7 @@ if __name__ == "__main__":
     test_name = args.test_name
 
     # test_name = "zdt1_gen_pindicators"
-    list_of_functions = ["mau"]
+    list_of_functions = ["mau","drag_lift","drage_lift_inv","auv","auv_g"]
     list_of_algos = ["bmr","bwr","bmwr"]
     list_of_psizes = []  # add psizes other than default here
     runs = 1
@@ -75,6 +75,8 @@ if __name__ == "__main__":
             else:
                 single_objective_optimizer(function,n_vars,bounds,list_of_algos,list_of_psizes,max_evals,runs,
                                             temp_file_path,minmax,plt_fe=False)
+
+            list_of_psizes.pop()
 
         shutil.move(str(temp_path), str(final_path))
         print(f"\nResults saved successfully to: {final_path}")
