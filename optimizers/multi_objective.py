@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from customclass.states import PopulationState
 from utils.initialization import random_initialize,lhs_initialize
 import algorithms
-import algo_modifiers.population as modifiers
+import modifiers.population as modifiers
 
 from utils.sorting import ranking_crowding_general as sorting_function
 from utils.sorting import ranking_reference 

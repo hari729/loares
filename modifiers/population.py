@@ -1,7 +1,7 @@
 import numpy as np
 
 def null(new_p, bounds):
-    return new_p
+    return None
 
 def opposition(new_p, bounds):
     opp_p = np.sum(bounds, axis=1) - new_p

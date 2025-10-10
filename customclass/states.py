@@ -39,7 +39,8 @@ class PopulationState():
         self.convergence_data = None
 
     def add_solutions(self, new_p):
-        self.new_solutions.append(new_p)
+        if new_p is not None:
+            self.new_solutions.append(new_p)
 
     def evaluate(self):
         pending_solutions = np.vstack(self.new_solutions)
