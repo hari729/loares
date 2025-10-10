@@ -15,21 +15,25 @@ from sys_utils.logger import Tee_general as Tee
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run multi-objective optimization experiments.")
-    parser.add_argument("--test_name", "-t", required=True, help="The name of the test.")
-    parser.add_argument("--problem", "-p", type=str, required=True, help="<category>.<prob_name>")
+    parser.add_argument("--test-name", "-t", required=True, help="The name of the test.")
+    parser.add_argument("--problems", "-p", nargs="+", type=str, required=True, help="<category>.<prob_name>")
     parser.add_argument("--selection-pool", "-sp", type=str, choices=["population","archive"], default="population",
-                            help="Selection pool for best soltution, population or archive")
+                            help="Selection pool for best solution, population or archive")
+    parser.add_argument("--runs", "-r", type=int, default=1, help="Number of runs")
+    parser.add_argument("--a-priori", action="store_true", help="Enable A Priori approach, default: A Posterior")
+    parser.add_argument("--psizes", "-ps", nargs="*", type=int, help="List of population sizes to test")
+    parser.add_argument("--max-evals", "-me", type=int, default=None, help="Override the max evals in problem definition")
 
     args = parser.parse_args()
     test_name = args.test_name
-    list_of_functions = [args.problem]
+    list_of_functions = args.problems
     selection_pool = args.selection_pool
+    runs = args.runs
+    a_posterior = not args.a_priori
+    list_of_psizes = args.psizes or []
 
     list_of_algos = ["bmr","bwr","bmwr"]
-    list_of_psizes = []  # add psizes other than default here
-    runs = 1
     modifier_name = "opposition"
-    a_posterior = 1
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
     project_root = Path(__file__).parent.resolve()
@@ -53,8 +57,9 @@ if __name__ == "__main__":
 
             function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problems.get(function_name)
 
-            # max_evals = 40000 # override case definition
+            max_evals = args.max_evals or max_evals # override case definition
             list_of_psizes.append(def_psize)
+            list_of_psizes = sorted(set(list_of_psizes))
 
             _, idx = np.unique(bounds, axis=0, return_index=True)
             ubounds = bounds[np.sort(idx)] 
@@ -79,7 +84,7 @@ if __name__ == "__main__":
             list_of_psizes.pop()
 
         shutil.move(str(temp_path), str(final_path))
-        print(f"\nResults saved successfully to: {final_path}")
+        print(f"\nResults saved successfully to: {final_path}\n")
 
     except KeyboardInterrupt:
         print("\nRun interrupted by user (Ctrl+C).")
