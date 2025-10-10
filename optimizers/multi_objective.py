@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from customclass.states import PopulationState
 from utils.initialization import random_initialize,lhs_initialize
 import algorithms
-import modifiers.population as modifiers
+import modifiers.population
 
 from utils.sorting import ranking_crowding_general as sorting_function
 from utils.sorting import ranking_reference 
@@ -20,7 +20,7 @@ from pymoo.problems import get_problem
 
 def single_run(args):
 
-    algorithm,function,n_vars,bounds,tf,psize,max_evals,selector,selection_pool,mod,seed_id = args
+    algorithm,function,n_vars,bounds,tf,psize,max_evals,selector,selection_pool,pmods,seed_id = args
 
     np.random.seed(seed_id)
 
@@ -35,8 +35,9 @@ def single_run(args):
     while(population_state.evals < population_state.max_evals):
         
         population_state.add_solutions(algorithm(population_state, bounds))
-
-        population_state.add_solutions(mod(population_state.population, bounds))
+        
+        for mod in pmods:
+            population_state.add_solutions(mod(population_state, bounds))
 
         population_state.evaluate()
 
@@ -50,7 +51,7 @@ def single_run(args):
 
     return metrics,population_state
 
-def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,modifier_name,
+def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,Pmodifier_list,
                     selection_pool,max_evals,runs,tee_path,tf=None,std_seed=True):
 
     for psize in list_of_psizes:
@@ -60,7 +61,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
         for algo_name in list_of_algos:
             
             algorithm = algorithms.get[algo_name]
-            mod = modifiers.get[modifier_name]
+            pmods = [modifiers.population.get[name] for name in Pmodifier_list] 
 
             file_path = f"{tee_path}/{algo_name.upper()}/{psize}"
             os.makedirs(file_path, exist_ok=True)
@@ -71,7 +72,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
                 seed_id = np.random.randint(0,1e6,runs)
                 np.savetxt(f"{file_path}/seeds.csv", seed_id, delimiter=",", fmt="%d", header="Seeds", comments="")
 
-            args = [(algorithm,function,n_vars,bounds,tf,psize,max_evals,selector,selection_pool,mod,i) for i in seed_id]
+            args = [(algorithm,function,n_vars,bounds,tf,psize,max_evals,selector,selection_pool,pmods,i) for i in seed_id]
 
             with Pool(processes=10) as pool:
                 output = pool.map(single_run, args) 

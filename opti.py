@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--a-priori", action="store_true", help="Enable A Priori approach, default: A Posterior")
     parser.add_argument("--psizes", "-ps", nargs="*", type=int, help="List of population sizes to test")
     parser.add_argument("--max-evals", "-me", type=int, default=None, help="Override the max evals in problem definition")
+    parser.add_argument("--population-modifiers", "-pm", nargs="*", type=str, help="List of population modifiers to use.")
 
     args = parser.parse_args()
     test_name = args.test_name
@@ -31,9 +32,9 @@ if __name__ == "__main__":
     runs = args.runs
     a_posterior = not args.a_priori
     list_of_psizes = args.psizes or []
+    Pmodifier_list = args.population_modifiers or ["null"]
 
     list_of_algos = ["bmr","bwr","bmwr"]
-    modifier_name = "opposition"
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
     project_root = Path(__file__).parent.resolve()
@@ -48,7 +49,7 @@ if __name__ == "__main__":
         print(f"\nTest Name: {test_name}")
         print(f"\nRuns: {runs}")
         print(f"\nSelection Pool: {selection_pool}")
-
+        print(f"\nModifiers: {Pmodifier_list}")
 
         for function_name in list_of_functions:
 
@@ -72,7 +73,7 @@ if __name__ == "__main__":
                 tf = problems.get_true_front(function_name, n_vars)
                 if a_posterior:
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
-                                                list_of_algos,list_of_psizes,modifier_name,
+                                                list_of_algos,list_of_psizes,Pmodifier_list,
                                                 selection_pool,max_evals,
                                                 runs,temp_file_path,tf)
                 else:
