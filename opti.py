@@ -8,7 +8,8 @@ import shutil
 
 # import problems.sou as problem
 # import problems.mou as problem
-import problems.robotics as problem
+# import problems.robotics as problem
+import problems
 from optimizers.single_objective import single_objective_optimizer
 from optimizers.multi_objective import multi_objective_optimizer
 # from optimizers.mo_priori import a_priori
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     test_name = args.test_name
 
     # test_name = "zdt1_gen_pindicators"
-    list_of_functions = ["mau","drag_lift","drag_lift_inv","auv","auv_g"]
+    list_of_functions = ["robotics.mau"]
     list_of_algos = ["bmr","bwr","bmwr"]
     list_of_psizes = []  # add psizes other than default here
     runs = 1
@@ -52,7 +53,7 @@ if __name__ == "__main__":
             temp_file_path = project_root/f"results/data_dump/{test_name}_{timestamp}/{function_name}" 
             os.makedirs(temp_file_path, exist_ok=True)
 
-            function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problem.get[function_name]
+            function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problems.get(function_name)
 
             # max_evals = 40000 # override case definition
             list_of_psizes.append(def_psize)
@@ -65,7 +66,7 @@ if __name__ == "__main__":
             print(f"\nMax_Evals: {max_evals}")
 
             if n_obj > 1:
-                tf = problem.get_true_fronts(function_name, n_vars)
+                tf = problems.get_true_front(function_name, n_vars)
                 if a_posterior:
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
                                     list_of_algos,list_of_psizes,modifier_name,
