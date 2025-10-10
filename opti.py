@@ -6,9 +6,6 @@ from pathlib import Path
 import argparse
 import shutil
 
-# import problems.sou as problem
-# import problems.mou as problem
-# import problems.robotics as problem
 import problems
 from optimizers.single_objective import single_objective_optimizer
 from optimizers.multi_objective import multi_objective_optimizer
@@ -18,14 +15,16 @@ from sys_utils.logger import Tee_general as Tee
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run multi-objective optimization experiments.")
-    parser.add_argument('test_name', help="The name of the test.")
+    parser.add_argument("--test_name", help="The name of the test.")
+    parser.add_argument("--problem", type=str, required=True, help="<category>.<prob_name>")
     # 3. Parse the arguments from the terminal
     args = parser.parse_args()
     # 4. Use the parsed argument instead of the hardcoded one
     test_name = args.test_name
+    list_of_functions = [args.problem]
 
     # test_name = "zdt1_gen_pindicators"
-    list_of_functions = ["robotics.mau"]
+    # list_of_functions = ["robotics.mau"]
     list_of_algos = ["bmr","bwr","bmwr"]
     list_of_psizes = []  # add psizes other than default here
     runs = 1
@@ -69,9 +68,9 @@ if __name__ == "__main__":
                 tf = problems.get_true_front(function_name, n_vars)
                 if a_posterior:
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
-                                    list_of_algos,list_of_psizes,modifier_name,
-                                    selection_pool,max_evals,
-                                    runs,temp_file_path,tf)
+                                                list_of_algos,list_of_psizes,modifier_name,
+                                                selection_pool,max_evals,
+                                                runs,temp_file_path,tf)
                 else:
                     a_priori(function,n_vars,bounds,n_obj,list_of_algos,list_of_psizes,max_evals,runs,file_path)
             else:
