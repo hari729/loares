@@ -15,20 +15,19 @@ from sys_utils.logger import Tee_general as Tee
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run multi-objective optimization experiments.")
-    parser.add_argument("--test_name", help="The name of the test.")
-    parser.add_argument("--problem", type=str, required=True, help="<category>.<prob_name>")
-    # 3. Parse the arguments from the terminal
+    parser.add_argument("--test_name", "-t", required=True, help="The name of the test.")
+    parser.add_argument("--problem", "-p", type=str, required=True, help="<category>.<prob_name>")
+    parser.add_argument("--selection-pool", "-sp", type=str, choices=["population","archive"], default="population",
+                            help="Selection pool for best soltution, population or archive")
+
     args = parser.parse_args()
-    # 4. Use the parsed argument instead of the hardcoded one
     test_name = args.test_name
     list_of_functions = [args.problem]
+    selection_pool = args.selection_pool
 
-    # test_name = "zdt1_gen_pindicators"
-    # list_of_functions = ["robotics.mau"]
     list_of_algos = ["bmr","bwr","bmwr"]
     list_of_psizes = []  # add psizes other than default here
     runs = 1
-    selection_pool = "archive"
     modifier_name = "opposition"
     a_posterior = 1
 
