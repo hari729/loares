@@ -52,7 +52,7 @@ def single_run(args):
     return metrics,population_state
 
 def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,Pmodifier_list,
-                    selection_pool,max_evals,runs,tee_path,tf=None,std_seed=True):
+                    selection_pool,max_evals,runs,tee_path,threads,tf=None,std_seed=True):
 
     for psize in list_of_psizes:
 
@@ -74,7 +74,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
 
             args = [(algorithm,function,n_vars,bounds,tf,psize,max_evals,selector,selection_pool,pmods,i) for i in seed_id]
 
-            with Pool(processes=10) as pool:
+            with Pool(processes=threads) as pool:
                 output = pool.map(single_run, args) 
             
             metrics, pop_states = zip(*output)

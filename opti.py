@@ -24,6 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--psizes", "-ps", nargs="*", type=int, help="List of population sizes to test")
     parser.add_argument("--max-evals", "-me", type=int, default=None, help="Override the max evals in problem definition")
     parser.add_argument("--population-modifiers", "-pm", nargs="*", type=str, help="List of population modifiers to use.")
+    parser.add_argument("--threads", type=int, choices=range(1,13), default=10, help="Number of threads for multi processing") #edit if you have more threads
 
     args = parser.parse_args()
     test_name = args.test_name
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     a_posterior = not args.a_priori
     list_of_psizes = args.psizes or []
     Pmodifier_list = args.population_modifiers or ["null"]
-
+    threads = args.threads
     list_of_algos = ["bmr","bwr","bmwr"]
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
@@ -75,14 +76,12 @@ if __name__ == "__main__":
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
                                                 list_of_algos,list_of_psizes,Pmodifier_list,
                                                 selection_pool,max_evals,
-                                                runs,temp_file_path,tf)
+                                                runs,temp_file_path,threads,tf)
                 else:
                     a_priori(function,n_vars,bounds,n_obj,list_of_algos,list_of_psizes,max_evals,runs,file_path)
             else:
                 single_objective_optimizer(function,n_vars,bounds,list_of_algos,list_of_psizes,max_evals,runs,
-                                            temp_file_path,minmax,plt_fe=False)
-
-#            list_of_psizes.pop()
+                                           temp_file_path,minmax,plt_fe=False)
 
         shutil.move(str(temp_path), str(final_path))
         print(f"\nResults saved successfully to: {final_path}\n")
