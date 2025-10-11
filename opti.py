@@ -82,7 +82,7 @@ if __name__ == "__main__":
                 single_objective_optimizer(function,n_vars,bounds,list_of_algos,list_of_psizes,max_evals,runs,
                                             temp_file_path,minmax,plt_fe=False)
 
-            list_of_psizes.pop()
+#            list_of_psizes.pop()
 
         shutil.move(str(temp_path), str(final_path))
         print(f"\nResults saved successfully to: {final_path}\n")
