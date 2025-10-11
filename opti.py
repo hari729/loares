@@ -32,9 +32,8 @@ if __name__ == "__main__":
     selection_pool = args.selection_pool
     runs = args.runs
     a_posterior = not args.a_priori
-    list_of_psizes = args.psizes or []
-    Pmodifier_list = args.population_modifiers or ["null"]
-    threads = args.threads
+    p_modifier_list = args.population_modifiers or ["null"]
+    threads = args.threads 
     list_of_algos = ["bmr","bwr","bmwr"]
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
@@ -50,7 +49,7 @@ if __name__ == "__main__":
         print(f"\nTest Name: {test_name}")
         print(f"\nRuns: {runs}")
         print(f"\nSelection Pool: {selection_pool}")
-        print(f"\nModifiers: {Pmodifier_list}")
+        print(f"\nModifiers: {p_modifier_list}")
 
         for function_name in list_of_functions:
 
@@ -60,8 +59,7 @@ if __name__ == "__main__":
             function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problems.get(function_name)
 
             max_evals = args.max_evals or max_evals # override case definition
-            list_of_psizes.append(def_psize)
-            list_of_psizes = sorted(set(list_of_psizes))
+            list_of_psizes = args.psizes or [def_psize]
 
             _, idx = np.unique(bounds, axis=0, return_index=True)
             ubounds = bounds[np.sort(idx)] 
@@ -74,7 +72,7 @@ if __name__ == "__main__":
                 tf = problems.get_true_front(function_name, n_vars)
                 if a_posterior:
                     multi_objective_optimizer(function,n_vars,bounds,minmax,
-                                                list_of_algos,list_of_psizes,Pmodifier_list,
+                                                list_of_algos,list_of_psizes,p_modifier_list,
                                                 selection_pool,max_evals,
                                                 runs,temp_file_path,threads,tf)
                 else:
