@@ -34,7 +34,7 @@ if __name__ == "__main__":
     a_posterior = not args.a_priori
     p_modifier_list = args.population_modifiers or ["null"]
     threads = args.threads 
-    list_of_algos = ["bmr","bwr","bmwr"]
+    list_of_algos = ["bmr","bwr","bmwr","bwr_mod"]
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
     project_root = Path(__file__).parent.resolve()

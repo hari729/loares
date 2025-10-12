@@ -6,6 +6,7 @@ from .bmwr import bmwr
 get = {
     "bwr": bwr,
     "bmr": bmr,
+    "bwr_mod": bwr_mod,
     # "e1":e1,
     "bmwr":bmwr,
     # "e3":e3,
