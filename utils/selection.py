@@ -123,3 +123,9 @@ def hv_random_selection(current_set,selection_pool,pool_size):
         selected_w = np.random.randint(0,M_w,pool_size)
 
     return population_b[selected_b], population_w[selected_w]
+
+def single_best_worst(population_state,selection_pool,pool_size):
+    population_b = population_state.pareto_pop[0,:]
+    population_w = population_state.population[-1,:]
+    return population_b, population_w
+
