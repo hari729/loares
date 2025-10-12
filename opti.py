@@ -25,7 +25,8 @@ if __name__ == "__main__":
     parser.add_argument("--max-evals", "-me", type=int, default=None, help="Override the max evals in problem definition")
     parser.add_argument("--population-modifiers", "-pm", nargs="*", type=str, help="List of population modifiers to use.")
     parser.add_argument("--threads", type=int, choices=range(1,13), default=10, help="Number of threads for multi processing") #edit if you have more threads
-
+    parser.add_argument("--algorithms", "-a", nargs="+",  required=True, type=str, help="List of algorithms to use")
+    
     args = parser.parse_args()
     test_name = args.test_name
     list_of_functions = args.problems
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     a_posterior = not args.a_priori
     p_modifier_list = args.population_modifiers or ["null"]
     threads = args.threads 
-    list_of_algos = ["bmr","bwr","bmwr","bwr_mod"]
+    list_of_algos = args.algorithms
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
     project_root = Path(__file__).parent.resolve()

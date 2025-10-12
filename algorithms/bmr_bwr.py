@@ -88,8 +88,8 @@ def bwr_mod(current_set,bounds):
     c = 1/(20+1)
     beta = np.where(beta_mask, ((1/(2*(1-u)))**c), (2*u)**c)
 
-    r1 = 0.5*(beta + 1)
-    r2 = 0.5*(beta -1)
+    r1 = 0.5*(beta+1)
+    r2 = 0.5*(beta-1)
 
     r3 = np.random.rand(pop_size, 1)
     r4 = np.random.rand(pop_size, 1)
