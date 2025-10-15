@@ -14,7 +14,7 @@ from utils.sorting import ranking_crowding_general as sorting_function
 from utils.sorting import ranking_reference 
 from utils.selection import random_selection as selector
 from metrics.performance import pindicators, gen_pindicators
-from metrics.plots import generate_plots_notf
+from metrics.plots import generate_plots_notf, convergance_plots
 
 from pymoo.problems import get_problem
 
@@ -24,16 +24,24 @@ def single_run(args):
 
     np.random.seed(seed_id)
 
+    interval_size = int(max_evals * 0.05)
+
     p = random_initialize(psize,n_vars,bounds)
 
     population_state = PopulationState(p, function, max_evals, sorting_function, selection_pool)
 
     population_state.update_generation()
 
+    ref_pts = np.ones([population_state.objective_values.shape[1]]) * 1.1
+
+    population_state.add_convergance_data(gen_pindicators(population_state.pareto_objectives,ref_pts,tf))
+
     population_state.best, population_state.worst = selector(population_state,selection_pool,psize)
 
     while(population_state.evals < population_state.max_evals):
         
+        prev_evals = population_state.evals
+
         population_state.add_solutions(algorithm(population_state, bounds))
         
         for mod in pmods:
@@ -43,11 +51,15 @@ def single_run(args):
 
         population_state.update_generation()
 
+        if (population_state.evals // interval_size) > (prev_evals // interval_size):
+            population_state.add_convergance_data(gen_pindicators(population_state.pareto_objectives,ref_pts,tf))
+
         population_state.best, population_state.worst = selector(population_state,selection_pool,psize)
 
-    ref_pts = np.ones([population_state.objective_values.shape[1]]) * 1.1
 
-    _,metrics = gen_pindicators(population_state.pareto_objectives,ref_pts,tf)
+    metrics = gen_pindicators(population_state.pareto_objectives,ref_pts,tf)
+
+    population_state.add_convergance_data(metrics)
 
     return metrics,population_state
 
@@ -111,3 +123,4 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
             legend = [f"MO-{algo_name.upper()} Pareto Front"]
 
             generate_plots_notf(function.__name__,algo_name,psize,max_evals,objective_values,legend,file_path,tf)
+            convergance_plots(function.__name__,algo_name,psize,max_evals,pop.get_convergance_data(),file_path)

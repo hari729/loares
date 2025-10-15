@@ -129,4 +129,4 @@ def gen_pindicators(objective_values,ref_point,truefront=None):
         
         metrics.append(hv(obj_norm))
 
-    return obj_norm,metrics
+    return metrics

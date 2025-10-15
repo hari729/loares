@@ -36,7 +36,13 @@ class PopulationState():
         self.pareto_constraints = None
         self.pareto_metadata = None
 
-        self.convergence_data = None
+        self.convergence_data = []
+
+    def add_convergance_data(self, metrics):
+        self.convergence_data.append(np.append(metrics, self.evals))
+
+    def get_convergance_data(self):
+        return np.vstack(self.convergence_data)
 
     def add_solutions(self, new_p):
         if new_p is not None:

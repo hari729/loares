@@ -93,7 +93,30 @@ def plot_mod(csv_path,legend,algo_name,cpts=None,xylabels=None, lloc=None):
         plt.savefig(f"{file_path}/{function_name}_{algo_name}_{psize}_{iterations}.png", dpi=600, bbox_inches='tight')
         plt.close()
 
+def convergance_plots(function_name,algo_name,psize,max_evals,convergance_data,file_path):
+    n_metrics = convergance_data.shape[1]-1
+    # print(n_metrics)
+    if n_metrics == 5:
+        ylabels = ["GD","IGD","SPC","SPR","HV"]
+    elif n_metrics == 2:
+        ylabels = ["SPC","HV"]
 
+    legend = [f"MO-{algo_name.upper()}"]
+
+    for i in range(0,n_metrics):
+
+        plt.figure()
+        plt.plot(convergance_data[:,-1], convergance_data[:,i], linestyle='-',marker='',
+                 color='blue',
+                  markerfacecolor='cyan',markersize='5',
+                  markeredgecolor='black',markeredgewidth=0.1)
+        plt.legend(labels=legend, loc='upper right', fontsize=8)
+        plt.grid(which='both',linestyle='--',alpha=0.7)
+        plt.xlabel("Function Evaluations")
+        plt.ylabel(ylabels[i])
+        plt.tight_layout()
+        plt.savefig(f"{file_path}/{ylabels[i]}_{function_name}_{algo_name}_{psize}_{max_evals}.png", dpi=600, bbox_inches='tight')
+        plt.close()
 
 
     
