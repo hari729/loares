@@ -14,7 +14,7 @@ from utils.sorting import ranking_crowding_general as sorting_function
 from utils.sorting import ranking_reference 
 from utils.selection import random_selection as selector
 from metrics.performance import pindicators, gen_pindicators
-from metrics.plots import generate_plots_notf, convergance_plots
+from metrics.plots import generate_plots_notf, convergence_plots
 
 from pymoo.problems import get_problem
 
@@ -97,18 +97,21 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
             pop = pop_states[np.argmax(metrics[:,-1])]
             solutions = pop.pareto_pop
             objective_values = minmax*pop.pareto_objectives
-            constraint_values = pop.pareto_constraints 
+            constraint_values = pop.pareto_constraints
+            convergence_data = pop.get_convergence_data()
 
             if metrics.shape[1] == 2:
                 print(f"{algo_name.upper()}; F1: {np.min(objective_values[:,0]):.4e} to {np.max(objective_values[:,0]):.4e}, " 
                         f"F2: {np.min(objective_values[:,1]):.4e} to {np.max(objective_values[:,1]):.4e}, "
                         f"Spc: {mean_res[-2]:.4e} [{std[-1]:.4e}], HV: {mean_res[-1]:.4e} [{std[-1]:.4e}]")
-            
+                convergence_headers = ["SPC","HV","evals"]
+
             else:        
                 print(f"{algo_name.upper()}; GD: {mean_res[0]:.4e} [{std[0]:.4e}], " 
                     f"IGD: {mean_res[1]:.4e} [{std[1]:.4e}], Spc: {mean_res[2]:.4e} [{std[2]:.4e}], " 
                     f"Spr: {mean_res[3]:.4e} [{std[3]:.4e}], HV: {mean_res[4]:.4e} [{std[4]:.4e}]")
 
+                convergence_headers = ["GD","IGD","SPC","SPR","HV","evals"]
 
             if constraint_values.ndim == 1:
                 headers = ([f"s{i+1}" for i in range(solutions.shape[1])] + 
@@ -119,8 +122,11 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
 
             np.savetxt(f"{file_path}/solutions.csv", np.column_stack([solutions, constraint_values, objective_values]) , delimiter=",", fmt="%.7e",
                     header=','.join(headers), comments="")
+            
+            np.savetxt(f"{file_path}/convergence_data.csv", convergence_data , delimiter=",", fmt="%.7e",
+                    header=','.join(convergence_headers), comments="")
 
             legend = [f"MO-{algo_name.upper()} Pareto Front"]
 
             generate_plots_notf(function.__name__,algo_name,psize,max_evals,objective_values,legend,file_path,tf)
-            convergance_plots(function.__name__,algo_name,psize,max_evals,pop.get_convergance_data(),file_path)
+            convergence_plots(function.__name__,algo_name,psize,max_evals,convergence_data,file_path)

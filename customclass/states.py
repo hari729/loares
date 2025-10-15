@@ -41,7 +41,7 @@ class PopulationState():
     def add_convergance_data(self, metrics):
         self.convergence_data.append(np.append(metrics, self.evals))
 
-    def get_convergance_data(self):
+    def get_convergence_data(self):
         return np.vstack(self.convergence_data)
 
     def add_solutions(self, new_p):
