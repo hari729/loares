@@ -138,32 +138,32 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
             settings = {
                 "problem": function.__name__,
                 "n_vars": int(n_vars),
-                "bounds": bounds.tolist(),
+                "bounds": "[" + ",".join(f"[{b[0]},{b[1]}]" for b in bounds) + "]",
                 "minmax": minmax,
                 "algo_name": algo_name,
                 "psize": int(psize),
                 "max_evals": int(max_evals),
-                "modifiers": pmodifier_list,
+                "modifiers": "[" + ",".join(f"{p}" for p in pmodifier_list) + "]",
                 "selection_pool": selection_pool,
                 "sorting": sorting_function.__name__,
                 "selector": selector.__name__,
                 "runs": int(runs),
-                "seeds": seed_id.tolist(),
+                "seeds": "[" + ",".join(f"{i}" for i in seed_id) + "]",
                 "best_seed": int(best_seed),
                 "metrics": {
                         "headers": convergence_headers,
                         "mean":  mean_res.tolist(),
                         "std": std.tolist(),
                 },
-                # "pareto_front": {
-                #     "objective_values": objective_values.tolist(),
-                #     "solutions": solutions.tolist(),
-                #     "constraints": constraint_values.tolist()
-                # },
-                # "convergance": {
-                #     "data": convergence_data.tolist()
-                # }
+                "pareto_front": {
+                    "objective_values": objective_values.tolist(),
+                    "solutions": solutions.tolist(),
+                    "constraints": constraint_values.tolist()
+                },
+                "convergence": {
+                    "data": convergence_data.tolist()
+                }
             }
 
             with open(f"{file_path}/settings.json", "w") as f:
-                json.dump(settings, f, indent=2)
+                json.dump(settings, f, indent=4)
