@@ -4,6 +4,7 @@ import sys
 import os
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
+import json
 
 from customclass.states import PopulationState
 from utils.initialization import random_initialize,lhs_initialize
@@ -63,7 +64,7 @@ def single_run(args):
 
     return metrics,population_state
 
-def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,Pmodifier_list,
+def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_of_psizes,pmodifier_list,
                     selection_pool,max_evals,runs,tee_path,threads,tf=None,std_seed=True):
 
     for psize in list_of_psizes:
@@ -71,9 +72,10 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
         print(f"\nP:{psize}")
     
         for algo_name in list_of_algos:
+
             
             algorithm = algorithms.get[algo_name]
-            pmods = [modifiers.population.get[name] for name in Pmodifier_list] 
+            pmods = [modifiers.population.get[name] for name in pmodifier_list]
 
             file_path = f"{tee_path}/{algo_name.upper()}/{psize}"
             os.makedirs(file_path, exist_ok=True)
@@ -95,6 +97,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
             std = np.std(metrics, axis=0)
 
             pop = pop_states[np.argmax(metrics[:,-1])]
+            best_seed = seed_id[np.argmax(metrics[:,-1])]
             solutions = pop.pareto_pop
             objective_values = minmax*pop.pareto_objectives
             constraint_values = pop.pareto_constraints
@@ -130,3 +133,37 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
 
             generate_plots_notf(function.__name__,algo_name,psize,max_evals,objective_values,legend,file_path,tf)
             convergence_plots(function.__name__,algo_name,psize,max_evals,convergence_data,file_path)
+
+
+            settings = {
+                "problem": function.__name__,
+                "n_vars": int(n_vars),
+                "bounds": bounds.tolist(),
+                "minmax": minmax,
+                "algo_name": algo_name,
+                "psize": int(psize),
+                "max_evals": int(max_evals),
+                "modifiers": pmodifier_list,
+                "selection_pool": selection_pool,
+                "sorting": sorting_function.__name__,
+                "selector": selector.__name__,
+                "runs": int(runs),
+                "seeds": seed_id.tolist(),
+                "best_seed": int(best_seed),
+                "metrics": {
+                        "headers": convergence_headers,
+                        "mean":  mean_res.tolist(),
+                        "std": std.tolist(),
+                },
+                # "pareto_front": {
+                #     "objective_values": objective_values.tolist(),
+                #     "solutions": solutions.tolist(),
+                #     "constraints": constraint_values.tolist()
+                # },
+                # "convergance": {
+                #     "data": convergence_data.tolist()
+                # }
+            }
+
+            with open(f"{file_path}/settings.json", "w") as f:
+                json.dump(settings, f, indent=2)
