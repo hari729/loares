@@ -98,8 +98,10 @@ def convergence_plots(function_name,algo_name,psize,max_evals,convergence_data,f
     # print(n_metrics)
     if n_metrics == 5:
         ylabels = ["GD","IGD","SPC","SPR","HV"]
+        colors = ["red","blue","green","orange","indigo"]
     elif n_metrics == 2:
         ylabels = ["SPC","HV"]
+        colors = ["green","indigo"]
 
     legend = [f"MO-{algo_name.upper()}"]
 
@@ -107,7 +109,7 @@ def convergence_plots(function_name,algo_name,psize,max_evals,convergence_data,f
 
         plt.figure()
         plt.plot(convergence_data[:,-1], convergence_data[:,i], linestyle='-',marker='',
-                 color='blue',
+                 color=colors[i],
                   markerfacecolor='cyan',markersize='5',
                   markeredgecolor='black',markeredgewidth=0.1)
         plt.legend(labels=legend, loc='upper right', fontsize=8)

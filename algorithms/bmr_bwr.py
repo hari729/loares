@@ -103,6 +103,8 @@ def bwr_mod(current_set,bounds):
                  r1  * (best_pop - T * random_pop) -
                  r2  * (worst_pop - random_pop))
 
+    # new = r1  * (best_pop ) + r2  * (worst_pop )
+
     new = np.clip(new,bounds[:,0],bounds[:,1])
 
     return new
