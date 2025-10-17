@@ -122,8 +122,10 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
             else:
                 headers = ([f"s{i+1}" for i in range(solutions.shape[1])] + 
                             [f"g{i+1}" for i in range(constraint_values.shape[1])] + [f"f{i+1}" for i in range(objective_values.shape[1])])
+            
+            pareto_data =  np.column_stack([solutions, constraint_values, objective_values])
 
-            np.savetxt(f"{file_path}/solutions.csv", np.column_stack([solutions, constraint_values, objective_values]) , delimiter=",", fmt="%.7e",
+            np.savetxt(f"{file_path}/solutions.csv", pareto_data , delimiter=",", fmt="%.7e",
                     header=','.join(headers), comments="")
             
             np.savetxt(f"{file_path}/convergence_data.csv", convergence_data , delimiter=",", fmt="%.7e",
@@ -154,16 +156,20 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
                         "headers": convergence_headers,
                         "mean":  mean_res.tolist(),
                         "std": std.tolist(),
-                },
-                "pareto_front": {
-                    "objective_values": objective_values.tolist(),
-                    "solutions": solutions.tolist(),
-                    "constraints": constraint_values.tolist()
-                },
-                "convergence": {
-                    "data": convergence_data.tolist()
                 }
             }
 
             with open(f"{file_path}/settings.json", "w") as f:
                 json.dump(settings, f, indent=4)
+
+            convergence_dict = {c_header: convergence_data[:,i] for i,c_header in enumerate(convergence_headers)}
+            np.savez_compressed(
+                f"{file_path}/convergence_data.npz",
+                **convergence_dict
+            )
+           
+            pareto_dict = {header: pareto_data[:,j] for j,header in enumerate(headers)}
+            np.savez_compressed(
+                f"{file_path}/pareto_data.npz",
+                **pareto_dict
+            )
