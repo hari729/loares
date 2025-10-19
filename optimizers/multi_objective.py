@@ -145,7 +145,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
                 "algo_name": algo_name,
                 "psize": int(psize),
                 "max_evals": int(max_evals),
-                "modifiers": "[" + ",".join(f"{p}" for p in pmodifier_list) + "]",
+                "modifiers": " + ".join(f"{p}" for p in pmodifier_list),
                 "selection_pool": selection_pool,
                 "sorting": sorting_function.__name__,
                 "selector": selector.__name__,
