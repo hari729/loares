@@ -141,7 +141,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
                 "problem": function.__name__,
                 "n_vars": int(n_vars),
                 "bounds": "[" + ",".join(f"[{b[0]},{b[1]}]" for b in bounds) + "]",
-                "minmax": minmax,
+                "minmax": minmax.tolist(),
                 "algo_name": algo_name,
                 "psize": int(psize),
                 "max_evals": int(max_evals),
