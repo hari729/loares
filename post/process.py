@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import datetime
+import argparse
 
 def extract(test_name,problem,algo,psize):
     results_path = Path(__file__).resolve().parent.parent/'results'
@@ -43,7 +44,9 @@ def compare(list_of_result_paths,comparison_result_path):
         legend = []
         for data in data_dict:
             plt.plot(data['evals'], data[key], linestyle='-',marker='')
-            legend.append(f"{data['algo_name'].upper()}-{data['selection_pool']}-{data['modifiers']}")
+            legend.append(f"MO-{data['algo_name'].upper()}" +
+                (f" - {data['selection_pool']}" if data['selection_pool'] != 'population' else "")+ 
+                (f"{" - ".join(f"{p}" for p in ['']+data['modifiers'] if p != 'local_search')}"))
 
         plt.legend(labels=legend, loc='right', fontsize=8)
         plt.grid(which='both',linestyle='--',alpha=0.7)
@@ -70,12 +73,9 @@ def run_comparison(list_of_tests):
                 compare(list_of_result_paths,f"{timestamp}/{prob}/{algo}/{psize}")
 
 if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description="Generate comparison")
 
-    # print(extract("npz_test_20251017_113101","mou.zdt2","bwr","100").keys())
+    parser.add_argument("--test_names", "-t", nargs="+" , type=str, required=True, help="List of tests")
 
-    # compare([
-    #     '/home/hari/projects/opti/results/regular+local_search_20251019_143059/mou.zdt1/BMR/100/',
-    #     '/home/hari/projects/opti/results/archive+local_search_20251019_143204/mou.zdt1/BMR/100/'
-    # ])
-#
-    run_comparison(['20251021_154804','20251021_154833','20251021_160330'])
+    run_comparison(parser.parse_args().test_names)
