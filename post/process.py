@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import datetime
 import argparse
+import csv
 
 def extract(test_name,problem,algo,psize):
     results_path = Path(__file__).resolve().parent.parent/'results'
@@ -35,18 +36,34 @@ def compare(list_of_result_paths,comparison_result_path):
         data_dict.append(temp_dict)
 
     metrics = data_dict[0]['metrics']["headers"]
+    
+    legend = []
+    metrics_vals = []
+    for d in data_dict:  
+        legend.append(f"MO-{d['algo_name'].upper()}" +
+            (f" - {d['selection_pool']}" if d['selection_pool'] != 'population' else "")+ 
+            (f"{" - ".join(f"{p}" for p in ['']+d['modifiers'] if p != 'local_search')}"))
+        metrics_vals.append([d[k][-1] for k in metrics])
 
-    for key in metrics:
-        if key == 'evals':
-            continue
+    csv_headers = ["Algorithm"] + metrics
+
+    csv_rows = [[first_col] + metrics_vals for first_col, metrics_vals in zip(legend, metrics_vals)]
+
+    filename = f"{save_path}/output.csv"
+    with open(filename, 'w', newline='') as f:
+        writer = csv.writer(f)
+        
+        # Write the header row
+        writer.writerow(csv_headers)
+        
+        # Write all the data rows
+        writer.writerows(csv_rows)
+
+    for key in metrics[:-1]:
         
         plt.figure()
-        legend = []
         for data in data_dict:
             plt.plot(data['evals'], data[key], linestyle='-',marker='')
-            legend.append(f"MO-{data['algo_name'].upper()}" +
-                (f" - {data['selection_pool']}" if data['selection_pool'] != 'population' else "")+ 
-                (f"{" - ".join(f"{p}" for p in ['']+data['modifiers'] if p != 'local_search')}"))
 
         plt.legend(labels=legend, loc='right', fontsize=8)
         plt.grid(which='both',linestyle='--',alpha=0.7)
@@ -71,6 +88,8 @@ def run_comparison(list_of_tests):
                 list_of_result_paths = [f"/home/hari/projects/opti/results/{test}/{prob}/{algo}/{psize}"
                                         for test in list_of_tests]
                 compare(list_of_result_paths,f"{timestamp}/{prob}/{algo}/{psize}")
+
+    print(f"\nSaved to compare/{timestamp}")
 
 if __name__ == "__main__":
     
