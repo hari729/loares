@@ -46,16 +46,12 @@ def compare(list_of_result_paths,comparison_result_path):
         metrics_vals.append([d[k][-1] for k in metrics])
 
     csv_headers = ["Algorithm"] + metrics
-
     csv_rows = [[first_col] + metrics_vals for first_col, metrics_vals in zip(legend, metrics_vals)]
-
     filename = f"{save_path}/output.csv"
     with open(filename, 'w', newline='') as f:
         writer = csv.writer(f)
-        
         # Write the header row
         writer.writerow(csv_headers)
-        
         # Write all the data rows
         writer.writerows(csv_rows)
 

@@ -33,7 +33,7 @@ def single_run(args):
 
     population_state.update_generation()
 
-    ref_pts = np.ones([population_state.objective_values.shape[1]]) * 1.1
+    ref_pts = np.ones([population_state.objective_values.shape[1]])
 
     population_state.add_convergance_data(gen_pindicators(population_state.pareto_objectives,ref_pts,tf))
 

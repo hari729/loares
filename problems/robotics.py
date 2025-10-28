@@ -1,5 +1,7 @@
 import numpy as np
 import scipy as sp
+from optimizers.single_objective import single_run as so_opti
+import algorithms
 
 def mau(population):
     b,h,l,s = population.T
@@ -131,6 +133,80 @@ def vg_ft(population):
         + 12.80639*b*c - 5.85859e-7*a**2 + 4.29091e-1*b**2 - 187.77056*c**2)
     return np.column_stack([f,t]), np.full((population.shape[0], 1), -1)
 
+def gripper_c1(population):
+
+    P = 100
+    Y_min = 50
+    Y_max = 100
+    Yg = 150
+    Z_max = 50
+    Fg = 50
+    psize = population.shape[0]
+    f_array = np.zeros([psize,2])
+    g = np.zeros([psize,8])
+    Fk_array = np.zeros([psize,2])
+
+    
+    def y(population,z):      
+        a,b,c,e,f,l,delta = population.T
+        g = np.sqrt((l-z)**2 + e**2)
+        phi = np.arctan(e / (l-z))
+        num1 = np.clip((a**2 + g**2 - b**2)/(2*a*g), -1, 1)
+        num2 = np.clip((b**2 + g**2 - a**2)/(2*b*g), -1, 1)
+        alpha = np.arccos(num1) + phi
+        beta  = np.arccos(num2) - phi
+        return 2*(e+f+c*np.sin(beta+delta))
+
+    yZmax = y(population,Z_max)
+    y0 = y(population,0)
+
+    for i in range(0,population.shape[0]):
+
+        a,b,c,e,f,l,delta = population[i,:].T
+        
+        def Fk(z):
+            g = np.sqrt((l-z)**2 + e**2)
+            phi = np.arctan(e / (l-z))
+            num1 = np.clip((a**2 + g**2 - b**2)/(2*a*g), -1, 1)
+            num2 = np.clip((b**2 + g**2 - a**2)/(2*b*g), -1, 1)
+            alpha = np.arccos(num1) + phi
+            beta  = np.arccos(num2) - phi
+            f_i = P*b*np.sin(alpha + beta)/(2*c*np.cos(alpha))
+            return f_i, None
+
+        def Fk_max(z):
+            g = np.sqrt((l-z)**2 + e**2)
+            phi = np.arctan(e / (l-z))
+            num1 = np.clip((a**2 + g**2 - b**2)/(2*a*g), -1, 1)
+            num2 = np.clip((b**2 + g**2 - a**2)/(2*b*g), -1, 1)
+            alpha = np.arccos(num1) + phi
+            beta  = np.arccos(num2) - phi
+            f_i = P*b*np.sin(alpha + beta)/(2*c*np.cos(alpha))
+            return -f_i, None
+
+        algo = algorithms.get['bmr']
+        res = so_opti([algo,Fk_max,1,np.array([[0,50]]),10,10,1])
+        Fk_array[i,0] = - res[0]
+        Fk_array[i,1],_,_,_ = so_opti([algo,Fk,1,np.array([[0,50]]),10,10,1])
+    
+    # print(Fk_array)
+       
+    f_array[:,0] = Fk_array[:,0] - Fk_array[:,1]
+    f_array[:,1] = P/(Fk_array[:,1] + 1e-10)
+
+    g[:,0] = yZmax - Y_min
+    g[:,1] = -yZmax
+    g[:,2] = Y_max - y0
+    g[:,3] = y0 - Yg
+    g[:,4] = -((population[:,0]+population[:,1])**2 - population[:,5]**2 - population[:,3]**2)
+    g[:,5] = -((population[:,5]-Z_max)**2 - (population[:,0]-population[:,3])**2 - population[:,1]**2)
+    g[:,6] = Z_max - population[:,5]
+    g[:,7] = Fg - Fk_array[:,1]
+    # print(f_array,g)
+    return f_array,np.full((psize, 1), -1)
+
+
+
 get = {
     #"name":[function, n_vars, bounds, n_obj, minmax, max_evals, population_size]
 
@@ -139,7 +215,7 @@ get = {
     "drag_lift_inv": [drag_lift_inv, 4, np.array([[10,50],[20,40],[1,3],[0,40]]),2,np.array([-1,1]),60000,300],
     "auv": [auv, 4, np.array([[0.148,0.223],[0.185,0.285],[1.5,4],[1.5,3]]),2,np.array([1,1]),80000,200],
     "auv_g": [auv_gep_safe, 4, np.array([[0.148,0.223],[0.185,0.285],[1.5,4],[1.5,3]]),2,np.array([1,1]),80000,200],
-
+   "gripper_c1": [gripper_c1,7,np.array([[10,250],[10,250],[100,300],[0,50],[10,250],[100,300],[1,3.14]]),2,np.array([1,1]),10000,300]
 }
 
 def get_true_fronts(function_name,n_vars):
