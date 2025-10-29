@@ -1,10 +1,15 @@
-from results.composite import composite
+# from results.composite import composite
 import numpy as np
+from problems.robotics import gripper_c1
 
 if __name__ == "__main__":
-
+    
+    population = np.array([[230.65628,182.67297,300,46.39774,43.90391,144.51126,2.03856],
+                           [237.73246,187.10041,152.75955,33.30607,31.64811,232.63416,2.20343]])
+    f,g = gripper_c1(population)
+    print(f,g)
     # multi_objective_unconstrained(100,30,200000,30,"zdt1","e2","population")
-    print(len(np.arange(0,30,1)))
+    # print(len(np.arange(0,30,1)))
 
     # for i in range(10):
     #     print(i)

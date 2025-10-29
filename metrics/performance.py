@@ -88,6 +88,7 @@ def hv(objective_values,ref_point):
     return hvs
 
 def gen_pindicators(objective_values,ref_point,truefront=None):
+
     if truefront is not None:
         fmax = truefront.max(axis=0)
         fmin = truefront.min(axis=0)

@@ -86,6 +86,16 @@ class PopulationState():
                                         self.constraint_values[ndfront],
                                         self.metadata[ndfront])
 
+        # if self.pareto_objectives.size == 0:
+        #     self.metadata = np.zeros(self.metadata.shape)
+        #     (self.pareto_pop,
+        #     self.pareto_objectives,
+        #     self.pareto_constraints,
+        #     self.pareto_metadata) = (self.population,
+        #                                 self.objective_values,
+        #                                 self.constraint_values,
+        #                                 self.metadata)
+    
     def first_update_generation(self):
 
         (self.population,
@@ -105,6 +115,16 @@ class PopulationState():
                                     self.objective_values[ndfront],
                                     self.constraint_values[ndfront],
                                     self.metadata[ndfront])
+
+        # if self.pareto_objectives.size == 0:
+        #     self.metadata = np.zeros(self.metadata.shape)
+        #     (self.pareto_pop,
+        #     self.pareto_objectives,
+        #     self.pareto_constraints,
+        #     self.pareto_metadata) = (self.population,
+        #                                 self.objective_values,
+        #                                 self.constraint_values,
+        #                                 self.metadata)
 
     def update_generation(self):
         if ~self.init_updated:

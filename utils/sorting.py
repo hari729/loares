@@ -107,16 +107,13 @@ def ranking_reference(population_data,
 
 def ranking_crowding_general(population_data, objective_values, constraint_values, limit, ndf=False):
 
-    # 2. Define a single dummy problem class
     class DummyProblem(Problem):
         def __init__(self, n_var, n_obj, n_constr):
             super().__init__(n_var=n_var, n_obj=n_obj, n_constr=n_constr)
         
         def _evaluate(self, x, out, *args, **kwargs):
-            # This method is required by pymoo but can be empty for this purpose
             pass
 
-    # 3. Create the population and problem instance
     pop = Population.new("X", population_data, "F", objective_values, "G", constraint_values)
     n_constr = constraint_values.shape[1]
     
@@ -124,16 +121,23 @@ def ranking_crowding_general(population_data, objective_values, constraint_value
                                  n_obj=objective_values.shape[1], 
                                  n_constr=n_constr)
 
-    # 4. Perform the survival selection only once
     survival = RankAndCrowdingSurvival()
     survivors = survival.do(dummy_problem, pop, n_survive=limit)
 
-    # 5. Handle the return logic only once
     target_pop = survivors
     if ndf:
         target_pop = survivors[survivors.get("rank") == 0]
 
-    # Pymoo's ranking already handles feasibility, so no special check is needed
-    metadata = np.column_stack([target_pop.get("rank"), target_pop.get("crowding")])
-    
-    return target_pop.get("X"), target_pop.get("F"), target_pop.get("G"), metadata
+    p_array = target_pop.get("X")
+    o_array = target_pop.get("F")
+    c_array = target_pop.get("G")
+    metadata = np.column_stack([target_pop.get("rank"), target_pop.get("crowding") ])
+
+    if np.all([x is None for x in np.ravel(metadata)]):
+        metadata = target_pop.get("CV") 
+        metadata = metadata - np.min(metadata)
+        metadata = metadata.reshape(-1, 1)
+
+    return p_array, o_array, c_array, metadata
+
+

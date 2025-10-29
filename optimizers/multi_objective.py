@@ -34,9 +34,9 @@ def single_run(args):
     population_state.update_generation()
 
     ref_pts = np.ones([population_state.objective_values.shape[1]])
-
+    # print(population_state.pareto_objectives)
     population_state.add_convergance_data(gen_pindicators(population_state.pareto_objectives,ref_pts,tf))
-
+    # print(population_state.pareto_metadata)
     population_state.best, population_state.worst = selector(population_state,selection_pool,psize)
 
     while(population_state.evals < population_state.max_evals):

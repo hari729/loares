@@ -15,7 +15,7 @@ from sys_utils.logger import Tee_general as Tee
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run multi-objective optimization experiments.")
-    # parser.add_argument("--test-name", "-t", required=True, help="The name of the test.")
+    parser.add_argument("--test-name", "-t", help="The name of the test.")
     parser.add_argument("--problems", "-p", nargs="+", type=str, required=True, help="<category>.<prob_name>")
     parser.add_argument("--selection-pool", "-sp", type=str, choices=["population","archive"], default="population",
                             help="Selection pool for best solution, population or archive")
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--algorithms", "-a", nargs="+",  required=True, type=str, help="List of algorithms to use")
     
     args = parser.parse_args()
-    # test_name = args.test_name
+    test_name = args.test_name or ""
     list_of_functions = args.problems
     selection_pool = args.selection_pool
     runs = args.runs
@@ -39,22 +39,23 @@ if __name__ == "__main__":
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") 
     project_root = Path(__file__).parent.resolve()
-    final_path = project_root/f"results/{timestamp}" 
-    temp_path = project_root/f"results/data_dump/{timestamp}" 
+    full_name = timestamp + "_" + test_name
+    final_path = project_root/f"results/{full_name}" 
+    temp_path = project_root/f"results/data_dump/{full_name}" 
     os.makedirs(temp_path, exist_ok=True)
     tee = Tee(f"{temp_path}/{timestamp}.txt")
     sys.stdout = tee
     sys.stderr = tee
 
     try:
-        print(f"\nTest Name: {timestamp}")
+        print(f"\nTest Name: {full_name}")
         print(f"\nRuns: {runs}")
         print(f"\nSelection Pool: {selection_pool}")
         print(f"\nModifiers: {p_modifier_list}")
 
         for function_name in list_of_functions:
 
-            temp_file_path = project_root/f"results/data_dump/{timestamp}/{function_name}" 
+            temp_file_path = project_root/f"results/data_dump/{full_name}/{function_name}" 
             os.makedirs(temp_file_path, exist_ok=True)
 
             function, n_vars, bounds, n_obj, minmax, max_evals, def_psize = problems.get(function_name)
