@@ -1,8 +1,8 @@
 import numpy as np
 
 class PopulationState():
-    def __init__(self,population_array, function, max_evals, sorting_function, selection_pool):
 
+    def __init__(self,population_array, function, max_evals, sorting_function, selection_pool):
         self.population = population_array
         self.objective_values, self.constraint_values = function(population_array)
         self.metadata = None

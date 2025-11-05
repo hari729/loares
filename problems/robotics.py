@@ -175,13 +175,7 @@ def gripper_c1(population):
             return f_i, None
 
         def Fk_max(z):
-            g = np.sqrt((l-z)**2 + e**2)
-            phi = np.arctan(e / (l-z))
-            num1 = np.clip((a**2 + g**2 - b**2)/(2*a*g), -1, 1)
-            num2 = np.clip((b**2 + g**2 - a**2)/(2*b*g), -1, 1)
-            alpha = np.arccos(num1) + phi
-            beta  = np.arccos(num2) - phi
-            f_i = P*b*np.sin(alpha + beta)/(2*c*np.cos(alpha))
+            f_i,_ = Fk(z)
             return -f_i, None
 
         algo = algorithms.get['bmr']
@@ -191,7 +185,7 @@ def gripper_c1(population):
     
        
     f_array[:,0] = Fk_array[:,0] - Fk_array[:,1]
-    f_array[:,1] = P/(Fk_array[:,1] + 1e-10)
+    f_array[:,1] = P/(Fk_array[:,1])
 
     ai,bi,ci,ei,fi,li,deltai = population.T
     g[:,0] = Y_min - yZmax

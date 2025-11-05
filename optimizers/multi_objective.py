@@ -34,9 +34,9 @@ def single_run(args):
     population_state.update_generation()
 
     ref_pts = np.ones([population_state.objective_values.shape[1]])
-    # print(population_state.pareto_objectives)
+   
     population_state.add_convergance_data(gen_pindicators(population_state.pareto_objectives,ref_pts,tf))
-    # print(population_state.pareto_metadata)
+
     population_state.best, population_state.worst = selector(population_state,selection_pool,psize)
 
     while(population_state.evals < population_state.max_evals):
@@ -72,8 +72,7 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
         print(f"\nP:{psize}")
     
         for algo_name in list_of_algos:
-
-            
+ 
             algorithm = algorithms.get[algo_name]
             pmods = [modifiers.population.get[name] for name in pmodifier_list]
 
@@ -135,7 +134,6 @@ def multi_objective_optimizer(function,n_vars,bounds,minmax,list_of_algos,list_o
 
             generate_plots_notf(function.__name__,algo_name,psize,max_evals,objective_values,legend,file_path,tf)
             convergence_plots(function.__name__,algo_name,psize,max_evals,convergence_data,file_path)
-
 
             settings = {
                 "problem": function.__name__,
