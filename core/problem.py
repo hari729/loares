@@ -6,6 +6,7 @@ class Problem():
                  function = None,
                  n_vars = 1,
                  n_obj = 1,
+                 n_contr = 0,
                  psize = 10,
                  max_evals = 100,
                  bounds = None,
@@ -35,14 +36,14 @@ class Problem():
 
     def get_settings(self):
         dict = {
-            "name" : self.function.__name__(),
+            "name" : self.function.__name__,
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
             "bounds" : self.bounds,
             "psize" : self.psize,
             "max_evals" : self.max_evals,
             "minmax" : self.minmax,
-            "variable_modifier" : self.variable_modifier.__name__()
+            "variable_modifier" : self.variable_modifier.__name__
         }
         return dict
 

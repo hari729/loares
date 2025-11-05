@@ -1,3 +1,4 @@
+from core.metrics import performance_metrics as metrics
 
 class Result():
     def __init__(self,
@@ -9,9 +10,9 @@ class Result():
         self.final_metrics = None
         self.final_population = None
 
-    def add_convergance_data(self, population, evals):
-        self.convergence_data.append(np.append(metrics(population), evals))
+    def add_convergence_data(self, problem, population, evals):
+        self.convergence_data.append(np.append(metrics(problem, population), evals))
 
-    def set_final_population(self, population):
+    def set_final_population(self, problem, population):
         self.final_population = population
-        self.final_metrics = metrics(population)
+        self.final_metrics = metrics(problem, population)
