@@ -1,3 +1,4 @@
+import numpy as np 
 
 class Population():
 
@@ -14,12 +15,15 @@ class Population():
         self.metadata = M
 
     def get_pareto(self):
-        mask = [self.metadata[:,0] == 0]
+        mask = (self.metadata[:,0] == 0)
         ps = self.solutions[mask]
         po = self.objectives[mask]
         pc = self.constraints[mask]
         pm = self.metadata[mask]
         return ps, po, pc, pm
+
+    def get_size(self):
+        return self.solutions.shape[0]
 
     def merge(self, new_gen, new_obj, new_constr):
         temp_population = Population(np.row_stack([self.solutions, new_gen]),

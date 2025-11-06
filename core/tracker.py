@@ -19,4 +19,4 @@ class Tracker():
 
     def record(self, problem, population, result):
         if (self.evals//self.tracking_interval) > (self.prev_evals//self.tracking_interval):
-           result.add_convergence_data(problem, population, self.evals)
+           result.add_convergence_data(population, self.evals)

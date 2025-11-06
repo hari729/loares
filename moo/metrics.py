@@ -28,7 +28,7 @@ def calculate_spread(pf, true_pf):
 def performance_metrics(problem, population):
 
     objective_values = population.objectives
-    ref_point = np.ones([1, problem.n_obj])
+    ref_point = np.ones(problem.n_obj)
     truefront = problem.get_true_front()
 
     if truefront is not None:
@@ -59,7 +59,6 @@ def performance_metrics(problem, population):
         fmin = objective_values.min(axis=0)
 
         obj_norm = normalize(objective_values,fmin,fmax)
-
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 

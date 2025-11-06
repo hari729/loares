@@ -1,5 +1,6 @@
+import numpy as np 
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
-from pymoo.core.population import PymooPopulation
+from pymoo.core.population import Population as PymooPopulation
 from pymoo.algorithms.moo.nsga3 import ReferenceDirectionSurvival
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.core.problem import Problem
@@ -17,7 +18,7 @@ def ranking_crowding(problem, population, limit, ndf=False):
 
     pop = PymooPopulation.new("X", population.solutions, "F", population.objectives, "G", population.constraints)
  
-    dummy_problem = DummyProblem(n_var=problem.n_var, 
+    dummy_problem = DummyProblem(n_var=problem.n_vars, 
                                  n_obj=problem.n_obj, 
                                  n_constr=problem.n_constr)
 

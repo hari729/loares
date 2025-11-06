@@ -6,16 +6,17 @@ class Problem():
                  function = None,
                  n_vars = 1,
                  n_obj = 1,
-                 n_contr = 0,
+                 n_constr = 0,
                  psize = 10,
                  max_evals = 100,
                  bounds = None,
-                 minmax = np.full(n_obj, 1),
+                 minmax = None,
                  variable_modifier = None):
 
         self.function = function
         self.n_vars = n_vars
         self.n_obj = n_obj
+        self.n_constr = n_constr
         self.psize = psize
         self.max_evals = max_evals
         self.bounds = bounds
