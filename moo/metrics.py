@@ -27,9 +27,10 @@ def calculate_spread(pf, true_pf):
 
 def performance_metrics(problem, population):
 
-    objective_values = population.objectives
+    _,objective_values,_,_ = population.get_pareto()
     ref_point = np.ones(problem.n_obj)
     truefront = problem.get_true_front()
+    metrics = {}
 
     if truefront is not None:
         fmax = truefront.max(axis=0)
@@ -43,16 +44,17 @@ def performance_metrics(problem, population):
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 
-        metrics = [gd(obj_norm),igd(obj_norm)]
+        metrics["GD"] = gd(obj_norm)
+        metrics["IGD"] = igd(obj_norm)
 
         if objective_values.shape[0]>1:
-            metrics.append(spacing(obj_norm))
-            metrics.append(calculate_spread(obj_norm,tf_norm))
+            metrics["SPC"] = spacing(obj_norm)
+            metrics["SPR"] = calculate_spread(obj_norm,tf_norm)
         else:
-            metrics.append(np.nan)
-            metrics.append(np.nan)
+            metrics["SPC"] = np.nan
+            metrics["SPR"] = np.nan
         
-        metrics.append(hv(obj_norm))
+        metrics["HV"] = hv(obj_norm)
     
     else:
         fmax = objective_values.max(axis=0)
@@ -62,13 +64,11 @@ def performance_metrics(problem, population):
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 
-        metrics = []
-
         if objective_values.shape[0]>1:
-            metrics.append(spacing(obj_norm))
+            metrics["SPC"] = spacing(obj_norm)
         else:
-            metrics.append(np.nan)
+            metrics["SPC"] = np.nan
         
-        metrics.append(hv(obj_norm))
+        metrics["HV"] = hv(obj_norm)
 
     return metrics

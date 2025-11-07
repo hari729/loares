@@ -35,7 +35,7 @@ class Problem():
     def get_true_front(self):
         return None
 
-    def get_settings(self):
+    def get_info(self):
         dict = {
             "name" : self.function.__name__,
             "n_obj" : self.n_obj,

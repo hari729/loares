@@ -1,7 +1,7 @@
 import numpy as np
 
 def bwr(problem, population, selector):
-    pop_size = problem.psize
+    pop_size = population.get_size()
     variables = problem.n_vars
     bounds = problem.bounds
     # Generate random numbers
