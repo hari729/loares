@@ -1,6 +1,6 @@
 import numpy as np
 
-from core.problem import Problem
+from opti.core.problem import Problem
 
 
 def mau_funciton(population): 

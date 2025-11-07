@@ -1,8 +1,12 @@
 import numpy as np
-from core.population import Population
-from core.result import Result
-from core.tracker import Tracker
-from core.initializer import random_initialize
+from opti.core.population import Population
+from opti.core.result import Result
+from opti.core.tracker import Tracker
+from opti.core.initializer import random_initialize
+
+
+def null_mutator(problem, new_gen):
+    return new_gen
 
 class Algorithm():
 
@@ -22,8 +26,6 @@ class Algorithm():
         np.random.seed(self.seed)
         self.basefunction = basefunction
         if mutation is None:
-            def null_mutator(problem, new_gen):
-                return new_gen
             self.mutation = null_mutator
         else:
             self.mutation = mutation
@@ -70,11 +72,11 @@ class Algorithm():
 
     def get_info(self):
         dict = {
-            "name" : self.__class__.__name__,
-            "BaseFunction" : self.basefunction.__name__,
-            "Sorting" : self.sorting_function.__name__,
-            "Selection" : self.selection.__name__,
-            "Mods" : self.pmods
+            "name" : str(self.__class__.__name__),
+            "BaseFunction" : str(self.basefunction.__name__),
+            "Sorting" : str(self.sorting_function.__name__),
+            "Selection" : str(self.selection.__name__),
+            "Mods" : [str(f.__name__) for f in self.pmods],
             "seed" : self.seed
         }
         return dict

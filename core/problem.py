@@ -1,5 +1,8 @@
 import numpy as np
 
+def no_modifier(X):
+    return X 
+
 class Problem():
 
     def __init__(self,
@@ -23,8 +26,6 @@ class Problem():
         self.minmax = minmax
 
         if variable_modifier is None:
-            def no_modifier(X):
-                return X 
             self.variable_modifier = no_modifier
         else:
             self.variable_modifier = variable_modifier
@@ -37,14 +38,14 @@ class Problem():
 
     def get_info(self):
         dict = {
-            "name" : self.function.__name__,
+            "name" : str(self.function.__name__),
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
-            "bounds" : self.bounds,
+            "bounds" : self.bounds.tolist(),
             "psize" : self.psize,
             "max_evals" : self.max_evals,
-            "minmax" : self.minmax,
-            "variable_modifier" : self.variable_modifier.__name__
+            "minmax" : self.minmax.tolist(),
+            "variable_modifier" : str(self.variable_modifier.__name__)
         }
         return dict
 

@@ -24,3 +24,11 @@ class Result():
     def set_final_population(self, population):
         self.final_population = population
         self.final_metrics = self.metrics_function(self.problem, population)
+
+    def get_pareto_dict(self):
+        return self.final_population.get_pareto_dict()
+
+    def show_results(self):
+        print(f"Problem settings: {self.problem.get_info()}")
+        print(f"Algorithm settings: {self.algorithm.get_info()}")
+        print(f"Final metrics: {self.final_metrics}")

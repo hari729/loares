@@ -1,11 +1,12 @@
-import numpy as np 
+import numpy as np
+
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
 from pymoo.core.population import Population as PymooPopulation
 from pymoo.algorithms.moo.nsga3 import ReferenceDirectionSurvival
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.core.problem import Problem
 
-from core.population import Population
+from opti.core.population import Population
 
 def ranking_crowding(problem, population, limit, ndf=False):
 
