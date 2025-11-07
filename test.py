@@ -8,13 +8,23 @@ args = { "problem": mau,
          "pmods": [local_search]
         }
 
-algos = [MO_BMR_SAMP(**args), MO_BWR_SAMP(**args), MO_BMWR_SAMP(**args)]
+algo_classes = [MO_BMR_SAMP, MO_BWR_SAMP, MO_BMWR_SAMP]
 
-for algo in algos:
-    while algo.tracker.remaining_evals() > 0:
-        algo.advance()
+def optimizer(algo_class, seed_list):
+    results = []
+    for i in seed_list:
+        args["seed"] = i
+        algo = algo_class(**args)
+        while algo.tracker.remaining_evals() > 0:
+            algo.advance()
+        results.append(algo.get_result())
+    return results
 
-    result = algo.get_result()
+for algo_class in algo_classes:
+    results = optimizer(algo_class, [1])
+
+
+    result = results[0]
     print(result.get_convergence_data())
     print(f"{np.min(result.final_population.objectives[:,0])}, {np.min(result.final_population.objectives[:,1])}")
     print(result.final_metrics)
