@@ -9,7 +9,7 @@ class Result():
         self.algorithm = algorithm
         self.convergence_data = {}
         self.final_metrics = None
-        self.final_population = None
+        self.population = None
         self.metrics_function = metrics_function
 
     def add_convergence_data(self, population, evals):
@@ -22,11 +22,8 @@ class Result():
         return self.convergence_data
 
     def set_final_population(self, population):
-        self.final_population = population
+        self.population = population
         self.final_metrics = self.metrics_function(self.problem, population)
-
-    def get_pareto_dict(self):
-        return self.final_population.get_pareto_dict()
 
     def show_results(self):
         print(f"Problem settings: {self.problem.get_info()}")

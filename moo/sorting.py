@@ -6,7 +6,7 @@ from pymoo.algorithms.moo.nsga3 import ReferenceDirectionSurvival
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.core.problem import Problem
 
-from opti.core.population import Population
+from opti.moo.population import MoPopulation
 
 def ranking_crowding(problem, population, limit, ndf=False):
 
@@ -40,5 +40,5 @@ def ranking_crowding(problem, population, limit, ndf=False):
         metadata = metadata - np.min(metadata)
         metadata = metadata.reshape(-1, 1)
 
-    return Population(p_array, o_array, c_array, metadata)
+    return MoPopulation(p_array, o_array, c_array, metadata)
 

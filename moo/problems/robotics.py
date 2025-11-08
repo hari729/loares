@@ -19,11 +19,17 @@ def mau_funciton(population):
 
     return f,g
 
-mau = Problem(function = mau_funciton,
-              n_vars = 4,
-              n_obj = 2,
-              n_constr = 1,
-              psize = 100,
-              max_evals = 30000,
-              bounds = np.array([[24.5,45.5],[9,17],[60,110],[0,15]]),
-              minmax = np.array([1,1]))
+class MAU(Problem):
+    def __init__(self,
+                 psize = 100,
+                 max_evals = 30000):
+
+        super().__init__(function = mau_funciton,
+                            n_vars = 4,
+                            n_obj = 2,
+                            n_constr = 1,
+                            psize = psize,
+                            max_evals = max_evals,
+                            bounds = np.array([[24.5,45.5],[9,17],[60,110],[0,15]]),
+                            minmax = np.array([1,1]))
+

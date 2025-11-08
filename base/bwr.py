@@ -1,6 +1,6 @@
 import numpy as np
 
-def bwr(problem, population, selector):
+def bwr(problem, population, pool):
     pop_size = population.get_size()
     variables = problem.n_vars
     bounds = problem.bounds
@@ -16,7 +16,8 @@ def bwr(problem, population, selector):
     
     mask = r4 > 0.5
     # First compute all the term arrays
-    best_pop ,worst_pop = selector(population)
+    best_pop = pool["best"]
+    worst_pop = pool["worst"]
     
     random_pop = population.solutions[r_i]
     

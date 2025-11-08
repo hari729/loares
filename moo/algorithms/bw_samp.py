@@ -2,87 +2,81 @@
 import numpy as np
 
 from opti.core.algorithm import SAMP
+from opti.core.initializer import random_initialize
 from opti.moo.sorting import ranking_crowding
 from opti.moo.metrics import performance_metrics
 from opti.base.bwr import bwr
 from opti.base.bmr import bmr
 from opti.base.bmwr import bmwr
-from opti.moo.bw_selection import random_selection
+from opti.moo.bw_selection import random_bw_selection
 from opti.moo.population_modifiers import local_search
 
 class MO_BMR_SAMP(SAMP):
     def __init__(self,
-                 basefunction=bmr,
                  mutation = None,
                  problem=None,
-                 selection_function=random_selection,
+                 selection_function=random_bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
-                 # tracker = Tracker(),
-                 # intitializer = random_initialize,
+                 initializer = random_initialize,
                  metrics_function = performance_metrics,
                  seed = 1):
 
         super().__init__(
-                 basefunction=basefunction,
+                 basefunction=bmr,
                  mutation = mutation,
                  problem=problem,
                  selection_function=selection_function,
                  sorting_function=sorting_function,
                  pmods=pmods,
-                 # tracker = Tracker(),
-                 # intitializer = intitializer,
+                 initializer = initializer,
                  metrics_function = metrics_function,
                  seed = 1)
 
 
 class MO_BWR_SAMP(SAMP):
     def __init__(self,
-                 basefunction=bwr,
                  mutation = None,
                  problem=None,
-                 selection_function=random_selection,
+                 selection_function=random_bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
-                 # tracker = Tracker(),
-                 # intitializer = random_initialize,
+                 initializer = random_initialize,
                  metrics_function = performance_metrics,
                  seed = 1):
 
         super().__init__(
-                 basefunction=basefunction,
+                 basefunction=bwr,
                  mutation = mutation,
                  problem=problem,
                  selection_function=selection_function,
                  sorting_function=sorting_function,
                  pmods=pmods,
-                 # tracker = Tracker(),
-                 # intitializer = intitializer,
+                 initializer = initializer,
                  metrics_function = metrics_function,
                  seed = 1)
 
 
 class MO_BMWR_SAMP(SAMP):
     def __init__(self,
-                 basefunction=bmwr,
                  mutation = None,
                  problem=None,
-                 selection_function=random_selection,
+                 selection_function=random_bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
-                 # tracker = Tracker(),
-                 # intitializer = random_initialize,
+                 initializer = random_initialize,
                  metrics_function = performance_metrics,
                  seed = 1):
 
         super().__init__(
-                 basefunction=basefunction,
+                 basefunction=bmwr,
                  mutation = mutation,
                  problem=problem,
                  selection_function=selection_function,
                  sorting_function=sorting_function,
                  pmods=pmods,
-                 # tracker = Tracker(),
-                 # intitializer = intitializer,
+                 initializer = initializer,
                  metrics_function = metrics_function,
                  seed = 1)
+
+class_list = [MO_BMR_SAMP, MO_BWR_SAMP, MO_BMWR_SAMP]

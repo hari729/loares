@@ -24,3 +24,10 @@ class Tracker():
             if len(convergence_data["HV"]) > 1:
                 better = convergence_data["HV"][-1] > convergence_data["HV"][-2]
                 return better
+
+    def create_population(self, problem, solutions):
+        if self.remaining_evals() < solutions.shape[0]:
+            solutions = solutions[:self.remaining_evals(),:]
+        self.prev_evals = self.evals
+        self.evals += solutions.shape[0]
+        return problem.create_population(solutions)

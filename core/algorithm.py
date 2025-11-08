@@ -1,9 +1,6 @@
 import numpy as np
-from opti.core.population import Population
 from opti.core.result import Result
 from opti.core.tracker import Tracker
-from opti.core.initializer import random_initialize
-
 
 def null_mutator(problem, new_gen):
     return new_gen
@@ -13,12 +10,11 @@ class Algorithm():
     def __init__(self, 
                  basefunction=None,
                  mutation = None,
-                 problem=None,
+                 problem = None,
                  selection_function=None,
                  sorting_function=None,
                  pmods=[],
-                 # tracker = Tracker(),
-                 initializer = random_initialize,
+                 initializer = None,
                  metrics_function = None,
                  seed = 1 ):
 
@@ -33,8 +29,7 @@ class Algorithm():
         self.evals = 0
         self.tracker = Tracker(self.problem)
         solutions = initializer(self.problem)
-        solutions, objectives, constraints = self.tracker.evaluate(self.problem, solutions)
-        self.population = Population(solutions, objectives, constraints)
+        self.population = self.tracker.create_population(self.problem, solutions)
         self.selection = selection_function
         self.sorting_function = sorting_function
         self.population = self.sorting_function(self.problem, self.population, self.population.get_size())
@@ -45,7 +40,7 @@ class Algorithm():
     def advance(self):
         if self.tracker.remaining_evals() > 0:
 
-            new_gen = self.basefunction(self.problem, self.population, self.selection)
+            new_gen = self.basefunction(self.problem, self.population, self.selection(self.population))
             new_gen = self.mutation(self.problem, new_gen)
 
             for mod in self.pmods:
@@ -53,7 +48,7 @@ class Algorithm():
 
             new_gen = self.problem.variable_modifier(new_gen)
 
-            new_pop = Population(*self.tracker.evaluate(self.problem, new_gen))
+            new_pop = self.tracker.create_population(self.problem, new_gen)
 
             self.population = self.sorting_function(self.problem,
                                                     self.population + new_pop,
@@ -89,8 +84,7 @@ class SAMP(Algorithm):
                  selection_function=None,
                  sorting_function=None,
                  pmods=[],
-                 # tracker = Tracker(),
-                 initializer = random_initialize,
+                 initializer = None,
                  metrics_function = None,
                  seed = 1 ,
                  n_sub_pops = 2):
@@ -118,7 +112,7 @@ class SAMP(Algorithm):
             for nc in range(self.n_sub_pops):
                 pop = self.sub_pops[nc]
 
-                new_gen = self.basefunction(self.problem, pop, self.selection)
+                new_gen = self.basefunction(self.problem, pop, self.selection(pop))
                 new_gen = self.mutation(self.problem, new_gen)
 
                 for mod in self.pmods:
@@ -126,7 +120,7 @@ class SAMP(Algorithm):
 
                 new_gen = self.problem.variable_modifier(new_gen)
 
-                new_pop = Population(*self.tracker.evaluate(self.problem, new_gen))
+                new_pop = self.tracker.create_population(self.problem, new_gen)
 
                 self.sub_pops[nc] = self.sorting_function(self.problem,
                                                         pop + new_pop,
@@ -161,3 +155,5 @@ class SAMP(Algorithm):
 
         else:
             print("Stopped")
+
+

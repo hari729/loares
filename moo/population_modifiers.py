@@ -39,7 +39,7 @@ def local_search(problem, population, factor=0.05):
 
 def opposition(problem, population):
     bounds = problem.bounds
-    current_p = population_state.population
+    current_p = population.solutions
     opp_p = np.sum(bounds, axis=1) - current_p
     opp_p = np.clip(opp_p, bounds[:,0], bounds[:,1])
     return opp_p

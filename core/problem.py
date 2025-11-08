@@ -1,5 +1,8 @@
 import numpy as np
 
+from opti.core.population import Population
+from opti.moo.population import MoPopulation
+
 def no_modifier(X):
     return X 
 
@@ -38,7 +41,7 @@ class Problem():
 
     def get_info(self):
         dict = {
-            "name" : str(self.function.__name__),
+            "name" : str(self.__class__.__name__),
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
             "bounds" : self.bounds.tolist(),
@@ -48,4 +51,13 @@ class Problem():
             "variable_modifier" : str(self.variable_modifier.__name__)
         }
         return dict
+
+    def create_population(self, solutions):
+        X = solutions
+        F, G  = self.evaluate(solutions)
+        if self.n_obj > 2:
+            population = MoPopulation(X, F, G)
+        else:
+            population = Population(X, F, G)
+        return population
 
