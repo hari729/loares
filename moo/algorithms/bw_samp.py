@@ -31,7 +31,7 @@ class MO_BMR_SAMP(SAMP):
                  pmods=pmods,
                  initializer = initializer,
                  metrics_function = metrics_function,
-                 seed = 1)
+                 seed = seed)
 
 
 class MO_BWR_SAMP(SAMP):
@@ -54,7 +54,7 @@ class MO_BWR_SAMP(SAMP):
                  pmods=pmods,
                  initializer = initializer,
                  metrics_function = metrics_function,
-                 seed = 1)
+                 seed = seed)
 
 
 class MO_BMWR_SAMP(SAMP):
@@ -77,6 +77,6 @@ class MO_BMWR_SAMP(SAMP):
                  pmods=pmods,
                  initializer = initializer,
                  metrics_function = metrics_function,
-                 seed = 1)
+                 seed = seed)
 
 class_list = [MO_BMR_SAMP, MO_BWR_SAMP, MO_BMWR_SAMP]

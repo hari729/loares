@@ -1,4 +1,6 @@
 from pathlib import Path
+import os
+import __main__
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -82,15 +84,32 @@ class MOProcessor(ResultProcessor):
                                 legend,
                                 save_path)
 
-def result_path_generator(problem_name, compare_dict):
-    root_dir = Path(dir) if dir else Path.cwd()
-    paths = []
-    # for algo in settings_dict:
-    #     p = Path(f"{root_dir}/results/{problem_name}/{algo}/{compare_dict[algo][ps_me]}/{compare_dict[]}
+def compare_base(problem_name, selection_metric = "HV", minmax = 1, dir = None):
+    root_dir = Path(dir) if dir else Path(__main__.__file__).parent.resolve()
+    master_list_path = Path(f"{root_dir}/results/{problem_name}")
+    master_lists = [a for a in master_list_path.iterdir() if not a.is_dir()]
+    for master_list in master_lists:
+        comparison_path = Path(f"{master_list_path}/comparison/{master_list.stem}")
+        os.makedirs(comparison_path, exist_ok=True)
+        master_df = pd.read_csv(master_list)
+        df = master_df.loc[master_df.groupby("algorithm")[f"{selection_metric}"].idxmax()]
+        df.to_csv(f"{comparison_path}/best_metrics.csv")
+        convergence_data_list = []
+        for path in df["save_path"]:
+            convergence_data_list.append(pd.read_csv(f"{path}/convergence.csv"))
 
-    # pattern = re.compile(fr"{algo_name}")
-    pattern = re.compile(fr"(?<![A-Za-z0-9]){algo_name}(?![A-Za-z0-9])")
-    folders = [a for a in results_path.iterdir() if a.is_dir() and pattern.search(a.name)]
-    all_data = []
-    # for algo_dir in folders:
+        headers = list(convergence_data_list[0].columns)
+        legend = df["algorithm"]
+        for key in headers:
+            if key != "evals":
+                plt.figure()
+                for data in convergence_data_list:
+                    plt.plot(data['evals'], data[key], linestyle='-',marker='')
 
+                plt.legend(labels=legend, loc='right', fontsize=8)
+                plt.grid(which='both',linestyle='--',alpha=0.7)
+                plt.xlabel("Function Evaluations")
+                plt.ylabel(key)
+                plt.tight_layout()
+                plt.savefig(f"{comparison_path}/{key}_comparison.png", dpi=600, bbox_inches='tight')
+                plt.close()

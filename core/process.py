@@ -26,7 +26,7 @@ class ResultProcessor():
         seed = algo_info["seed"]
         save_path = f"{self.root_dir}/results/{problem_info["name"]}/{algo_info["name"]}/{psize}_{max_evals}/{seed}"
         os.makedirs(save_path, exist_ok=True)
-        master_list_path = Path(f"{self.root_dir}/results/{problem_info["name"]}/{algo_info["BaseFunction"]}_master_list.csv")
+        master_list_path = Path(f"{self.root_dir}/results/{problem_info["name"]}/{algo_info["BaseFunction"]}.csv")
         return problem_info, algo_info, save_path, master_list_path
 
     def generate_plots(self,*args):
@@ -35,14 +35,16 @@ class ResultProcessor():
     def generate_results(self):
         master_list = []
         for result in self.results:
+            # print(result.algorithm.get_info())
             problem_info, algorithm_info, save_path, master_list_path = self.set_path(result)
 
             master_list.append({"problem" : problem_info["name"],
                                 "algorithm" : algorithm_info['name'],
-                                "seed" : algorithm_info['seed'],
                                 "psize" : problem_info["psize"],
                                 "max_evals" : problem_info["max_evals"],
-                                **result.final_metrics})
+                                "seed" : algorithm_info['seed'],
+                                **result.final_metrics,
+                                "save_path": save_path})
 
             with open(f"{save_path}/problem_settings.json", "w") as write_file:
                 json.dump(problem_info, write_file)
@@ -63,7 +65,7 @@ class ResultProcessor():
         if master_list_path.exists():
             existing = pd.read_csv(master_list_path)
             combined = pd.concat([existing, mf], ignore_index=True)
-            combined.drop_duplicates(subset=["psize", "max_evals", "seed"], keep="last", inplace=True)
+            combined.drop_duplicates(subset=["algorithm", "psize", "max_evals", "seed"], keep="last", inplace=True)
             combined.to_csv(master_list_path, index=False)
         else:
             mf.to_csv(master_list_path, mode='w', header=True, index = False)

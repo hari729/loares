@@ -9,7 +9,6 @@ def optimizer(algo):
 def multi_thread_optimizer(algo_class, args, seed_list, threads=5):
     settings = [{"seed": s, **args} for s in seed_list]
     algos = [algo_class(**i) for i in settings]
-
     with Pool(processes=threads) as pool:
         output = pool.map(optimizer, algos)
 
