@@ -22,8 +22,8 @@ class Result():
         return self.convergence_data
 
     def set_final_population(self, population):
-        self.population = population
         self.final_metrics = self.metrics_function(self.problem, population)
+        self.population = self.problem.objective_correction(population)
 
     def show_results(self):
         print(f"Problem settings: {self.problem.get_info()}")

@@ -61,3 +61,7 @@ class Problem():
             population = Population(X, F, G)
         return population
 
+    def objective_correction(self, population):
+        population.objectives *= self.minmax
+        return population
+

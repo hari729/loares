@@ -12,7 +12,6 @@ class Tracker():
     def evaluate(self, problem, solutions):
         if self.remaining_evals() < solutions.shape[0]:
             solutions = solutions[:self.remaining_evals(),:]
-        self.prev_evals = self.evals
         self.evals += solutions.shape[0]
         objectives, constraints =  problem.evaluate(solutions)
         return solutions, objectives, constraints
@@ -20,6 +19,7 @@ class Tracker():
     def record(self, problem, population, result):
         if ((self.evals//self.tracking_interval) > (self.prev_evals//self.tracking_interval)) | (self.prev_evals == 0):
             result.add_convergence_data(population, self.evals)
+            self.prev_evals = self.evals
             convergence_data = result.get_convergence_data()
             if len(convergence_data["HV"]) > 1:
                 better = convergence_data["HV"][-1] > convergence_data["HV"][-2]
@@ -28,6 +28,5 @@ class Tracker():
     def create_population(self, problem, solutions):
         if self.remaining_evals() < solutions.shape[0]:
             solutions = solutions[:self.remaining_evals(),:]
-        self.prev_evals = self.evals
         self.evals += solutions.shape[0]
         return problem.create_population(solutions)

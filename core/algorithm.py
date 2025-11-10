@@ -110,21 +110,23 @@ class SAMP(Algorithm):
     def advance(self):
         if self.tracker.remaining_evals() > 0:
             for nc in range(self.n_sub_pops):
-                pop = self.sub_pops[nc]
+                if self.tracker.remaining_evals() > 0:
+                    # print(self.tracker.remaining_evals())
+                    pop = self.sub_pops[nc]
 
-                new_gen = self.basefunction(self.problem, pop, self.selection(pop))
-                new_gen = self.mutation(self.problem, new_gen)
+                    new_gen = self.basefunction(self.problem, pop, self.selection(pop))
+                    new_gen = self.mutation(self.problem, new_gen)
 
-                for mod in self.pmods:
-                    new_gen = np.vstack([new_gen,mod(self.problem, pop)])
+                    for mod in self.pmods:
+                        new_gen = np.vstack([new_gen,mod(self.problem, pop)])
 
-                new_gen = self.problem.variable_modifier(new_gen)
+                    new_gen = self.problem.variable_modifier(new_gen)
 
-                new_pop = self.tracker.create_population(self.problem, new_gen)
+                    new_pop = self.tracker.create_population(self.problem, new_gen)
 
-                self.sub_pops[nc] = self.sorting_function(self.problem,
-                                                        pop + new_pop,
-                                                        pop.get_size())
+                    self.sub_pops[nc] = self.sorting_function(self.problem,
+                                                            pop + new_pop,
+                                                            pop.get_size())
 
             if self.n_sub_pops > 1:
                 self.population = sum(self.sub_pops[1:], self.sub_pops[0])
