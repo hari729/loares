@@ -1,91 +1,113 @@
+from pathlib import Path
+import os
+import __main__
+import pandas as pd
 import matplotlib.pyplot as plt
-from opti.core.process import ResultProcessor
-from opti.core.problem import Problem
-from opti.moo.population import MoPopulation
+import seaborn as sns
+from tqdm import tqdm
 
-class MOProcessor(ResultProcessor):
-    def __init__(self,
-                 results_list,
-                 root_dir = None):
-        super().__init__(results_list,
-                         root_dir)
-
-    def plot_convergence(self, convergence_data, legend, file_path):
-        colors = {
-            "GD" : "red",
-            "IGD" : "blue",
-            "SPC" : "green",
-            "SPR" : "orange",
-            "HV" : "indigo"
-        }
-        for key in convergence_data:
-            if key == "evals":
-                continue
-
+def plot_convergence_comparison(convergence_data_list, legend, comparison_path, problem_name):
+    headers = list(convergence_data_list[0].columns)
+    for key in headers:
+        if key != "evals":
             plt.figure()
-            plt.plot(convergence_data["evals"], convergence_data[key], linestyle='-',marker='',
-                    color=colors[key],
-                    markerfacecolor='cyan',markersize='5',
-                    markeredgecolor='black',markeredgewidth=0.1)
-            plt.legend(labels=legend, loc='right', fontsize=8)
+            for data in convergence_data_list:
+                plt.plot(data['evals'], data[key], linestyle='-',marker='')
+
+            plt.legend(labels=legend, loc='best', fontsize=8)
             plt.grid(which='both',linestyle='--',alpha=0.7)
             plt.xlabel("Function Evaluations")
             plt.ylabel(key)
             plt.tight_layout()
-            plt.savefig(f"{file_path}/{key}.png", dpi=600, bbox_inches='tight')
+            plt.savefig(f"{comparison_path}/{problem_name}_{key}_comparison.png", dpi=600, bbox_inches='tight')
             plt.close()
 
-    def plot_pareto_front(self, objective_values, tf, legend, file_path):
-        n_obj = objective_values.shape[1]
-        if n_obj == 2:
-            plt.figure()
-            plt.plot(objective_values[:,0], objective_values[:,1], linestyle='',marker='s',
-                    markerfacecolor='cyan',markersize='5'
-                    ,markeredgecolor='black',markeredgewidth=0.1)
-            if tf is not None:
-                plt.plot(tf[:,0],tf[:,1],linestyle='',marker='.',color='black'
-                        ,markersize='5',alpha=1)
-                legend.append("True Front")
-            plt.legend(labels=legend, loc='upper right', fontsize=8)
-            plt.grid(which='both',linestyle='--',alpha=0.7)
-            plt.xlabel("f1")
-            plt.ylabel("f2")
-            plt.tight_layout()
-            plt.savefig(f"{file_path}/pareto_front.png", dpi=600, bbox_inches='tight')
-            plt.close()
-        
-        if n_obj == 3:
-            plt.figure()
-            ax = plt.axes(projection='3d')
-            ax.view_init(elev=30, azim=30)
-            ax.set_xlabel("f1")
-            ax.set_ylabel("f2")
-            ax.set_zlabel("f3")
-            
-            plt.plot(objective_values[:,0], objective_values[:,1],objective_values[:,2], linestyle='',marker='s',
-                        markerfacecolor='cyan',markersize='5',markeredgecolor='black',markeredgewidth=0.1)
-            if tf is not None:
-                plt.plot(tf[:,0],tf[:,1],tf[:,2],linestyle='',marker='.',color='black',markersize='5')
-                legend.append("True Front")
-            plt.legend(labels=legend, loc='upper right', fontsize=8)
-            ax.grid(which='both',linestyle='--',alpha=0.3)
-            plt.savefig(f"{file_path}/pareto_front.png", dpi=600, bbox_inches='tight')
-            plt.close()
+def plot_pareto_2d_comparison(pareto_df, comparison_path, problem_name):
+    plt.figure()
+    sc = sns.relplot(data = pareto_df, x = "f1", y = "f2", hue = "algorithm", style = "algorithm", s = 50,
+                     col = "algorithm", col_wrap = 2,alpha = 1, linewidth = 0.3, facet_kws = {'legend_out':False})
+    # sc.get_legend().set_title(None)
+    plt.tight_layout()
+    for ax in sc.axes.flat:
+        ax.grid(which='both',linestyle='--',alpha=0.7)
+        ax.spines['top'].set_visible(True)
+        ax.spines['right'].set_visible(True)
+        ax.spines['bottom'].set_visible(True)
+        ax.spines['left'].set_visible(True)
+        # ax.set_ylim(top=1, bottom=0)
+    sc.set_titles("")
+    sc.legend.set_title("Algorithm")
+    plt.savefig(f"{comparison_path}/{problem_name}_pareto_fronts_comparison.png", dpi=600, bbox_inches='tight')
+    plt.close()
 
-    def generate_plots(self, result, save_path):
-        _,pareto_front,_,_ = result.population.get_pareto()
-        legend = [result.algorithm.get_info()["name"]]
-        self.plot_convergence(result.get_convergence_data(), legend, save_path)
-        self.plot_pareto_front(pareto_front,
-                                result.problem.get_true_front(),
-                                legend,
-                                save_path)
+def plot_pareto_3d_individual(pareto_df, comparison_path, problem_name):
+    sns.set_theme(style="whitegrid")
 
+    algorithms = pareto_df["algorithm"].unique()
+    n_algos = len(algorithms)
 
+    # Consistent colors and markers across figures
+    colors = sns.color_palette("tab10", n_algos)
+    markers = ["o", "X", "s", "P", "v", "^", "D", "p", "*"]
 
+    color_map = {algo: colors[i % len(colors)] for i, algo in enumerate(algorithms)}
+    marker_map = {algo: markers[i % len(markers)] for i, algo in enumerate(algorithms)}
 
+    for algo in algorithms:
+        df_algo = pareto_df[pareto_df["algorithm"] == algo]
 
-def compare_base(problem_name, n_obj = None, selection_metric = "HV", minmax = 1, dir = None):
+        fig = plt.figure(figsize=(7, 6))
+        ax = fig.add_subplot(111, projection="3d")
+
+        # Scatter plot for current algorithm
+        ax.scatter(
+            df_algo["f1"], df_algo["f2"], df_algo["f3"],
+            label=algo,
+            s=40,
+            alpha=0.9,
+            color=color_map[algo],
+            marker=marker_map[algo],
+            edgecolors="white",
+            linewidths=0.4
+        )
+
+        # Labels and styling
+        ax.set_xlabel("f1", labelpad=10)
+        ax.set_ylabel("f2", labelpad=12)
+        ax.text2D(0.03, 0.8, "f3", transform=ax.transAxes, rotation=0, fontsize=12)
+
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.xaxis.pane.fill = False
+        ax.yaxis.pane.fill = False
+        ax.zaxis.pane.fill = False
+        ax.xaxis.line.set_color("black")
+        ax.yaxis.line.set_color("black")
+        ax.zaxis.line.set_color("black")
+
+        ax.view_init(elev=20, azim=45)
+
+        # Legend
+        legend = ax.legend(
+            loc="upper right",
+            bbox_to_anchor=(0.95, 0.95),
+            frameon=True,
+            framealpha=0.5,
+            edgecolor='black',
+            fontsize=10,
+            bbox_transform=ax.transAxes
+        )
+        # legend.get_frame().set_alpha(0.9)
+        # legend.get_frame().set_edgecolor("black")
+
+        plt.tight_layout()
+        psize = pareto_df[pareto_df["algorithm"] == algo]["psize"].unique()
+        out_path = f"{comparison_path}/{problem_name}_{algo}_{psize}_pareto_front_3D.png"
+        plt.savefig(out_path, dpi=600, bbox_inches="tight")
+        plt.close()
+
+        print(f"✅ Saved: {out_path}")
+
+def basic_compare(problem_name, n_obj = None, selection_metric = "HV", minmax = 1, dir = None):
     root_dir = Path(dir) if dir else Path(__main__.__file__).parent.resolve()
     master_list_path = Path(f"{root_dir}/results/{problem_name}")
     master_lists = [a for a in master_list_path.iterdir() if not a.is_dir()]
@@ -106,44 +128,15 @@ def compare_base(problem_name, n_obj = None, selection_metric = "HV", minmax = 1
 
         pareto_df = pd.concat(pareto_front_list, ignore_index=True)
 
-        headers = list(convergence_data_list[0].columns)
-        legend = df["algorithm"]
-        for key in headers:
-            if key != "evals":
-                plt.figure()
-                for data in convergence_data_list:
-                    plt.plot(data['evals'], data[key], linestyle='-',marker='')
-
-                plt.legend(labels=legend, loc='best', fontsize=8)
-                plt.grid(which='both',linestyle='--',alpha=0.7)
-                plt.xlabel("Function Evaluations")
-                plt.ylabel(key)
-                plt.tight_layout()
-                plt.savefig(f"{comparison_path}/{problem_name}_{key}_comparison.png", dpi=600, bbox_inches='tight')
-                plt.close()
+        plot_convergence_comparison(convergence_data_list, df["algorithm"], comparison_path, problem_name)
         
         if n_obj == 2:
-            plt.figure()
-            sc = sns.relplot(data = pareto_df, x = "f1", y = "f2", hue = "algorithm", style = "algorithm", s = 50,
-                            col = "algorithm", col_wrap = 2,alpha = 1, linewidth = 0.3, facet_kws = {'legend_out':False})
-            # sc.get_legend().set_title(None)
-            plt.tight_layout()
-            for ax in sc.axes.flat:
-                ax.grid(which='both',linestyle='--',alpha=0.7)
-                ax.spines['top'].set_visible(True)
-                ax.spines['right'].set_visible(True)
-                ax.spines['bottom'].set_visible(True)
-                ax.spines['left'].set_visible(True)
-                # ax.set_ylim(top=1, bottom=0)
-            sc.set_titles("")
-            sc.legend.set_title("Algorithm")
-            plt.savefig(f"{comparison_path}/{problem_name}_pareto_fronts_comparison.png", dpi=600, bbox_inches='tight')
-            plt.close()
-
+            plot_pareto_2d_comparison(pareto_df, comparison_path, problem_name)
         if n_obj == 3:
             plot_pareto_3d_individual(pareto_df, comparison_path, problem_name)
 
-def plot_pareto_fronts(pareto_df, external_df, problem_name, comparison_path):
+
+def plot_pareto_2d_comparison_external(pareto_df, external_df, problem_name, comparison_path):
     sns.set_theme(
         context="talk",
         style="whitegrid",

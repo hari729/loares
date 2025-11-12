@@ -42,3 +42,12 @@ class Population():
         parts = np.array_split(idx, n_sub_pops)
         return [Population(self.solutions[i], self.objectives[i], self.constraints[i]) for i in parts]
 
+    def get_dict(self):
+        combined = np.hstack([self.solutions, self.objectives, self.constraints])
+        col_labels = (
+            [f"x{i+1}" for i in range(self.solutions.shape[1])] +
+            [f"f{j+1}" for j in range(self.objectives.shape[1])] +
+            [f"g{k+1}" for k in range(self.constraints.shape[1])]
+        )
+        return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
+

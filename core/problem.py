@@ -36,6 +36,11 @@ class Problem():
     def evaluate(self, solutions):
         return self.function(solutions)
 
+    def get_minmax_applied_pop(self, solutions):
+        population = self.create_population(solutions)
+        population.objectives *= self.minmax
+        return population
+
     def get_true_front(self):
         return None
 

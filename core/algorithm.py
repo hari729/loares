@@ -28,7 +28,7 @@ class Algorithm():
         self.problem = problem
         self.evals = 0
         self.tracker = Tracker(self.problem)
-        solutions = initializer(self.problem)
+        solutions = self.problem.variable_modifier(initializer(self.problem))
         self.population = self.tracker.create_population(self.problem, solutions)
         self.selection = selection_function
         self.sorting_function = sorting_function
