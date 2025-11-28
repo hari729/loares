@@ -51,7 +51,7 @@ class MOProcessor(ResultProcessor):
             plt.xlabel("f1")
             plt.ylabel("f2")
             plt.tight_layout()
-            plt.savefig(f"{file_path}/pareto_front.png", dpi=600, bbox_inches='tight')
+            plt.savefig(f"{file_path}/pareto-front.png", dpi=600, bbox_inches='tight')
             plt.close()
         
         if n_obj == 3:
@@ -69,7 +69,7 @@ class MOProcessor(ResultProcessor):
                 legend.append("True Front")
             plt.legend(labels=legend, loc='upper right', fontsize=8)
             ax.grid(which='both',linestyle='--',alpha=0.3)
-            plt.savefig(f"{file_path}/pareto_front.png", dpi=600, bbox_inches='tight')
+            plt.savefig(f"{file_path}/pareto-front.png", dpi=600, bbox_inches='tight')
             plt.close()
 
     def generate_plots(self, result, save_path):
@@ -85,165 +85,3 @@ class MOProcessor(ResultProcessor):
 
 
 
-def compare_base(problem_name, n_obj = None, selection_metric = "HV", minmax = 1, dir = None):
-    root_dir = Path(dir) if dir else Path(__main__.__file__).parent.resolve()
-    master_list_path = Path(f"{root_dir}/results/{problem_name}")
-    master_lists = [a for a in master_list_path.iterdir() if not a.is_dir()]
-    for master_list in tqdm(master_lists):
-        comparison_path = Path(f"{master_list_path}/comparison/{master_list.stem}")
-        os.makedirs(comparison_path, exist_ok=True)
-        master_df = pd.read_csv(master_list)
-        df = master_df.loc[master_df.groupby("algorithm")[f"{selection_metric}"].idxmax()]
-        df.to_csv(f"{comparison_path}/best_metrics.csv")
-        convergence_data_list = []
-        pareto_front_list = []
-        for index, row in df.iterrows():
-            convergence_data_list.append(pd.read_csv(f"{row["save_path"]}/convergence.csv"))
-            temp = pd.read_csv(f"{row["save_path"]}/solutions.csv")
-            temp["algorithm"] = row["algorithm"]
-            temp["psize"] = row["psize"]
-            pareto_front_list.append(temp)
-
-        pareto_df = pd.concat(pareto_front_list, ignore_index=True)
-
-        headers = list(convergence_data_list[0].columns)
-        legend = df["algorithm"]
-        for key in headers:
-            if key != "evals":
-                plt.figure()
-                for data in convergence_data_list:
-                    plt.plot(data['evals'], data[key], linestyle='-',marker='')
-
-                plt.legend(labels=legend, loc='best', fontsize=8)
-                plt.grid(which='both',linestyle='--',alpha=0.7)
-                plt.xlabel("Function Evaluations")
-                plt.ylabel(key)
-                plt.tight_layout()
-                plt.savefig(f"{comparison_path}/{problem_name}_{key}_comparison.png", dpi=600, bbox_inches='tight')
-                plt.close()
-        
-        if n_obj == 2:
-            plt.figure()
-            sc = sns.relplot(data = pareto_df, x = "f1", y = "f2", hue = "algorithm", style = "algorithm", s = 50,
-                            col = "algorithm", col_wrap = 2,alpha = 1, linewidth = 0.3, facet_kws = {'legend_out':False})
-            # sc.get_legend().set_title(None)
-            plt.tight_layout()
-            for ax in sc.axes.flat:
-                ax.grid(which='both',linestyle='--',alpha=0.7)
-                ax.spines['top'].set_visible(True)
-                ax.spines['right'].set_visible(True)
-                ax.spines['bottom'].set_visible(True)
-                ax.spines['left'].set_visible(True)
-                # ax.set_ylim(top=1, bottom=0)
-            sc.set_titles("")
-            sc.legend.set_title("Algorithm")
-            plt.savefig(f"{comparison_path}/{problem_name}_pareto_fronts_comparison.png", dpi=600, bbox_inches='tight')
-            plt.close()
-
-        if n_obj == 3:
-            plot_pareto_3d_individual(pareto_df, comparison_path, problem_name)
-
-def plot_pareto_fronts(pareto_df, external_df, problem_name, comparison_path):
-    sns.set_theme(
-        context="talk",
-        style="whitegrid",
-        font_scale=1.1,
-        rc={"axes.edgecolor": "black", "axes.linewidth": 1.2}
-    )
-
-    algorithms = pareto_df["algorithm"].unique()
-    n = len(algorithms)
-    ncols = 2
-    nrows = (n + 1) // ncols
-
-    palette = sns.color_palette("tab10", n)       # distinct colors
-    markers = ["o", "X", "s", "P", "v", "P", "^"] # distinct markers (recycle if needed)
-
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10* ncols, 10 * nrows),
-                             sharex=True, sharey=True)
-    axes = axes.flatten()
-
-    for i, algo in enumerate(algorithms):
-        ax = axes[i]
-        subset = pareto_df[pareto_df["algorithm"] == algo]
-
-        sns.scatterplot(
-            data=subset,
-            x="f1", y="f2",
-            color=palette[i % len(palette)],
-            marker=markers[i % len(markers)],
-            s=170, edgecolor="white", alpha=0.8,
-            ax=ax,
-            label=algo, linewidth=0.5
-        )
-
-        sns.scatterplot(
-            data=external_df,
-            x="f1", y="f2",
-            color="indigo", marker="X", s=170, ax=ax, label=external_df["algorithm"].iloc[0]
-        )
-
-        # ax.set_ylim(top = 1, bottom=0)
-        ax.grid(ls="--", alpha=1)
-        ax.legend(loc="best")
-        for spine in ax.spines.values():
-            spine.set_edgecolor("black")
-            spine.set_linewidth(1.2)
-
-    # Remove unused axes if odd count
-    for ax in axes[len(algorithms):]:
-        ax.remove()
-
-    fig.tight_layout(rect=[0, 0.05, 1, 1])
-    plt.savefig(f"{comparison_path}/{problem_name}_pareto_fronts_comparison.png",
-                dpi=600, bbox_inches="tight")
-    plt.close()
-
-def compare_solutions(problem, objectives_dict,
-                      selection_metric = "HV", minmax = 1, dir = None):
-    problem_name = problem.get_info()["name"]
-    root_dir = Path(dir) if dir else Path(__main__.__file__).parent.resolve()
-    master_list_path = Path(f"{root_dir}/results/{problem_name}")
-    master_lists = [a for a in master_list_path.iterdir() if not a.is_dir()]
-    external_df = pd.DataFrame(objectives_dict)
-    obj_cols = [f"f{o+1}" for o in range(problem.n_obj)]
-    for master_list in tqdm(master_lists):
-        comparison_path = Path(f"{master_list_path}/compare_solutions/{master_list.stem}")
-        os.makedirs(comparison_path, exist_ok=True)
-        master_df = pd.read_csv(master_list)
-        df = master_df.loc[master_df.groupby("algorithm")[f"{selection_metric}"].idxmax()]
-        pareto_front_list = []
-        for index, row in df.iterrows():
-            temp = pd.read_csv(f"{row["save_path"]}/solutions.csv")
-            temp["algorithm"] = row["algorithm"]
-            pareto_front_list.append(temp)
-            matched_rows = []
-            for i, e_row in external_df.iterrows():
-                better_mask = np.all((temp[obj_cols].values - e_row[obj_cols].values) * problem.minmax <= 0, axis=1)
-                matches = temp[better_mask]
-                # print(matches)
-
-                if len(matches) > 0:
-                    flipped_temp = temp[obj_cols].values * problem.minmax
-                    flipped_ext = e_row[obj_cols].values * problem.minmax
-                    diff = np.asarray(flipped_temp[better_mask] - flipped_ext, dtype=float)
-                    dist = np.linalg.norm(diff, axis=1)
-                    matches = matches.assign(distance=dist)
-                    matches = matches.sort_values(by="distance", ascending=True)
-                    matches = matches.head(5)
-                    for j, col in enumerate(obj_cols):
-                        matches[f"e{col}"] = e_row[col]
-                    matched_rows.append(matches)
-
-
-            if matched_rows:
-                matched_df = pd.concat(matched_rows, ignore_index=True)
-            else:
-                matched_df = pd.DataFrame(columns=temp.columns.tolist() + ["distance", "external_id"])
-
-            output_path = comparison_path / f"{row['algorithm']}_matches.csv"
-            matched_df.to_csv(output_path, index=False)
-            print(f"✅ Saved matches for {row['algorithm']} → {output_path}")
-
-        pareto_df = pd.concat(pareto_front_list, ignore_index=True)
-        plot_pareto_fronts(pareto_df, external_df, problem_name, comparison_path)

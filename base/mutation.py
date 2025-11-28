@@ -1,0 +1,16 @@
+import numpy as np 
+
+def random_reinit(problem, new, pb = 0.5):
+    pop_size = new.shape[0]
+    bounds = problem.bounds
+
+    r3 = np.random.rand(pop_size, 1)
+    r4 = np.random.rand(pop_size, 1)
+    mask = r4 > pb
+
+    random_init = bounds[None, :, 1] - r3  * (bounds[None, :, 1] - bounds[None,:, 0])
+    new = np.where(mask, new, random_init)    
+    new = np.clip(new,bounds[:,0],bounds[:,1])
+
+    return new
+

@@ -2,7 +2,7 @@ import numpy as np
 from opti.core.population import Population
 
 class MoPopulation(Population):
-    def __ini__(self, X, F, G, M = None):
+    def __init__(self, X, F, G, M = None):
         super().__init__(X, F, G, M)
 
 
@@ -12,7 +12,11 @@ class MoPopulation(Population):
         po = self.objectives[mask]
         pc = self.constraints[mask]
         pm = self.metadata[mask]
-        return ps, po, pc, pm
+
+        _, unique_idx = np.unique(po, axis=0, return_index=True)
+        unique_idx = np.sort(unique_idx)
+
+        return ps[unique_idx], po[unique_idx], pc[unique_idx], pm[unique_idx]
 
     def get_pareto_population(self):
         ps,po,pc,_ = self.get_pareto()

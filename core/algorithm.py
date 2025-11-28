@@ -67,8 +67,9 @@ class Algorithm():
 
     def get_info(self):
         dict = {
-            "name" : str(self.__class__.__name__),
+            "name": str(self.__class__.__name__).replace("_", "-"),
             "BaseFunction" : str(self.basefunction.__name__.upper()),
+            "Mutation": str(self.mutation.__name__),
             "Sorting" : str(self.sorting_function.__name__),
             "Selection" : str(self.selection.__name__),
             "Mods" : [str(f.__name__) for f in self.pmods],

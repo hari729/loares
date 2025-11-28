@@ -46,7 +46,7 @@ class Problem():
 
     def get_info(self):
         dict = {
-            "name" : str(self.__class__.__name__),
+            "name": str(self.__class__.__name__).replace("_", "-"),
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
             "bounds" : self.bounds.tolist(),
