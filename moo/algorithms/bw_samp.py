@@ -8,14 +8,14 @@ from opti.moo.metrics import performance_metrics
 from opti.base.bwr import bwr
 from opti.base.bmr import bmr
 from opti.base.bmwr import bmwr
-from opti.moo.bw_selection import random_bw_selection
+from opti.moo.bw_selection import bw_selection
 from opti.moo.population_modifiers import local_search
 
 class MO_BMR_SAMP(SAMP):
     def __init__(self,
                  mutation = None,
                  problem=None,
-                 selection_function=random_bw_selection,
+                 selection_function=bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
                  initializer = random_initialize,
@@ -38,7 +38,7 @@ class MO_BWR_SAMP(SAMP):
     def __init__(self,
                  mutation = None,
                  problem=None,
-                 selection_function=random_bw_selection,
+                 selection_function=bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
                  initializer = random_initialize,
@@ -61,7 +61,7 @@ class MO_BMWR_SAMP(SAMP):
     def __init__(self,
                  mutation = None,
                  problem=None,
-                 selection_function=random_bw_selection,
+                 selection_function=bw_selection,
                  sorting_function=ranking_crowding,
                  pmods=[local_search],
                  initializer = random_initialize,

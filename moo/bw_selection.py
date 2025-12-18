@@ -25,6 +25,16 @@ def random_bw_selection(population):
 
     return {"best":population_b[selected_b], "worst":population_w[selected_w]}
 
+def bw_selection(population):
+    best = population.solutions[0,:]
+    worst = population.solutions[-1,0]
+    return {"best":best, "worst":worst}
+
+def bw_selection_a(population, archive):
+    best = archive.solutions[0,:]
+    worst = population.solutions[-1,0]
+    return {"best":best, "worst":worst}
+
 
 def archive_bw_selection(population, archive):
     pool_size = population.get_size()

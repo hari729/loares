@@ -17,7 +17,7 @@ def bmr(problem, population, pool):
     random_pop = population.solutions[r_i]
     
     new = (population.solutions + 
-                 r1  * (best_pop - T * mean) -
+                 r1  * (best_pop - T * mean) +
                  r2  * (best_pop - random_pop))
     
     new = np.clip(new,bounds[:,0],bounds[:,1])

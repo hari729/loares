@@ -8,29 +8,40 @@ from opti.moo.plots import plot_pareto_2d_comparison, plot_pareto_2d_comparison_
 from opti.moo.plots import plot_convergence_comparison, plot_pareto_3d_many_obj
 from pymoo.util.normalization import normalize
 
-def find_compromise_solution(pareto_df, comparison_path, problem):
+# def find_compromise_solution(pareto_df, comparison_path, problem):
+#
+#     algorithms = pareto_df["algorithm"].unique()
+#     obj_cols = [f"f{o+1}" for o in range(problem.n_obj)]
+#     best_solutions = []
+#     for algo in algorithms:
+#         df = pareto_df[pareto_df["algorithm"] == algo]
+#         flipped = df[obj_cols].values * problem.minmax 
+#         optimal_point = flipped.min(axis=0)
+#         direct_ed = np.linalg.norm(flipped - optimal_point, axis=1)
+#         df = df.assign(direct_ed= direct_ed)
+#         df.sort_values(by="direct_ed", ascending=True)
+#         best_solutions.append( df.head(1))
+#         normalized = normalize(flipped, flipped.min(axis=0), flipped.max(axis=0))
+#         normalized_ed = np.linalg.norm(normalized, axis=1)
+#         df["normalized_ed"] = normalized_ed
+#         df.sort_values(by="normalized_ed", ascending=True)
+#         best_solutions.append(df.head(1))
+#
+#     best_df = pd.concat(best_solutions, ignore_index=True)
+#     output_path = comparison_path / f"best-solutions.csv"
+#     best_df.to_csv(output_path, index=False)
+#     tqdm.write(f"✅ Saved best-solutions to → {output_path}")
 
-    algorithms = pareto_df["algorithm"].unique()
-    obj_cols = [f"f{o+1}" for o in range(problem.n_obj)]
-    best_solutions = []
-    for algo in algorithms:
-        df = pareto_df[pareto_df["algorithm"] == algo]
-        flipped = df[obj_cols].values * problem.minmax 
-        optimal_point = flipped.min(axis=0)
-        direct_ed = np.linalg.norm(flipped - optimal_point, axis=1)
-        df = df.assign(direct_ed= direct_ed)
-        df.sort_values(by="direct_ed", ascending=True)
-        best_solutions.append( df.head(1))
-        normalized = normalize(flipped, flipped.min(axis=0), flipped.max(axis=0))
-        normalized_ed = np.linalg.norm(normalized, axis=1)
-        df["normalized_ed"] = normalized_ed
-        df.sort_values(by="normalized_ed", ascending=True)
-        best_solutions.append(df.head(1))
-
-    best_df = pd.concat(best_solutions, ignore_index=True)
-    output_path = comparison_path / f"best-solutions.csv"
-    best_df.to_csv(output_path, index=False)
-    tqdm.write(f"✅ Saved best-solutions to → {output_path}")
+def get_master_dfs(problem, selection_metric = "HV", minmax = 1, dir = None):
+    problem_name = problem.get_info()["name"]
+    root_dir = Path(dir) if dir else Path(__main__.__file__).parent.resolve()
+    master_list_path = Path(f"{root_dir}/results/{problem_name}")
+    all_lists = [a for a in master_list_path.iterdir() if not a.is_dir()]
+    master_data_frames = []
+    for master_list in all_lists:
+        temp = pd.read_csv(master_list)
+        master_data_frames.append({"class":master_list.stem, "dataF":temp})
+    return master_data_frames
 
 def basic_compare(problem, selection_metric = "HV", minmax = 1, dir = None):
     problem_info = problem.get_info()
@@ -56,7 +67,7 @@ def basic_compare(problem, selection_metric = "HV", minmax = 1, dir = None):
 
         pareto_df = pd.concat(pareto_front_list, ignore_index=True)
         
-        find_compromise_solution(pareto_df, comparison_path, problem)
+        # find_compromise_solution(pareto_df, comparison_path, problem)
 
         plot_convergence_comparison(convergence_data_list, df["algorithm"], comparison_path, problem_name)
         
@@ -121,3 +132,4 @@ def compare_solutions(problem, objectives_dict,
 
         else:
             print("Plotter not defined yet")
+

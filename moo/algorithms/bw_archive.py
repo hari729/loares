@@ -4,7 +4,7 @@ from opti.base.bwr import bwr
 from opti.base.bmr import bmr
 from opti.base.bmwr import bmwr
 from opti.moo.algorithms.general import MOArchive
-from opti.moo.bw_selection import archive_bw_selection
+from opti.moo.bw_selection import bw_selection_a
 from opti.moo.population_modifiers import local_search
 
 
@@ -12,7 +12,7 @@ class MO_BMR_ARCHIVE(MOArchive):
     def __init__(self,
                  mutation = None,
                  problem = None,
-                 selection_function = archive_bw_selection,
+                 selection_function = bw_selection_a,
                  pmods=[local_search],
                  initializer = random_initialize,
                  seed = 1):
@@ -31,7 +31,7 @@ class MO_BWR_ARCHIVE(MOArchive):
     def __init__(self,
                  mutation = None,
                  problem = None,
-                 selection_function = archive_bw_selection,
+                 selection_function = bw_selection_a,
                  pmods=[local_search],
                  initializer = random_initialize,
                  seed = 1):
@@ -50,7 +50,7 @@ class MO_BMWR_ARCHIVE(MOArchive):
     def __init__(self,
                  mutation = None,
                  problem = None,
-                 selection_function = archive_bw_selection,
+                 selection_function = bw_selection_a,
                  pmods=[local_search],
                  initializer = random_initialize,
                  seed = 1):
