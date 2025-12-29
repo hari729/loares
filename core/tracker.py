@@ -30,3 +30,27 @@ class Tracker():
             solutions = solutions[:self.remaining_evals(),:]
         self.evals += solutions.shape[0]
         return problem.create_population(solutions)
+
+class IterationTracker():
+    def __init__(self, problem):
+        self.problem = problem
+        self.max_evals = problem.max_evals
+        self.evals = 0
+        self.prev_evals = 0
+        self.tracking_interval = int(self.max_evals * 0.05)
+
+    def remaining_evals(self):
+        return self.max_evals - self.evals
+
+    def evaluate(self, solutions):
+        if self.remaining_evals() < solutions.shape[0]:
+            solutions = solutions[:self.remaining_evals(),:]
+        self.evals += solutions.shape[0]
+        objectives, constraints =  problem.evaluate(solutions)
+        return solutions, objectives, constraints
+
+    def create_population(self, solutions):
+        if self.remaining_evals() < solutions.shape[0]:
+            solutions = solutions[:self.remaining_evals(),:]
+        self.evals += solutions.shape[0]
+        return problem.create_population(solutions)
