@@ -70,3 +70,21 @@ class Problem():
         population.objectives *= self.minmax
         return population
 
+
+class ProblemHandler():
+    def __init__(self, problem):
+        self.problem = problem
+        self.max_evals = problem.max_evals
+        self.evals = 0
+        self.prev_evals = 0
+
+    def remaining_evals(self):
+        return self.max_evals - self.evals
+
+    def evaluate(self, solutions):
+        if self.remaining_evals() < solutions.shape[0]:
+            solutions = solutions[:self.remaining_evals(),:]
+        self.evals += solutions.shape[0]
+        objectives, constraints =  self.problem.evaluate(solutions)
+        return solutions, objectives, constraints
+

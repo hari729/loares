@@ -31,18 +31,5 @@ class Result():
         print(f"Algorithm settings: {self.algorithm.get_info()}")
         print(f"Final metrics: {self.final_metrics}")
 
-class PopulationRecorderHDF5():
-    def __init__(self,filename):
-        self.file = h5py.File(filename, "w")
-        self.iter_group = self.file.create_group("iterations")
-
-    def record(self, population, iterations):
-        grp = self.iter_group.create_group(f"{iteration:06d}")
-        grp.create_dataset("X", data=population.X)
-        grp.create_dataset("F", data=population.F)
-        grp.create_dataset("G", data=population.G)
-
-    def close(self):
-        self.file.close()
 
 
