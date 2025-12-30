@@ -23,3 +23,26 @@ def bmr(problem, population, pool):
     new = np.clip(new,bounds[:,0],bounds[:,1])
 
     return new
+
+def bmrX(problem, population, pool):
+    pop_size = population.get_size()
+    variables = problem.n_vars
+    bounds = problem.bounds
+
+    r_i = np.random.randint(0, pop_size, size=pop_size)
+    r1 = np.random.rand(pop_size, 1)
+    r2 = np.random.rand(pop_size, 1)
+    T = np.random.choice([1, 2], size=(pop_size, 1))
+
+    best_pop = pool["best"]
+    worst_pop = pool["worst"]
+    mean = np.mean(population.X, axis=0)
+    random_pop = population.X[r_i]
+    
+    new = (population.X + 
+                 r1  * (best_pop - T * mean) +
+                 r2  * (best_pop - random_pop))
+    
+    new = np.clip(new,bounds[:,0],bounds[:,1])
+
+    return new

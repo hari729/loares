@@ -40,5 +40,5 @@ def ranking_crowding(problem, population, limit, ndf=False):
         metadata = metadata - np.min(metadata)
         metadata = metadata.reshape(-1, 1)
 
-    return MoPopulation(p_array, o_array, c_array, metadata)
-
+    # return MoPopulation(p_array, o_array, c_array, metadata)
+    return p_array, o_array, c_array, metadata

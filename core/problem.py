@@ -77,6 +77,7 @@ class ProblemHandler():
         self.max_evals = problem.max_evals
         self.evals = 0
         self.prev_evals = 0
+        self.recording_interval = int(self.max_evals * 0.05)
 
     def remaining_evals(self):
         return self.max_evals - self.evals
@@ -87,4 +88,11 @@ class ProblemHandler():
         self.evals += solutions.shape[0]
         objectives, constraints =  self.problem.evaluate(solutions)
         return solutions, objectives, constraints
+
+    def interval_status(self):
+        if (((self.evals//self.recording_interval) > (self.prev_evals//self.recording_interval)) 
+            | (self.prev_evals == 0)):
+            return 1
+        else:
+            return 0
 

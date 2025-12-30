@@ -1,6 +1,6 @@
 import numpy as np 
 import warnings
-from opti.core.initializer import random_initiatlize
+from opti.core.initializer import random_initialize
 import h5py
 
 class Population():
@@ -53,34 +53,30 @@ class Population():
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
-class PopulationX():
-    def __init__(self, X = None, F = None, G = None, M = None):
-        self.X = X
-        self.F = F
-        self.G = G
-        self.M = M
 
 class PopulationHandler():
-    def __init__(self, ProblemHandler, initializer, sorting_function):
+    def __init__(self, ProblemHandler, sorting_function, initializer=None):
         if initializer is None:
-            initializer = random_initiatlize
-        self.population = PopulationX(
-                ProblemHandler.evaluate(initializer(ProblemHandler.problem)))
+            initializer = random_initialize
+        X = initializer(ProblemHandler.problem)
+        _, F, G = ProblemHandler.evaluate(X)
+        self.population = Population(X, F, G)
         self.sort = sorting_function
+        self.ProblemHandler = ProblemHandler
 
-    def raw_udpate(self, X, F, G, M = None):
-        self.population.X = X
-        self.population.F = F
-        self.population.G = G
-        self.population.M = M
+    def raw_update(self, X, F, G, M = None):
+        self.population.solutions = X
+        self.population.objectives = F
+        self.population.constraints = G
+        self.population.metadata = M
 
     def get_size(self):
-        return self.population.X.shape[0]
+        return self.population.solutions.shape[0]
 
     def merge(self, X, F, G):
-        temp_population = PopulationX(np.row_stack([self.population.X, X]),
-                                      np.row_stack([self.population.F, F]),
-                                      np.row_stack([self.population.G, G]))
+        temp_population = Population(np.row_stack([self.population.solutions, X]),
+                                      np.row_stack([self.population.objectives, F]),
+                                      np.row_stack([self.population.constraints, G]))
         return temp_population
 
     def split(self, n_sub_pops):
@@ -90,19 +86,21 @@ class PopulationHandler():
         idx = np.arange(self.get_size())
         np.random.shuffle(idx)
         parts = np.array_split(idx, n_sub_pops)
-        return [PopulationX(self.population.X[i], self.population.F[i], self.population.G[i]) for i in parts]
+        return [Population(self.population.solutions[i], self.population.objectives[i], self.population.constraints[i]) for i in parts]
 
     def get_dict(self):
-        combined = np.hstack([self.population.X, self.population.F, self.population.G])
+        combined = np.hstack([self.population.solutions, self.population.objectives, self.population.constraints])
         col_labels = (
-            [f"x{i+1}" for i in range(self.population.X.shape[1])] +
-            [f"f{j+1}" for j in range(self.population.F.shape[1])] +
-            [f"g{k+1}" for k in range(self.population.G.shape[1])]
+            [f"x{i+1}" for i in range(self.population.solutions.shape[1])] +
+            [f"f{j+1}" for j in range(self.population.objectives.shape[1])] +
+            [f"g{k+1}" for k in range(self.population.constraints.shape[1])]
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
     def update(self, X, F, G):
-        self.raw_update(self.sort(self.merge(X, F, G)))
+        nX, nF, nG, nM = self.sort(self.ProblemHandler.problem,self.merge(X, F, G),
+                                self.population.solutions.shape[0])
+        self.raw_update(nX, nG, nF, nM)
 
     def get(self):
         return self.population
@@ -111,15 +109,14 @@ class PopulationRecorderHDF5():
     def __init__(self, filename):
         self.file = h5py.File(filename, "w")
         self.iter_group = self.file.create_group("function_evals")
-        self.recording_interval = int(self.max_evals * 0.05)
 
     def record(self, population, evals):
-        if (((self.evals//self.recording_interval) > (self.prev_evals//self.recording_interval)) 
-            | (self.prev_evals == 0)):
-            grp = self.iter_group.create_group(f"{evals:06d}")
-            grp.create_dataset("X", data=population.X)
-            grp.create_dataset("F", data=population.F)
-            grp.create_dataset("G", data=population.G)
-
+        grp = self.iter_group.create_group(f"{evals:06d}")
+        grp.create_dataset("X", data=population.solutions)
+        grp.create_dataset("F", data=population.objectives)
+        grp.create_dataset("G", data=population.constraints)
+        grp.create_dataset("M", data=population.metadata)
     def close(self):
         self.file.close()
+
+
