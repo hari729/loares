@@ -3,39 +3,39 @@ from opti.core.population import PopulationRecorderHDF5
 
 class FlowHandler():
     def __init__(self, ProblemHandler, UpdateRule, PopulationHandler, Mods):
-        self.ProblemHandler = ProblemHandler
-        self.UpdateRule = UpdateRule
-        self.PopulationHandler = PopulationHandler
-        self.Mods = Mods
+        self.problemHandler = ProblemHandler
+        self.updateRule = UpdateRule
+        self.populationHandler = PopulationHandler
+        self.mods = Mods
 
     def step(self):
-        temp_X = self.UpdateRule.next_gen(self.ProblemHandler.problem,
-                                self.PopulationHandler.population) 
-        for mod in self.Mods:
-            temp_X = np.vstack([temp_X,mod(self.ProblemHandler.problem
-                                           , self.PopulationHandler)])
-        temp_X, temp_F, temp_G = self.ProblemHandler.evaluate(temp_X)
-        self.PopulationHandler.update(temp_X, temp_F, temp_G, self.ProblemHandler)
+        temp_X = self.updateRule.next_gen(self.problemHandler.problem,
+                                            self.population)
+        for mod in self.mods:
+            temp_X = np.vstack([temp_X,mod(self.problemHandler.problem,
+                                           self.population, self.populationHandler)])
+        temp_population = self.problemHandler.evaluate(temp_X)
+        self.population = self.populationHandler.update([self.population, temp_population],
+                                                            self.problemHandler)
 
     def record(self):
-        if self.ProblemHandler.interval_status():
-            self.PopulationRecorder.record(self.PopulationHandler.get(),
-                                            self.ProblemHandler.evals)
+        if self.problemHandler.interval_status():
+            self.populationRecorder.record(self.populationHandler.get_refined(self.population),
+                                            self.problemHandler.evals)
+            self.problemHandler.update_evals()
 
     def stop_record(self):
-        self.PopulationRecorder.close()
+        self.populationRecorder.close()
 
     def initialize(self, filedir):
-        self.PopulationRecorder = PopulationRecorderHDF5(filedir)
-        self.PopulationHandler.initialize(self.ProblemHandler)
-        print("first record")
+        self.populationRecorder = PopulationRecorderHDF5(filedir)
+        self.population = self.populationHandler.initialize(self.problemHandler)
         self.record()
 
     def run(self, filedir):
         self.initialize(filedir)
-        while self.ProblemHandler.remaining_evals() > 0:
+        while self.problemHandler.remaining_evals() > 0:
             self.step()
-            print("inter record")
             self.record()
         self.stop_record()
 

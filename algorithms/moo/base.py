@@ -11,24 +11,24 @@ class MOPopulationHandler(PopulationHandler):
     def __init__(self):
         super().__init__(ranking_crowding)
 
-    def get_pareto(self):
-        mask = (self.population.metadata[:,0] == 0)
-        ps = self.population.solutions[mask]
-        po = self.population.objectives[mask]
-        pc = self.population.constraints[mask]
-        pm = self.population.metadata[mask]
+    def get_raw_pareto(self, population):
+        mask = (population.metadata[:,0] == 0)
+        ps = population.solutions[mask]
+        po = population.objectives[mask]
+        pc = population.constraints[mask]
+        pm = population.metadata[mask]
 
         _, unique_idx = np.unique(po, axis=0, return_index=True)
         unique_idx = np.sort(unique_idx)
 
         return ps[unique_idx], po[unique_idx], pc[unique_idx], pm[unique_idx]
 
-    def get_pareto_population(self):
-        ps,po,pc,pm = self.get_pareto()
+    def get_refined(self, population):
+        ps,po,pc,pm = self.get_raw_pareto(population)
         return Population(ps, po, pc, pm)
 
-    def get_pareto_dict(self):
-        ps,po,pc,_ = self.get_pareto()
+    def get_pareto_dict(self, population):
+        ps,po,pc,_ = self.get_raw_pareto(population)
         combined = np.hstack([ps, po, pc])
         col_labels = (
             [f"x{i+1}" for i in range(ps.shape[1])] +
@@ -41,11 +41,6 @@ class MORankingCrowdingAlgo(FlowHandler):
     def __init__(self, ProblemHandler, UpdateRule, Mods=[local_search]):
         super().__init__(ProblemHandler, UpdateRule, MOPopulationHandler(), 
                          Mods)
-
-    def record(self):
-            if self.ProblemHandler.interval_status():
-                self.PopulationRecorder.record(self.PopulationHandler.get_pareto_population(),
-                                                self.ProblemHandler.evals)
 
 class MO_BMR(MORankingCrowdingAlgo):
     def __init__(self, ProblemHandler):

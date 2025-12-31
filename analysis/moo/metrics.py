@@ -25,9 +25,9 @@ def calculate_spread(pf, true_pf):
     return delta
 
 
-def performance_metrics(problem, population):
+def performance_metrics(problem, pareto_population):
 
-    _,objective_values,_,_ = population.get_pareto()
+    objective_values = pareto_population.objectives
     ref_point = np.ones(problem.n_obj) + 1e-5
     truefront = problem.get_true_front()
     metrics = {}

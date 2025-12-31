@@ -1,6 +1,6 @@
 import numpy as np 
 
-def local_search(problem, PopulationHandler, factor=0.05):
+def local_search(problem, population, PopulationHandler, factor=0.05):
     """
     Generates new solutions by perturbing the top solutions from the base population.
 
@@ -14,7 +14,7 @@ def local_search(problem, PopulationHandler, factor=0.05):
     Returns:
     - ndarray of new, locally searched solutions.
     """
-    base_population,_,_,_ = PopulationHandler.get_pareto()
+    base_population,_,_,_ = PopulationHandler.get_raw_pareto(population)
     bounds = problem.bounds
 
     n_search = 6 * base_population.shape[0] // 100
@@ -36,9 +36,9 @@ def local_search(problem, PopulationHandler, factor=0.05):
 
     return searched_solutions
 
-def opposition(problem, PopulationHandler):
+def opposition(problem, population, PopulationHandler):
     bounds = problem.bounds
-    current_p = PopulationHandler.get().solutions
+    current_p = population.solutions
     opp_p = np.sum(bounds, axis=1) - current_p
     opp_p = np.clip(opp_p, bounds[:,0], bounds[:,1])
     return opp_p

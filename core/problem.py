@@ -1,7 +1,6 @@
 import numpy as np
 
 from opti.core.population import Population
-from opti.moo.population import MoPopulation
 
 def no_modifier(X):
     return X 
@@ -36,11 +35,6 @@ class Problem():
     def evaluate(self, solutions):
         return self.function(solutions)
 
-    def get_minmax_applied_pop(self, solutions):
-        population = self.create_population(solutions)
-        population.objectives *= self.minmax
-        return population
-
     def get_true_front(self):
         return None
 
@@ -56,15 +50,6 @@ class Problem():
             "variable_modifier" : str(self.variable_modifier.__name__)
         }
         return dict
-
-    def create_population(self, solutions):
-        X = solutions
-        F, G  = self.evaluate(solutions)
-        if self.n_obj > 2:
-            population = MoPopulation(X, F, G)
-        else:
-            population = Population(X, F, G)
-        return population
 
     def objective_correction(self, population):
         population.objectives *= self.minmax
@@ -82,18 +67,23 @@ class ProblemHandler():
     def remaining_evals(self):
         return self.max_evals - self.evals
 
+    def get_evals(self):
+        return self.evals
+
     def evaluate(self, solutions):
         if self.remaining_evals() < solutions.shape[0]:
             solutions = solutions[:self.remaining_evals(),:]
         self.evals += solutions.shape[0]
         solutions = self.problem.variable_modifier(solutions)
         objectives, constraints =  self.problem.evaluate(solutions)
-        return solutions, objectives, constraints
+        return Population(solutions, objectives, constraints)
 
     def interval_status(self):
-        if (((self.evals//self.recording_interval) > (self.prev_evals//self.recording_interval)) 
-            | (self.prev_evals == 0)):
+        if ((self.evals//self.recording_interval) > (self.prev_evals//self.recording_interval)) | (self.prev_evals == 0):
             return 1
         else:
             return 0
+
+    def update_evals(self):
+        self.prev_evals = self.get_evals()
 

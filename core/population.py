@@ -1,7 +1,9 @@
 import numpy as np 
 import warnings
+from opti.analysis.moo import metrics
 from opti.core.initializer import random_initialize
 import h5py
+
 
 class Population():
 
@@ -11,48 +13,17 @@ class Population():
         self.constraints = G
         self.metadata = M
 
-    def update(self, X, F, G, M):
-        self.solutions = X
-        self.objectives = F
-        self.constraints = G
-        self.metadata = M
-
     def get_size(self):
         return self.solutions.shape[0]
 
-    def merge(self, new_gen, new_obj, new_constr):
-        temp_population = Population(np.row_stack([self.solutions, new_gen]),
-                                     np.row_stack([self.objectives, new_obj]),
-                                     np.row_stack([self.constraints, new_constr]))
-        return temp_population
-
     def __add__(self, other):
         if isinstance(other, Population):
-            X = np.row_stack([self.solutions, other.solutions])
-            F = np.row_stack([self.objectives, other.objectives])
-            G = np.row_stack([self.constraints, other.constraints])
+            X = np.vstack([self.solutions, other.solutions])
+            F = np.vstack([self.objectives, other.objectives])
+            G = np.vstack([self.constraints, other.constraints])
             return Population(X, F, G)
         else:
             raise TypeError("Can only add another instance of Population class")
-
-    def split(self, n_sub_pops):
-        if n_sub_pops > self.get_size():
-            warnings.warn("No. of sub opulations exceed population size, value is automatically reduced.", Warning)
-            n_sub_pops = self.get_size()
-        idx = np.arange(self.get_size())
-        np.random.shuffle(idx)
-        parts = np.array_split(idx, n_sub_pops)
-        return [Population(self.solutions[i], self.objectives[i], self.constraints[i]) for i in parts]
-
-    def get_dict(self):
-        combined = np.hstack([self.solutions, self.objectives, self.constraints])
-        col_labels = (
-            [f"x{i+1}" for i in range(self.solutions.shape[1])] +
-            [f"f{j+1}" for j in range(self.objectives.shape[1])] +
-            [f"g{k+1}" for k in range(self.constraints.shape[1])]
-        )
-        return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
-
 
 class PopulationHandler():
     def __init__(self, sorting_function, initializer=None):
@@ -63,57 +34,52 @@ class PopulationHandler():
 
     def initialize(self, ProblemHandler):
         X = self.initializer(ProblemHandler.problem)
-        X, F, G = ProblemHandler.evaluate(X)
-        self.population = Population(X, F, G)
-        self.raw_update(*self.sort(ProblemHandler.problem,
-                                    self.population, self.population.solutions.shape[0]))
+        population = ProblemHandler.evaluate(X)
+        return Population(*self.sort(ProblemHandler.problem,
+                            population, population.solutions.shape[0]))
 
-    def raw_update(self, X, F, G, M = None):
-        self.population.solutions = X
-        self.population.objectives = F
-        self.population.constraints = G
-        self.population.metadata = M
+    def raw_update(self,population, X, F, G, M):
+        population.solutions = X
+        population.objectives = F
+        population.constraints = G
+        population.metadata = M
 
-    def raw_replace(self, population):
-        self.population = population
+    def get_size(self, population):
+        return population.solutions.shape[0]
 
-    def get_size(self):
-        return self.population.solutions.shape[0]
-
-    def merge(self, X, F, G):
-        temp_population = Population(np.row_stack([self.population.solutions, X]),
-                                      np.row_stack([self.population.objectives, F]),
-                                      np.row_stack([self.population.constraints, G]))
+    def merge(self, population_list):
+        temp_population = sum(population_list[1:], population_list[0])
         return temp_population
 
-    def split(self, n_sub_pops):
-        if n_sub_pops > self.get_size():
-            warnings.warn("No. of sub opulations exceed population size, value is automatically reduced.", Warning)
-            n_sub_pops = self.get_size()
-        idx = np.arange(self.get_size())
+    def split(self,population, n_sub_pops):
+        if n_sub_pops > self.get_size(population):
+            warnings.warn("No. of sub populations exceed population size, value is automatically reduced.", Warning)
+            n_sub_pops = self.get_size(population)
+        idx = np.arange(self.get_size(population))
         np.random.shuffle(idx)
         parts = np.array_split(idx, n_sub_pops)
-        return [Population(self.population.solutions[i], self.population.objectives[i], self.population.constraints[i]) for i in parts]
+        return [Population(population.solutions[i], population.objectives[i], population.constraints[i]) for i in parts]
 
-    def get_dict(self):
-        combined = np.hstack([self.population.solutions, self.population.objectives, self.population.constraints])
+    def get_dict(self, population):
+        combined = np.hstack([population.solutions, population.objectives, population.constraints])
         col_labels = (
-            [f"x{i+1}" for i in range(self.population.solutions.shape[1])] +
-            [f"f{j+1}" for j in range(self.population.objectives.shape[1])] +
-            [f"g{k+1}" for k in range(self.population.constraints.shape[1])]
+            [f"x{i+1}" for i in range(population.solutions.shape[1])] +
+            [f"f{j+1}" for j in range(population.objectives.shape[1])] +
+            [f"g{k+1}" for k in range(population.constraints.shape[1])]
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
-    def self_sort(self, ProblemHandler):
-        self.raw_update(*self.sort(ProblemHandler.problem, self.population, self.get_size()))
+    def get_sorted(self,population, ProblemHandler, limit=None):
+        if limit is None:
+            limit = ProblemHandler.problem.psize
+        return Population(*self.sort(ProblemHandler.problem, population, limit))
 
-    def update(self, X, F, G, ProblemHandler):
-        nX, nF, nG, nM = self.sort(ProblemHandler.problem,self.merge(X, F, G),
-                                    self.get_size())
-        self.raw_update(nX, nG, nF, nM)
+    def update(self, population_list, ProblemHandler, limit=None):
+        temp_population = self.merge(population_list)
+        return self.get_sorted(temp_population, ProblemHandler, limit)
 
-    def get(self):
-        return self.population
+    def get_refined(self, population):
+        return population
 
 class PopulationRecorderHDF5():
     def __init__(self, filename):
@@ -129,4 +95,34 @@ class PopulationRecorderHDF5():
     def close(self):
         self.file.close()
 
+class PopulationHDF5Reader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.file = h5py.File(filepath, "r")
+        self.steps = sorted(self.file.keys())
 
+    def list_steps(self):
+        """Return available recorded steps."""
+        return self.steps
+
+    def get_convergance_data(self, problem, perofrmance_metrics):
+        convergence_data = {}
+        step = 'function_evals'
+        for it in self.file[step]:
+            X = self.file[step][it]['X'][:]
+            F = self.file[step][it]['F'][:]
+            G = self.file[step][it]['G'][:]
+            M = self.file[step][it]['M'][:]
+
+            population = Population(X, F, G, M)
+
+            metrics = perofrmance_metrics(problem, population)
+
+            for key, value in metrics.items():
+                convergence_data.setdefault(key, []).append(value)
+            convergence_data.setdefault("evals", []).append(it)
+
+        return convergence_data
+
+    def close(self):
+        self.file.close()

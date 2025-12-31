@@ -1,0 +1,59 @@
+import numpy as np
+
+from opti.algorithms.moo.base import MORankingCrowdingAlgo
+from opti.base.bmr import bmr
+from opti.base.bwr import bwr
+from opti.base.bmwr import bmwr
+from opti.base.mutation import random_reinit
+from opti.moo.bw_selection import bw_selection_a
+from opti.core.update import UpdateRule
+
+class UpdateRuleA(UpdateRule):
+    def __init__(self, selection, base_function, mutation):
+        super().__init__(selection, base_function, mutation)
+
+    def next_gen_a(self, problem, population, archive):
+        new_gen = self.base_function(problem, population, self.selection(population, archive))
+        new_gen = self.mutation(problem, new_gen)
+        return new_gen
+
+BMR_a = UpdateRuleA(bw_selection_a, bmr, random_reinit)
+BWR_a = UpdateRuleA(bw_selection_a, bwr, random_reinit)
+BMWR_a = UpdateRuleA(bw_selection_a, bmwr, random_reinit)
+
+class MORankingCrowdingArchive(MORankingCrowdingAlgo):
+    def __init__(self, ProblemHandler, UpdateRuleA):
+        super().__init__(ProblemHandler, UpdateRuleA)
+
+    def initialize(self, filedir):
+        super().initialize(filedir)
+        self.basepopulation = self.populationHandler.get_refined(self.population)
+
+    def step(self):
+        temp_X = self.updateRule.next_gen_a(self.problemHandler.problem,
+                                            self.basepopulation,
+                                            self.population)
+        for mod in self.mods:
+            temp_X = np.vstack([temp_X,mod(self.problemHandler.problem,
+                                           self.basepopulation, self.populationHandler)])
+
+        temp_population = self.problemHandler.evaluate(temp_X)
+        self.basepopulation = self.populationHandler.update([self.basepopulation, temp_population],
+                                                            self.problemHandler)
+
+        self.population = self.populationHandler.update(
+                                [self.population,
+                                 self.populationHandler.get_refined(self.basepopulation)],
+                                self.problemHandler, self.problemHandler.problem.psize*2)
+
+class MO_BMR_ARCHIVE(MORankingCrowdingArchive):
+    def __init__(self, problemHandler):
+        super().__init__(problemHandler, BMR_a)
+
+class MO_BWR_ARCHIVE(MORankingCrowdingArchive):
+    def __init__(self, problemHandler):
+        super().__init__(problemHandler, BWR_a)
+
+class MO_BMWR_ARCHIVE(MORankingCrowdingArchive):
+    def __init__(self, problemHandler):
+        super().__init__(problemHandler, BMWR_a)
