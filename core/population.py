@@ -74,6 +74,9 @@ class PopulationHandler():
         self.population.constraints = G
         self.population.metadata = M
 
+    def raw_replace(self, population):
+        self.population = population
+
     def get_size(self):
         return self.population.solutions.shape[0]
 
@@ -101,9 +104,12 @@ class PopulationHandler():
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
+    def self_sort(self, ProblemHandler):
+        self.raw_update(*self.sort(ProblemHandler.problem, self.population, self.get_size()))
+
     def update(self, X, F, G, ProblemHandler):
         nX, nF, nG, nM = self.sort(ProblemHandler.problem,self.merge(X, F, G),
-                                self.population.solutions.shape[0])
+                                    self.get_size())
         self.raw_update(nX, nG, nF, nM)
 
     def get(self):

@@ -4,8 +4,7 @@ from opti.core.flow import FlowHandler
 
 from opti.base.bw_rules import BMR, BWR, BMWR
 from opti.algorithms.moo.mods import local_search
-
-from opti.moo.sorting import ranking_crowding
+from opti.algorithms.moo.sorting import ranking_crowding
 
 
 class MOPopulationHandler(PopulationHandler):
@@ -38,24 +37,24 @@ class MOPopulationHandler(PopulationHandler):
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
-class MORankdingCrowdingAlgo(FlowHandler):
-    def __init__(self, ProblemHandler, UpdateRule):
+class MORankingCrowdingAlgo(FlowHandler):
+    def __init__(self, ProblemHandler, UpdateRule, Mods=[local_search]):
         super().__init__(ProblemHandler, UpdateRule, MOPopulationHandler(), 
-                         [local_search])
+                         Mods)
 
     def record(self):
             if self.ProblemHandler.interval_status():
                 self.PopulationRecorder.record(self.PopulationHandler.get_pareto_population(),
                                                 self.ProblemHandler.evals)
 
-class MO_BMR(MORankdingCrowdingAlgo):
+class MO_BMR(MORankingCrowdingAlgo):
     def __init__(self, ProblemHandler):
         super().__init__(ProblemHandler, BMR)
 
-class MO_BWR(MORankdingCrowdingAlgo):
+class MO_BWR(MORankingCrowdingAlgo):
     def __init__(self, ProblemHandler):
-        super.__init__(ProblemHandler, BWR)
+        super().__init__(ProblemHandler, BWR)
 
-class MO_BMWR(MORankdingCrowdingAlgo):
+class MO_BMWR(MORankingCrowdingAlgo):
     def __init__(self, ProblemHandler):
-        super.__init__(ProblemHandler, BMWR)
+        super().__init__(ProblemHandler, BMWR)

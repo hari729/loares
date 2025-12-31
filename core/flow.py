@@ -25,12 +25,17 @@ class FlowHandler():
     def stop_record(self):
         self.PopulationRecorder.close()
 
-    def run(self, filedir):
+    def initialize(self, filedir):
         self.PopulationRecorder = PopulationRecorderHDF5(filedir)
         self.PopulationHandler.initialize(self.ProblemHandler)
+        print("first record")
         self.record()
+
+    def run(self, filedir):
+        self.initialize(filedir)
         while self.ProblemHandler.remaining_evals() > 0:
             self.step()
+            print("inter record")
             self.record()
         self.stop_record()
 
