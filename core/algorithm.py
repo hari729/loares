@@ -159,6 +159,3 @@ class SAMP(Algorithm):
         else:
             print("Stopped")
 
-class Algo():
-    def __init__(self, FlowHandler):
-        self.FlowHandler = FlowHandler

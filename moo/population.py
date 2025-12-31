@@ -1,5 +1,5 @@
 import numpy as np
-from opti.core.population import Population
+from opti.core.population import Population, PopulationHandler
 
 class MoPopulation(Population):
     def __init__(self, X, F, G, M = None):

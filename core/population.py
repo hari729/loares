@@ -55,14 +55,18 @@ class Population():
 
 
 class PopulationHandler():
-    def __init__(self, ProblemHandler, sorting_function, initializer=None):
+    def __init__(self, sorting_function, initializer=None):
         if initializer is None:
             initializer = random_initialize
-        X = initializer(ProblemHandler.problem)
-        _, F, G = ProblemHandler.evaluate(X)
-        self.population = Population(X, F, G)
+        self.initializer = initializer
         self.sort = sorting_function
-        self.ProblemHandler = ProblemHandler
+
+    def initialize(self, ProblemHandler):
+        X = self.initializer(ProblemHandler.problem)
+        X, F, G = ProblemHandler.evaluate(X)
+        self.population = Population(X, F, G)
+        self.raw_update(*self.sort(ProblemHandler.problem,
+                                    self.population, self.population.solutions.shape[0]))
 
     def raw_update(self, X, F, G, M = None):
         self.population.solutions = X
@@ -97,8 +101,8 @@ class PopulationHandler():
         )
         return {name: combined[:, idx] for idx, name in enumerate(col_labels)}
 
-    def update(self, X, F, G):
-        nX, nF, nG, nM = self.sort(self.ProblemHandler.problem,self.merge(X, F, G),
+    def update(self, X, F, G, ProblemHandler):
+        nX, nF, nG, nM = self.sort(ProblemHandler.problem,self.merge(X, F, G),
                                 self.population.solutions.shape[0])
         self.raw_update(nX, nG, nF, nM)
 

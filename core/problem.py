@@ -86,6 +86,7 @@ class ProblemHandler():
         if self.remaining_evals() < solutions.shape[0]:
             solutions = solutions[:self.remaining_evals(),:]
         self.evals += solutions.shape[0]
+        solutions = self.problem.variable_modifier(solutions)
         objectives, constraints =  self.problem.evaluate(solutions)
         return solutions, objectives, constraints
 
