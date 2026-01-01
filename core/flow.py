@@ -1,5 +1,6 @@
 import numpy as np
 from opti.core.population import PopulationRecorderHDF5
+from opti.analysis.utils import dict_to_csv
 
 class FlowHandler():
     def __init__(self, ProblemHandler, UpdateRule, PopulationHandler, Mods):
@@ -38,6 +39,7 @@ class FlowHandler():
             self.step()
             self.record()
         self.stop_record()
+        return self.populationHandler.get_refined_dict(self.population)
 
     def get_info(self):
         dict = {

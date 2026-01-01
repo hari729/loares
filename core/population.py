@@ -81,6 +81,9 @@ class PopulationHandler():
     def get_refined(self, population):
         return population
 
+    def get_refined_dict(self, population):
+        return population
+
 class PopulationRecorderHDF5():
     def __init__(self, filename):
         self.file = h5py.File(filename, "w")
@@ -96,33 +99,44 @@ class PopulationRecorderHDF5():
         self.file.close()
 
 class PopulationHDF5Reader:
-    def __init__(self, filepath):
-        self.filepath = filepath
-        self.file = h5py.File(filepath, "r")
-        self.steps = sorted(self.file.keys())
+    def __init__(self, problem, perofrmance_metrics):
+        self.perofrmance_metrics = perofrmance_metrics
+        self.problem = problem
 
-    def list_steps(self):
-        """Return available recorded steps."""
-        return self.steps
+    def list_keys(self, filepath):
+        file = h5py.File(filepath, "r")
+        keys = sorted(file.keys())
+        file.close()
+        return keys
 
-    def get_convergance_data(self, problem, perofrmance_metrics):
+    def get_metrics_history(self, filepath, group):
+        file = h5py.File(filepath, "r")
         convergence_data = {}
-        step = 'function_evals'
-        for it in self.file[step]:
-            X = self.file[step][it]['X'][:]
-            F = self.file[step][it]['F'][:]
-            G = self.file[step][it]['G'][:]
-            M = self.file[step][it]['M'][:]
+        for it in file[group]:
+            X = file[group][it]['X'][:]
+            F = file[group][it]['F'][:]
+            G = file[group][it]['G'][:]
+            M = file[group][it]['M'][:]
 
             population = Population(X, F, G, M)
 
-            metrics = perofrmance_metrics(problem, population)
+            metrics = self.perofrmance_metrics(self.problem, population)
 
             for key, value in metrics.items():
                 convergence_data.setdefault(key, []).append(value)
             convergence_data.setdefault("evals", []).append(it)
 
+        file.close()
         return convergence_data
 
-    def close(self):
-        self.file.close()
+    def get_final_population(self, filepath, group):
+        file = h5py.File(filepath, "r")
+        it = f"{self.problem.max_evals:06d}"
+        X = file[group][it]['X'][:]
+        F = file[group][it]['F'][:]
+        G = file[group][it]['G'][:]
+        M = file[group][it]['M'][:]
+
+        population = Population(X, F, G, M)
+
+        return population

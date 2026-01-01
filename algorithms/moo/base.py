@@ -27,7 +27,7 @@ class MOPopulationHandler(PopulationHandler):
         ps,po,pc,pm = self.get_raw_pareto(population)
         return Population(ps, po, pc, pm)
 
-    def get_pareto_dict(self, population):
+    def get_refined_dict(self, population):
         ps,po,pc,_ = self.get_raw_pareto(population)
         combined = np.hstack([ps, po, pc])
         col_labels = (
