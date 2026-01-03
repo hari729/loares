@@ -5,8 +5,12 @@ from opti.base.bmr import bmr
 from opti.base.bwr import bwr
 from opti.base.bmwr import bmwr
 from opti.base.mutation import random_reinit
-from opti.moo.bw_selection import bw_selection_a
 from opti.core.update import UpdateRule
+
+def bw_selection_a(population, archive):
+    best = archive.solutions[0,:]
+    worst = population.solutions[-1,:]
+    return {"best":best, "worst":worst}
 
 class UpdateRuleA(UpdateRule):
     def __init__(self, selection, base_function, mutation):
