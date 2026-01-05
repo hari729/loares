@@ -36,7 +36,7 @@ class ExperimentRunner:
         return {"file": str(filepath), "seed": seed, "final_pop":refined_dict}
 
     def multi_thread(self, seeds, threads=5):
-        print(f"Optimizing {self.problem_info["name"]} using {self.algorithm_info["name"]}")
+        print(f"\nOptimizing {self.problem_info["name"]} using {self.algorithm_info["name"]}")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
         print("Processing\n")

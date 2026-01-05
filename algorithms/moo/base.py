@@ -25,7 +25,7 @@ class MOPopulationHandler(PopulationHandler):
 
     def get_refined(self, population):
         ps,po,pc,pm = self.get_raw_pareto(population)
-        return Population(ps, po, pc, pm)
+        return Population(ps, po, pc, pm.astype(float))
 
     def get_refined_dict(self, population):
         ps,po,pc,_ = self.get_raw_pareto(population)
