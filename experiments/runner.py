@@ -96,4 +96,6 @@ class ExperimentRunner:
 
 
 
-
+class pymooExptRunner(ExperimentRunner):
+    def __init__(self, problem, algorithm):
+        super().__init__(problem, algorithm)

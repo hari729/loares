@@ -8,7 +8,8 @@ def no_modifier(X):
 class Problem():
 
     def __init__(self,
-                 function = None,
+                 function,
+                 name = None,
                  n_vars = 1,
                  n_obj = 1,
                  n_constr = 0,
@@ -17,7 +18,7 @@ class Problem():
                  bounds = None,
                  minmax = None,
                  variable_modifier = None):
-
+        self.name = name
         self.function = function
         self.n_vars = n_vars
         self.n_obj = n_obj
@@ -39,8 +40,12 @@ class Problem():
         return None
 
     def get_info(self):
+        if self.name is not None:
+            name = self.name
+        else:
+            name = str(self.__class__.__name__).replace("_", "-")
         dict = {
-            "name": str(self.__class__.__name__).replace("_", "-"),
+            "name": name,
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
             "bounds" : self.bounds.tolist(),
