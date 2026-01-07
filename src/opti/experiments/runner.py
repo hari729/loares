@@ -63,16 +63,16 @@ class ExperimentRunner:
                     print(f"{m}(mean) :  {mean[m][-1]}")
                     print(f"{m}(std) :  {std[m][-1]}")
 
-        dict_to_csv(mean, self.output_dir, "mean_history")
-        dict_to_csv(std, self.output_dir, "std_history")
-        dict_to_csv(net, self.output_dir, "net_result")
+        dict_to_csv(mean, self.output_dir, "mean-history")
+        dict_to_csv(std, self.output_dir, "std-history")
+        dict_to_csv(net, self.output_dir, "net-result")
 
         final_metrics = {k:[] for k in metrics_list[0].keys()}
         for d in metrics_list:
             for i,j in d.items():
                 final_metrics[i].append(j[-1])
 
-        dict_to_csv(final_metrics, self.output_dir, "final_metrics")
+        dict_to_csv(final_metrics, self.output_dir, "final-metrics")
 
         multi_line_plot([mean, std], self.output_dir)
 
@@ -80,7 +80,7 @@ class ExperimentRunner:
         plot_data = highest_hv_result.final_dict
         plot_data["name"] = highest_hv_result.algorithm_info["name"]
         plot_data["seed"] = highest_hv_result.seed
-        dict_to_csv(plot_data, self.output_dir, "plot_data")
+        dict_to_csv(plot_data, self.output_dir, "plot-data")
         n_obj = self.problem_info["n_obj"]
         if n_obj == 1:
             pass

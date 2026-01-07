@@ -21,6 +21,11 @@ class pymoo_to_opti_prob(optiProblem):
         if self.n_constr == 0:
             self.evaluate = self.evaluate_no_contr
 
+        self.pareto_front = pymoo_prob.pareto_front
+
+    def get_true_front(self, pts=500):
+        return self.pareto_front(pts)
+
 
     def evaluate_no_contr(self, solutions):
         F = self.function(solutions)
