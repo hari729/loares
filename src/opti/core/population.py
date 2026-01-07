@@ -1,6 +1,5 @@
 import numpy as np 
 import warnings
-from opti.analysis.moo import metrics
 from opti.core.initializer import random_initialize
 import h5py
 

@@ -1,6 +1,7 @@
+from typing import final
 import numpy as np
 from opti.core.population import PopulationRecorderHDF5
-from opti.analysis.utils import dict_to_csv
+from opti.core.results import Result
 
 class FlowHandler():
     def __init__(self, ProblemHandler, UpdateRule, PopulationHandler, Mods):
@@ -21,28 +22,32 @@ class FlowHandler():
 
     def record(self):
         if self.problemHandler.interval_status():
-            self.populationRecorder.record(self.populationHandler.get_refined(self.population),
-                                            self.problemHandler.evals)
+            # self.populationRecorder.record(self.populationHandler.get_refined(self.population),
+            #                                 self.problemHandler.evals)
+            self.result.record(self.populationHandler.get_refined(self.population),
+                                self.problemHandler.evals)
             self.problemHandler.update_evals()
 
-    def stop_record(self):
-        self.populationRecorder.close()
+    def stop_record(self, final_dict):
+        # self.populationRecorder.close()
+        self.result.stop(final_dict)
 
-    def initialize(self, filedir):
-        self.populationRecorder = PopulationRecorderHDF5(filedir)
+    def initialize(self,seed):
+        # self.populationRecorder = PopulationRecorderHDF5(filedir)
+        self.result = Result(self.problemHandler.get_info(), self.get_info(), seed)
         self.population = self.populationHandler.initialize(self.problemHandler)
         self.record()
 
-    def run(self, filedir):
-        self.initialize(filedir)
+    def run(self, seed):
+        self.initialize(seed)
         while self.problemHandler.remaining_evals() > 0:
             self.step()
             self.record()
-        self.stop_record()
-        return self.populationHandler.get_refined_dict(self.population)
+        self.stop_record(self.populationHandler.get_refined_dict(self.population))
+        return self.result
 
     def get_info(self):
-        dict = {
+        dictionary = {
             "name": str(self.__class__.__name__).replace("_", "-"),
         }
-        return dict
+        return dictionary

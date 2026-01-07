@@ -73,11 +73,9 @@ def performance_metrics(problem, pareto_population):
 
     return metrics
 
-def raw_performance_metrics(problem, objectives):
+def raw_performance_metrics(objective_values, truefront):
 
-    objective_values = objectives
-    ref_point = np.ones(problem.n_obj) + 1e-5
-    truefront = problem.get_true_front()
+    ref_point = np.ones(objective_values.shape[1]) + 1e-5
     metrics = {}
 
     if truefront is not None:

@@ -36,7 +36,7 @@ class Problem():
     def evaluate(self, solutions):
         return self.function(solutions)
 
-    def get_true_front(self):
+    def get_true_front(self, pts=500):
         return None
 
     def get_info(self):
@@ -52,7 +52,8 @@ class Problem():
             "psize" : self.psize,
             "max_evals" : self.max_evals,
             "minmax" : self.minmax.tolist(),
-            "variable_modifier" : str(self.variable_modifier.__name__)
+            "variable_modifier" : str(self.variable_modifier.__name__),
+            "TF": self.get_true_front()
         }
         return dict
 
@@ -91,4 +92,6 @@ class ProblemHandler():
 
     def update_evals(self):
         self.prev_evals = self.get_evals()
-
+    
+    def get_info(self):
+        return self.problem.get_info()
