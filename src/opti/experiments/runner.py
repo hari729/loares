@@ -12,17 +12,16 @@ from opti.analysis.utils import dict_to_csv
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 
 class ExperimentRunner:
-    def __init__(self, problem, algorithm):
+    def __init__(self, problem, algorithm, test_name):
         self.problem = problem
         self.problemHandler = ProblemHandler(self.problem)
         self.algorithm = algorithm(self.problemHandler)
         self.problem_info = problem.get_info()
         self.algorithm_info = self.algorithm.get_info()
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
         output_dir = (Path.home()/"OptiResults"
                                 /self.problem_info["name"]
-                                /self.algorithm_info["name"]
-                                /timestamp)
+                                /test_name
+                                /self.algorithm_info["name"])
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
