@@ -5,7 +5,7 @@ from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import performance_metrics, raw_performance_metrics
 from opti.core.population import PopulationHDF5Reader, PopulationRecorderHDF5
 from opti.core.results import ResultProcessor
-from opti.analysis.utils import dict_to_csv, dict_to_json
+from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 
 class ExperimentRunner:
@@ -20,7 +20,8 @@ class ExperimentRunner:
         output_dir = (Path.home()/"OptiResults"
                                 /self.problem_info["name"]
                                 /test_name
-                                /self.algorithm_info["name"])
+                                /self.algorithm_info["name"]
+                                /str(self.problem_info['psize']))
         self.output_dir = Path(output_dir)
         Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
@@ -42,11 +43,11 @@ class ExperimentRunner:
         print(f"\nResults saved to {self.output_dir}")
 
     def _post_process(self, output):
-        master_dict = {"Problem": self.problem_info,
+
+        info_dict = {"Problem": self.problem_info,
                        "Algorithm": self.algorithm_info,
                        "UpdateRule": self.update_info}
-        dict_to_json(master_dict, self.output_dir, "Info")
-
+        dict_to_json(info_dict, self.output_dir, "Info")
 
         metrics_list = []
         for res in output:
@@ -82,8 +83,15 @@ class ExperimentRunner:
         for d in metrics_list:
             for i,j in d.items():
                 final_metrics[i].append(j[-1])
+        dict_to_csv(final_metrics, self.output_dir, "final-metrics-per-run")
 
-        dict_to_csv(final_metrics, self.output_dir, "final-metrics")
+        master_dict = {"Problem": self.problem_info["name"],
+                       "Algorithm": self.algorithm_info['name'],
+                       "Max-evals": self.problem_info['max_evals'],
+                       "Psize": self.problem_info["psize"],
+                       **net,
+                       }
+        modify_master_list(master_dict, Path(self.output_dir.parent/"master.csv"))
 
         multi_line_plot([mean, std], self.output_dir)
 
