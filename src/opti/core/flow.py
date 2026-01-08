@@ -1,5 +1,4 @@
 import numpy as np
-from opti.core.population import PopulationRecorderHDF5
 from opti.core.results import Result
 
 class FlowHandler():
@@ -21,18 +20,14 @@ class FlowHandler():
 
     def record(self):
         if self.problemHandler.interval_status():
-            # self.populationRecorder.record(self.populationHandler.get_refined(self.population),
-            #                                 self.problemHandler.evals)
             self.result.record(self.populationHandler.get_refined(self.population),
                                 self.problemHandler.evals)
             self.problemHandler.update_evals()
 
     def stop_record(self, final_dict):
-        # self.populationRecorder.close()
         self.result.stop(final_dict)
 
     def initialize(self,seed):
-        # self.populationRecorder = PopulationRecorderHDF5(filedir)
         self.result = Result(self.problemHandler.get_info(), self.get_info(), seed)
         self.population = self.populationHandler.initialize(self.problemHandler)
         self.record()

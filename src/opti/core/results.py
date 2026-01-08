@@ -18,11 +18,11 @@ class ResultProcessor():
     def __init__(self):
         pass
 
-    def get_metrics_history(self, result, performance_metrics):
+    def get_metrics_history(self, result, performance_metrics, TF=None):
         metrics_history = {}
         for i,evals in enumerate(result.history['evals']):
             metrics = performance_metrics(result.history['pop'][i].objectives,
-                                          result.problem_info["TF"])
+                                          TF)
 
             for key, value in metrics.items():
                 metrics_history.setdefault(key, []).append(value)

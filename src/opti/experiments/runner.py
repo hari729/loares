@@ -3,13 +3,13 @@ import numpy as np
 from multiprocessing import Pool
 from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import performance_metrics, raw_performance_metrics
-from opti.core.population import PopulationHDF5Reader
+from opti.core.population import PopulationHDF5Reader, PopulationRecorderHDF5
 from opti.core.results import ResultProcessor
 from opti.analysis.utils import dict_to_csv, dict_to_json
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 
 class ExperimentRunner:
-    def __init__(self, problem, algorithm, test_name):
+    def __init__(self, problem, algorithm, test_name, TF=None):
         self.problem = problem
         self.problemHandler = ProblemHandler(self.problem)
         self.algorithm = algorithm(self.problemHandler)
@@ -22,8 +22,9 @@ class ExperimentRunner:
                                 /test_name
                                 /self.algorithm_info["name"])
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
+        self.TF = TF
 
     def run(self, seed):
         np.random.seed(seed)
@@ -32,7 +33,8 @@ class ExperimentRunner:
 
     def multi_thread(self, seeds, threads=5):
         print(f"\nOptimizing {self.problem_info['name']} using {self.algorithm_info['name']}")
-        print(f"\nPopulation Size: {self.problem_info['psize']}  Max Evals: {self.problem_info['max_evals']}")
+        print(f"Population Size: {self.problem_info['psize']}  Max Evals: {self.problem_info['max_evals']}")
+        print(f"Runs: {len(seeds)} Seeds:{seeds}")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
         print("Processing\n")
@@ -41,13 +43,19 @@ class ExperimentRunner:
 
     def _post_process(self, output):
         master_dict = {"Problem": self.problem_info,
-                       "UpdateRule": self.update_info,
-                       "Algorithm": self.algorithm_info}
+                       "Algorithm": self.algorithm_info,
+                       "UpdateRule": self.update_info}
         dict_to_json(master_dict, self.output_dir, "Info")
+
 
         metrics_list = []
         for res in output:
-            temp_dict = self.processor.get_metrics_history(res, raw_performance_metrics)
+            recorder = PopulationRecorderHDF5(f"{self.output_dir}/H5/{res.seed:03d}.h5")
+            for i, eval in enumerate(res.history['evals']):
+                recorder.record(res.history['pop'][i], eval)
+            recorder.close()
+            temp_dict = self.processor.get_metrics_history(res, raw_performance_metrics,
+                                                           self.TF)
             temp_dict["seed"] = [res.seed]
             metrics_list.append(temp_dict)
 

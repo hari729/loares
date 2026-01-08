@@ -48,12 +48,11 @@ class Problem():
             "name": name,
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
-            "bounds" : self.bounds.tolist(),
+            "bounds" : str(self.bounds.tolist()),
             "psize" : self.psize,
             "max_evals" : self.max_evals,
-            "minmax" : self.minmax.tolist(),
+            "minmax" : str(self.minmax.tolist()),
             "variable_modifier" : str(self.variable_modifier.__name__),
-            "TF": self.get_true_front()
         }
         return dictionary
 
