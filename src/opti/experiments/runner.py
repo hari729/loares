@@ -1,9 +1,6 @@
-from datetime import datetime
 from pathlib import Path
-from typing import final
-from matplotlib.pyplot import plot
 import numpy as np
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool
 from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import performance_metrics, raw_performance_metrics
 from opti.core.population import PopulationHDF5Reader
