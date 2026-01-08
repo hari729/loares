@@ -33,11 +33,11 @@ class ExperimentRunner:
 
     def multi_thread(self, seeds, threads=5):
         print(f"\nOptimizing {self.problem_info['name']} using {self.algorithm_info['name']}")
-        print(f"Population Size: {self.problem_info['psize']}  Max Evals: {self.problem_info['max_evals']}")
-        print(f"Runs: {len(seeds)} Seeds:{seeds}")
+        print(f"| Population Size: {self.problem_info['psize']} | " +
+                f"Max Evals: {self.problem_info['max_evals']} | Runs: {len(seeds)} |")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
-        print("Processing\n")
+        print("\nProcessing\n")
         self._post_process(output)
         print(f"\nResults saved to {self.output_dir}")
 
