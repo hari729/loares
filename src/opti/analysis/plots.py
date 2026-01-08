@@ -8,7 +8,7 @@ import re
 def multi_line_plot(dict_list, filepath):
     legend = []
     for key in dict_list[0].keys():
-        if key not in ['evals', 'name']:
+        if key not in ['evals', 'name', 'value']:
             plt.figure()
             for data in dict_list:
                 legend.append(data["name"])

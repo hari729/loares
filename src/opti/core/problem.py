@@ -44,7 +44,7 @@ class Problem():
             name = self.name
         else:
             name = str(self.__class__.__name__).replace("_", "-")
-        dict = {
+        dictionary = {
             "name": name,
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
@@ -55,7 +55,7 @@ class Problem():
             "variable_modifier" : str(self.variable_modifier.__name__),
             "TF": self.get_true_front()
         }
-        return dict
+        return dictionary
 
     def objective_correction(self, population):
         population.objectives *= self.minmax

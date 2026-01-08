@@ -5,7 +5,7 @@ from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import performance_metrics, raw_performance_metrics
 from opti.core.population import PopulationHDF5Reader
 from opti.core.results import ResultProcessor
-from opti.analysis.utils import dict_to_csv
+from opti.analysis.utils import dict_to_csv, dict_to_json
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 
 class ExperimentRunner:
@@ -15,6 +15,8 @@ class ExperimentRunner:
         self.algorithm = algorithm(self.problemHandler)
         self.problem_info = problem.get_info()
         self.algorithm_info = self.algorithm.get_info()
+        self.update_info = self.algorithm.updateRule.get_info()
+        self.test_name = test_name
         output_dir = (Path.home()/"OptiResults"
                                 /self.problem_info["name"]
                                 /test_name
@@ -30,6 +32,7 @@ class ExperimentRunner:
 
     def multi_thread(self, seeds, threads=5):
         print(f"\nOptimizing {self.problem_info['name']} using {self.algorithm_info['name']}")
+        print(f"\nPopulation Size: {self.problem_info['psize']}  Max Evals: {self.problem_info['max_evals']}")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
         print("Processing\n")
@@ -37,25 +40,29 @@ class ExperimentRunner:
         print(f"\nResults saved to {self.output_dir}")
 
     def _post_process(self, output):
+        master_dict = {"Problem": self.problem_info,
+                       "UpdateRule": self.update_info,
+                       "Algorithm": self.algorithm_info}
+        dict_to_json(master_dict, self.output_dir, "Info")
+
         metrics_list = []
         for res in output:
             temp_dict = self.processor.get_metrics_history(res, raw_performance_metrics)
             temp_dict["seed"] = [res.seed]
             metrics_list.append(temp_dict)
-            dict_to_csv(res.final_dict, self.output_dir, res.seed)
 
         metrics = metrics_list[0].keys()
-        mean = {"name": "Mean"}
-        std = {"name": "Std"}
+        mean = {"name": self.algorithm_info['name'], "value": "Mean"}
+        std = {"name": self.algorithm_info['name'], "value": "Std"}
         net = {}
         for m in metrics:
             if m != "seed":
                 values = np.array([r[m] for r in metrics_list], dtype=float)
                 mean[m] = np.mean(values, axis=0)
                 std[m]  = np.std(values, axis=0)
-                net[f"{m}(mean)"] = [mean[m][-1]]
-                net[f"{m}(std)"] = [std[m][-1]]
-                if m!='evals':
+                if m != "evals":
+                    net[f"{m}(mean)"] = [mean[m][-1]]
+                    net[f"{m}(std)"] = [std[m][-1]]
                     print(f"{m}(mean) :  {mean[m][-1]}")
                     print(f"{m}(std) :  {std[m][-1]}")
 
@@ -74,9 +81,9 @@ class ExperimentRunner:
 
         highest_hv_result = output[np.argmax(final_metrics["HV"])]
         plot_data = highest_hv_result.final_dict
+        dict_to_csv(plot_data, self.output_dir, highest_hv_result.seed)
         plot_data["name"] = highest_hv_result.algorithm_info["name"]
         plot_data["seed"] = highest_hv_result.seed
-        dict_to_csv(plot_data, self.output_dir, "plot-data")
         n_obj = self.problem_info["n_obj"]
         if n_obj == 1:
             pass
@@ -89,6 +96,7 @@ class ExperimentRunner:
 
 
 
+
 class pymooExptRunner(ExperimentRunner):
-    def __init__(self, problem, algorithm):
-        super().__init__(problem, algorithm)
+    def __init__(self, problem, algorithm, test_name):
+        super().__init__(problem, algorithm, test_name)

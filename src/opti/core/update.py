@@ -18,10 +18,10 @@ class UpdateRule():
         return new_gen
 
     def get_info(self):
-        dict = {
+        dictionary = {
             "name": str(self.__class__.__name__).replace("_", "-"),
             "BaseFunction" : str(self.base_function.__name__.upper()),
             "Mutation": str(self.mutation.__name__),
             "Selection" : str(self.selection.__name__),
         }
-        return dict
+        return dictionary

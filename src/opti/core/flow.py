@@ -1,4 +1,3 @@
-from typing import final
 import numpy as np
 from opti.core.population import PopulationRecorderHDF5
 from opti.core.results import Result
@@ -49,5 +48,6 @@ class FlowHandler():
     def get_info(self):
         dictionary = {
             "name": str(self.__class__.__name__).replace("_", "-"),
+            "mods": [mod.__name__ for mod in self.mods],
         }
         return dictionary
