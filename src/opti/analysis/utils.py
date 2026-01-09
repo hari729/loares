@@ -16,7 +16,7 @@ def modify_master_list(master_list, filepath):
     if master_list_path.exists():
         existing = pd.read_csv(master_list_path)
         combined = pd.concat([existing, mf], ignore_index=True)
-        combined.drop_duplicates(subset=["algorithm", "psize", "max_evals", "seed"],
+        combined.drop_duplicates(subset=["Problem", "Algorithm", "Psize", "Max-evals", "Runs"],
                                 keep="last", inplace=True)
         combined.to_csv(master_list_path, index=False)
     else:

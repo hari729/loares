@@ -8,11 +8,11 @@ import re
 def multi_line_plot(dict_list, filepath):
     legend = []
     for key in dict_list[0].keys():
-        if key not in ['evals', 'name', 'value']:
+        if key not in ['evals', 'name']:
             plt.figure()
             for data in dict_list:
                 legend.append(data["name"])
-                plt.plot(dict_list[0]['evals'], data[key], linestyle='-',marker='')
+                plt.plot(data['evals'], data[key], linestyle='-',marker='')
             plt.legend(labels=legend, loc='best', fontsize=8)
             plt.grid(which='both',linestyle='--',alpha=0.7)
             plt.xlabel("Function Evaluations")

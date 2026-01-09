@@ -61,19 +61,20 @@ class ExperimentRunner:
             metrics_list.append(temp_dict)
 
         metrics = metrics_list[0].keys()
-        mean = {"name": self.algorithm_info['name'], "value": "Mean"}
-        std = {"name": self.algorithm_info['name'], "value": "Std"}
+        mean = {"name": f"{self.algorithm_info['name']} (Mean)"}
+        std = {"name": f"{self.algorithm_info['name']} (Std)"}
         net = {}
         for m in metrics:
             if m != "seed":
                 values = np.array([r[m] for r in metrics_list], dtype=float)
                 mean[m] = np.mean(values, axis=0)
-                std[m]  = np.std(values, axis=0)
                 if m != "evals":
+                    std[m]  = np.std(values, axis=0)
                     net[f"{m}(mean)"] = [mean[m][-1]]
                     net[f"{m}(std)"] = [std[m][-1]]
                     print(f"{m}(mean) :  {mean[m][-1]}")
                     print(f"{m}(std) :  {std[m][-1]}")
+        std['evals'] = mean['evals']
 
         dict_to_csv(mean, self.output_dir, "mean-history")
         dict_to_csv(std, self.output_dir, "std-history")
@@ -89,6 +90,7 @@ class ExperimentRunner:
                        "Algorithm": self.algorithm_info['name'],
                        "Max-evals": self.problem_info['max_evals'],
                        "Psize": self.problem_info["psize"],
+                       "Runs": len(final_metrics['seed']),
                        **net,
                        }
         modify_master_list(master_dict, Path(self.output_dir.parent/"master.csv"))
