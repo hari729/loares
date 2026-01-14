@@ -8,8 +8,8 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
         self.n = 2
         super().__init__(ProblemHandler, UpdateRule)
 
-    def initialize(self, filedir):
-        super().initialize(filedir)
+    def initialize(self, seed):
+        super().initialize(seed)
         self.sub_populations = self.populationHandler.split(self.population,
                                                             self.n)
         self.indicator = performance_metrics(self.problemHandler.problem,

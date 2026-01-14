@@ -21,7 +21,7 @@ class ExperimentRunner:
                                 /self.problem_info["name"]
                                 /test_name
                                 /self.algorithm_info["name"]
-                                /str(self.problem_info['psize']))
+                                /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
         self.output_dir = Path(output_dir)
         Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()

@@ -29,8 +29,8 @@ class MORankingCrowdingArchive(MORankingCrowdingAlgo):
     def __init__(self, ProblemHandler, UpdateRuleA):
         super().__init__(ProblemHandler, UpdateRuleA)
 
-    def initialize(self, filedir):
-        super().initialize(filedir)
+    def initialize(self, seed):
+        super().initialize(seed)
         self.basepopulation = self.populationHandler.get_refined(self.population)
 
     def step(self):
