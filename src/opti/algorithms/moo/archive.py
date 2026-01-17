@@ -6,11 +6,12 @@ from opti.base.bwr import bwr
 from opti.base.bmwr import bmwr
 from opti.base.mutation import random_reinit
 from opti.core.update import UpdateRule
+from opti.algorithms.moo.selection import archive_bw_selection as bw_selection_a
 
-def bw_selection_a(population, archive):
-    best = archive.solutions[0,:]
-    worst = population.solutions[-1,:]
-    return {"best":best, "worst":worst}
+# def bw_selection_a(population, archive):
+#     best = archive.solutions[0,:]
+#     worst = population.solutions[-1,:]
+#     return {"best":best, "worst":worst}
 
 class UpdateRuleA(UpdateRule):
     def __init__(self, selection, base_function, mutation):

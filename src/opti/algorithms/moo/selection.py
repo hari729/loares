@@ -1,3 +1,4 @@
+
 import numpy as np
 
 def random_bw_selection(population):

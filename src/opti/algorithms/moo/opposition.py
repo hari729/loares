@@ -1,5 +1,4 @@
-from opti.base.bw_rules import BMR, BWR, BMWR
-from opti.algorithms.moo.base import MORankingCrowdingAlgo
+from opti.algorithms.moo.base import BMR, BWR, BMWR,MORankingCrowdingAlgo
 from opti.algorithms.moo.mods import local_search, opposition
 
 Mods = [local_search, opposition]

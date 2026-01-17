@@ -2,10 +2,19 @@ import numpy as np
 from opti.core.population import Population, PopulationHandler
 from opti.core.flow import FlowHandler
 
-from opti.base.bw_rules import BMR, BWR, BMWR
 from opti.algorithms.moo.mods import local_search
 from opti.algorithms.moo.sorting import ranking_crowding
+from opti.algorithms.moo.selection import random_bw_selection as bw_selection
 
+from opti.base.bmr import bmr
+from opti.base.bwr import bwr
+from opti.base.bmwr import bmwr
+from opti.base.mutation import random_reinit
+from opti.core.update import UpdateRule
+
+BMR = UpdateRule(bw_selection, bmr, random_reinit)
+BWR = UpdateRule(bw_selection, bwr, random_reinit)
+BMWR = UpdateRule(bw_selection, bmwr, random_reinit)
 
 class MOPopulationHandler(PopulationHandler):
     def __init__(self):

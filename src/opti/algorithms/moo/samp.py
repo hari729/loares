@@ -1,6 +1,5 @@
 import numpy as np
-from opti.base.bw_rules import BMR, BWR, BMWR
-from opti.algorithms.moo.base import MORankingCrowdingAlgo
+from opti.algorithms.moo.base import BMR, BWR, BMWR,MORankingCrowdingAlgo
 from opti.analysis.moo.metrics import performance_metrics
 
 class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
