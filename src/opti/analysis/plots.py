@@ -6,23 +6,27 @@ import seaborn as sns
 import numpy as np
 import re
 
-def multi_line_plot(data, filepath):
-    for ydata in data['ydata']:
-        plt.plot(data['xdata'], ydata, linestyle='-',marker='')
+colors = sns.color_palette("tab10", 10)
+
+def multi_line_plot(data, filepath, filename=None):
+    for iy, (xdata, ydata) in enumerate(zip(data['xdata'],data['ydata'])):
+        plt.plot(xdata, ydata, linestyle='-',marker='', color=colors[iy])
     if 'vline' in data:
-        for pt in data['vline']:
+        for iv,pt in enumerate(data['vline']):
             y_point, x_point = pt
-            plt.axvline(x=x_point, linestyle='--')
+            plt.axvline(x=x_point, linestyle='--', color=colors[iv])
     if 'point' in data:
-        for pt in data['point']:
+        for ip,pt in enumerate(data['point']):
             y_point, x_point = pt
-            plt.plot(x_point, y_point, linestyle='', marker='x', color='red')
+            plt.plot(x_point, y_point, linestyle='', marker='x', color=colors[ip])
     plt.legend(labels=data['legend'], loc='best', fontsize=8)
     plt.grid(which='both',linestyle='--',alpha=0.7)
     plt.xlabel(f"{data['xlabel']}")
     plt.ylabel(f"{data['ylabel']}")
     plt.tight_layout()
-    plt.savefig(f"{filepath}/{data['ylabel']}-vs-{data['xlabel']}.png", dpi=600, bbox_inches='tight')
+    if filename is None:
+        filename = f"{data['ylabel']}-vs-{data['xlabel']}"
+    plt.savefig(f"{filepath}/{filename}.png", dpi=600, bbox_inches='tight')
     plt.close()
 
 def plot_2d(data, filepath, cid=0):

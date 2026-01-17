@@ -67,6 +67,7 @@ class ExperimentRunner:
         net = {}
         evals = np.array([r['evals'] for r in metrics_list], dtype=float)
         mean['evals'] = np.mean(evals, axis=0)
+        std['evals'] = mean['evals']
         convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
         ind_metrics = []
         for m in metrics:
@@ -81,9 +82,9 @@ class ExperimentRunner:
                     convergence[m] = [np.nan, np.nan]
                 std[m]  = np.std(values, axis=0)
                 ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
-                                    'xdata': mean['evals'], 'xlabel' : "Mean-Function-Evaluations",
-                                    'vline' : [convergence[m]],
-                                    'legend':[mean['name'],std['name'],'Convergence Point']})
+                                    'xdata': [mean['evals'],std['evals']], 'xlabel' : "Mean-Function-Evaluations",
+                                    'point' : [convergence[m]],
+                                    'legend':[mean['name'],std['name']]})
                 net[f"{m}(mean)"] = [mean[m][-1]]
                 net[f"{m}(std)"] = [std[m][-1]]
                 print(f"{m}(mean) :  {mean[m][-1]}")
@@ -115,7 +116,7 @@ class ExperimentRunner:
 
         highest_hv_result = output[np.argmax(final_metrics["HV"])]
         plot_data = highest_hv_result.final_dict
-        dict_to_csv(plot_data, self.output_dir, highest_hv_result.seed)
+        dict_to_csv(plot_data, self.output_dir, "pareto-front")
         plot_data["name"] = highest_hv_result.algorithm_info["name"]
         plot_data["seed"] = highest_hv_result.seed
         n_obj = self.problem_info["n_obj"]
