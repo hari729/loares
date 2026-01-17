@@ -1,5 +1,6 @@
 import matplotlib
 matplotlib.use('Agg')
+from matplotlib.lines import lineStyles
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -8,6 +9,14 @@ import re
 def multi_line_plot(data, filepath):
     for ydata in data['ydata']:
         plt.plot(data['xdata'], ydata, linestyle='-',marker='')
+    if 'vline' in data:
+        for pt in data['vline']:
+            y_point, x_point = pt
+            plt.axvline(x=x_point, linestyle='--')
+    if 'point' in data:
+        for pt in data['point']:
+            y_point, x_point = pt
+            plt.plot(x_point, y_point, linestyle='', marker='x', color='red')
     plt.legend(labels=data['legend'], loc='best', fontsize=8)
     plt.grid(which='both',linestyle='--',alpha=0.7)
     plt.xlabel(f"{data['xlabel']}")

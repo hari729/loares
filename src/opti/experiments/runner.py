@@ -65,27 +65,34 @@ class ExperimentRunner:
         mean = {"name": f"{self.algorithm_info['name']} (Mean)"}
         std = {"name": f"{self.algorithm_info['name']} (Std)"}
         net = {}
+        evals = np.array([r['evals'] for r in metrics_list], dtype=float)
+        mean['evals'] = np.mean(evals, axis=0)
+        convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
         ind_metrics = []
         for m in metrics:
-            if m != "seed":
+            if m not in ["seed", "evals"]:
                 values = np.array([r[m] for r in metrics_list], dtype=float)
                 mean[m] = np.mean(values, axis=0)
-                if m != "evals":
-                    std[m]  = np.std(values, axis=0)
-                    ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
-                                        'xlabel' : "Mean-Function-Evaluations",
-                                        'legend':[mean['name'],std['name']]})
-                    net[f"{m}(mean)"] = [mean[m][-1]]
-                    net[f"{m}(std)"] = [std[m][-1]]
-                    print(f"{m}(mean) :  {mean[m][-1]}")
-                    print(f"{m}(std) :  {std[m][-1]}")
-        std['evals'] = mean['evals']
-
-        # print(ind_metrics)
+                delta = np.diff(mean[m])/mean[m][:-1]
+                convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
+                if len(convergence_pt)>0:
+                    convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
+                else:
+                    convergence[m] = [np.nan, np.nan]
+                std[m]  = np.std(values, axis=0)
+                ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
+                                    'xdata': mean['evals'], 'xlabel' : "Mean-Function-Evaluations",
+                                    'vline' : [convergence[m]],
+                                    'legend':[mean['name'],std['name'],'Convergence Point']})
+                net[f"{m}(mean)"] = [mean[m][-1]]
+                net[f"{m}(std)"] = [std[m][-1]]
+                print(f"{m}(mean) :  {mean[m][-1]}")
+                print(f"{m}(std) :  {std[m][-1]}")
 
         dict_to_csv(mean, self.output_dir, "mean-history")
         dict_to_csv(std, self.output_dir, "std-history")
         dict_to_csv(net, self.output_dir, "net-result")
+        dict_to_csv(convergence, self.output_dir, "convergence-points")
 
         final_metrics = {k:[] for k in metrics_list[0].keys()}
         for d in metrics_list:
@@ -102,11 +109,7 @@ class ExperimentRunner:
                        }
         modify_master_list(master_dict, Path(self.output_dir.parent/"master.csv"))
 
-        # print(mean)
-        # print(std)
-
         for ind in ind_metrics:
-            ind['xdata'] = mean['evals']
             multi_line_plot(ind, self.output_dir)
 
 
