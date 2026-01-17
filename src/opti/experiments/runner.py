@@ -1,4 +1,5 @@
 from pathlib import Path
+from matplotlib.pyplot import ylabel
 import numpy as np
 from multiprocessing import Pool
 from opti.core.problem import ProblemHandler
@@ -64,17 +65,23 @@ class ExperimentRunner:
         mean = {"name": f"{self.algorithm_info['name']} (Mean)"}
         std = {"name": f"{self.algorithm_info['name']} (Std)"}
         net = {}
+        ind_metrics = []
         for m in metrics:
             if m != "seed":
                 values = np.array([r[m] for r in metrics_list], dtype=float)
                 mean[m] = np.mean(values, axis=0)
                 if m != "evals":
                     std[m]  = np.std(values, axis=0)
+                    ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
+                                        'xlabel' : "Mean-Function-Evaluations",
+                                        'legend':[mean['name'],std['name']]})
                     net[f"{m}(mean)"] = [mean[m][-1]]
                     net[f"{m}(std)"] = [std[m][-1]]
                     print(f"{m}(mean) :  {mean[m][-1]}")
                     print(f"{m}(std) :  {std[m][-1]}")
         std['evals'] = mean['evals']
+
+        # print(ind_metrics)
 
         dict_to_csv(mean, self.output_dir, "mean-history")
         dict_to_csv(std, self.output_dir, "std-history")
@@ -95,7 +102,13 @@ class ExperimentRunner:
                        }
         modify_master_list(master_dict, Path(self.output_dir.parent/"master.csv"))
 
-        multi_line_plot([mean, std], self.output_dir)
+        # print(mean)
+        # print(std)
+
+        for ind in ind_metrics:
+            ind['xdata'] = mean['evals']
+            multi_line_plot(ind, self.output_dir)
+
 
         highest_hv_result = output[np.argmax(final_metrics["HV"])]
         plot_data = highest_hv_result.final_dict

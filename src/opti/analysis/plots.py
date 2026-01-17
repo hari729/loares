@@ -5,21 +5,16 @@ import seaborn as sns
 import numpy as np
 import re
 
-def multi_line_plot(dict_list, filepath):
-    legend = []
-    for key in dict_list[0].keys():
-        if key not in ['evals', 'name']:
-            plt.figure()
-            for data in dict_list:
-                legend.append(data["name"])
-                plt.plot(data['evals'], data[key], linestyle='-',marker='')
-            plt.legend(labels=legend, loc='best', fontsize=8)
-            plt.grid(which='both',linestyle='--',alpha=0.7)
-            plt.xlabel("Function Evaluations")
-            plt.ylabel(f"{key}")
-            plt.tight_layout()
-            plt.savefig(f"{filepath}/mean-{key}.png", dpi=600, bbox_inches='tight')
-            plt.close()
+def multi_line_plot(data, filepath):
+    for ydata in data['ydata']:
+        plt.plot(data['xdata'], ydata, linestyle='-',marker='')
+    plt.legend(labels=data['legend'], loc='best', fontsize=8)
+    plt.grid(which='both',linestyle='--',alpha=0.7)
+    plt.xlabel(f"{data['xlabel']}")
+    plt.ylabel(f"{data['ylabel']}")
+    plt.tight_layout()
+    plt.savefig(f"{filepath}/{data['ylabel']}-vs-{data['xlabel']}.png", dpi=600, bbox_inches='tight')
+    plt.close()
 
 def plot_2d(data, filepath, cid=0):
     color = sns.color_palette("tab10")[cid]
