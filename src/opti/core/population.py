@@ -93,7 +93,7 @@ class PopulationRecorderHDF5():
         grp.create_dataset("X", data=population.solutions)
         grp.create_dataset("F", data=population.objectives)
         grp.create_dataset("G", data=population.constraints)
-        grp.create_dataset("M", data=population.metadata)
+        # grp.create_dataset("M", data=population.metadata)
     def close(self):
         self.file.close()
 

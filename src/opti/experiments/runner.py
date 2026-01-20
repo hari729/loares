@@ -1,6 +1,7 @@
 from pathlib import Path
 from matplotlib.pyplot import ylabel
 import numpy as np
+from math import comb
 from multiprocessing import Pool
 from opti.algorithms.moo.base import MOPopulationHandler
 from opti.core.problem import ProblemHandler
@@ -11,7 +12,7 @@ from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 from opti.core.adapters import opti_to_pymoo_prob, pymoo_to_opti_res
 from pymoo.optimize import minimize
-from pymoo.core.evaluator import Evaluator
+from pymoo.util.ref_dirs import get_reference_directions
 
 class ExperimentRunner:
     def __init__(self, problem, algorithm, test_name, TF=None):
@@ -69,32 +70,72 @@ class ExperimentRunner:
         mean = {"name": f"{self.algorithm_info['name']} (Mean)"}
         std = {"name": f"{self.algorithm_info['name']} (Std)"}
         net = {}
-        evals = np.array([r['evals'] for r in metrics_list], dtype=float)
-        mean['evals'] = np.mean(evals, axis=0)
-        std['evals'] = mean['evals']
+        # evals = np.array([r['evals'] for r in metrics_list], dtype=float)
+        # mean['evals'] = np.mean(evals, axis=0)
+        # std['evals'] = mean['evals']
+        # convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
+        # ind_metrics = []
+        # for m in metrics:
+        #     if m not in ["seed", "evals"]:
+        #         values = np.array([r[m] for r in metrics_list], dtype=float)
+        #         mean[m] = np.mean(values, axis=0)
+        #         delta = np.diff(mean[m])/mean[m][:-1]
+        #         convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
+        #         # print(convergence_pt)
+        #         # print(np.diff(convergence_pt))
+        #         convergence[m] = [np.nan, np.nan]
+        #         if len(convergence_pt)>1:
+        #             cidx = np.where(np.diff(convergence_pt) == 1)[0]
+        #             if len(cidx) > 0:
+        #                 idx = cidx[0]
+        #                 # print(idx)
+        #                 convergence[m] = [mean[m][convergence_pt[idx]],mean['evals'][convergence_pt[idx]]]
+        #                 # convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
+        #         std[m]  = np.std(values, axis=0)
+        #         ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
+        #                             'xdata': [mean['evals'],std['evals']], 'xlabel' : "Mean-Function-Evaluations",
+        #                             'point' : [convergence[m]],
+        #                             'legend':[mean['name'],std['name']]})
+        recording_interval = int(self.problem_info['max_evals'] * 0.05)
+        eval_grid = np.arange(recording_interval, 
+                            self.problem_info['max_evals'] + 1, 
+                            recording_interval)
+# Interpolate each run's metrics to the common grid
+        mean['evals'] = eval_grid
+        std['evals'] = eval_grid
         convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
         ind_metrics = []
         for m in metrics:
             if m not in ["seed", "evals"]:
-                values = np.array([r[m] for r in metrics_list], dtype=float)
+                interpolated_values = []
+                for r in metrics_list:
+                    # Linear interpolation to common evaluation grid
+                    interp_vals = np.interp(eval_grid, r['evals'], r[m])
+                    interpolated_values.append(interp_vals)
+                
+                values = np.array(interpolated_values, dtype=float)
                 mean[m] = np.mean(values, axis=0)
-                delta = np.diff(mean[m])/mean[m][:-1]
+                std[m] = np.std(values, axis=0)
+                
+                # Rest of convergence logic remains the same...
+                delta = np.diff(mean[m]) / mean[m][:-1]
                 convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
-                # print(convergence_pt)
-                # print(np.diff(convergence_pt))
                 convergence[m] = [np.nan, np.nan]
-                if len(convergence_pt)>1:
+                if len(convergence_pt) > 1:
                     cidx = np.where(np.diff(convergence_pt) == 1)[0]
                     if len(cidx) > 0:
                         idx = cidx[0]
-                        # print(idx)
-                        convergence[m] = [mean[m][convergence_pt[idx]],mean['evals'][convergence_pt[idx]]]
-                        # convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
-                std[m]  = np.std(values, axis=0)
-                ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
-                                    'xdata': [mean['evals'],std['evals']], 'xlabel' : "Mean-Function-Evaluations",
-                                    'point' : [convergence[m]],
-                                    'legend':[mean['name'],std['name']]})
+                        convergence[m] = [mean[m][convergence_pt[idx]], 
+                                        mean['evals'][convergence_pt[idx]]]
+                
+                ind_metrics.append({
+                    'ydata': [mean[m], std[m]], 
+                    'ylabel': f"{m}",
+                    'xdata': [mean['evals'], std['evals']], 
+                    'xlabel': "Mean-Function-Evaluations",
+                    'point': [convergence[m]],
+                    'legend': [mean['name'], std['name']]
+                })
                 net[f"{m}(mean)"] = [mean[m][-1]]
                 net[f"{m}(std)"] = [std[m][-1]]
                 print(f"{m}(mean) :  {mean[m][-1]}")
@@ -139,10 +180,18 @@ class ExperimentRunner:
         else:
             parallel_coordinates_plot(plot_data, self.output_dir)
 
+def get_das_dennis_partitions(n_obj, target_psize):
+    # Find n_partitions that gives closest to target_psize
+    for p in range(1, 1000):
+        n_points = comb(p + n_obj - 1, n_obj - 1)
+        if n_points >= target_psize:
+            return p
+    return p
 
 class PymooExptRunner(ExperimentRunner):
     def __init__(self, problem, algorithm, test_name, TF=None):
         self.problem = problem
+        self.pymoo_problem = opti_to_pymoo_prob(self.problem)
         self.algorithm = algorithm
         self.problem_info = problem.get_info()
         self.algorithm_info = {'name':self.algorithm.__name__}
@@ -164,14 +213,21 @@ class PymooExptRunner(ExperimentRunner):
             raise
 
     def run(self, seed):
-        problem = opti_to_pymoo_prob(self.problem)
-        algorithm = self.algorithm(pop_size=self.problem.psize)
-        res = minimize(problem,
+        if self.algorithm_info['name'] in ['MOEAD', 'NSGA3']:
+            n_partitions = get_das_dennis_partitions(self.problem.n_obj,
+                                                     self.problem.psize)
+            ref_dirs = get_reference_directions('das-dennis', 
+                                                self.problem.n_obj, 
+                                                n_partitions=n_partitions)
+            algorithm = self.algorithm(ref_dirs=ref_dirs)
+        else:
+            algorithm = self.algorithm(pop_size=self.problem.psize)
+
+        res = minimize(self.pymoo_problem,
                     algorithm,
                     ('n_eval', self.problem.max_evals),
                     seed=int(seed),
                     save_history=True,
-                    evaluator=Evaluator(n_workers=1),
                     )
         return pymoo_to_opti_res(self.problem_info,
                                  self.algorithm_info,

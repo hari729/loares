@@ -52,10 +52,7 @@ def pymoo_to_opti_res(problem_info, algorithm_info, seed, pymooResult, populatio
     for algo in pymooResult.history:
         pop = Population(algo.opt.get("X"),
                          algo.opt.get("F"),
-                         algo.opt.get("G"), 
-                         np.hstack([np.atleast_2d(algo.opt.get("rank")).T,
-                                    np.atleast_2d(algo.opt.get("crowding")).T]))
+                         algo.opt.get("G"))
         result.record(pop, algo.evaluator.n_eval)
-    result.stop(populationHandler.get_refined_dict(pop))
+    result.stop(populationHandler.get_dict(pop)) 
     return result
-

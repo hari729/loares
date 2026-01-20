@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import re
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
+from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 
 def get_suffix_priority(result_dict):
     name = result_dict['Info']['Algorithm']['name']
@@ -48,7 +49,8 @@ def compare_experiments(problem, test_name, selction_metric='HV'):
         temp = {'pf': pd.read_csv(path/"pareto-front.csv"),
                 'Info': pd.read_json(path/"Info.json"),
                 'mean-history': pd.read_csv(path/"mean-history.csv"),
-                'convergence-pts': pd.read_csv(path/"convergence-points.csv")}
+                'convergence-pts': pd.read_csv(path/"convergence-points.csv"),
+                'net-result':pd.read_csv(path/"net-result.csv")}
         name = temp['Info']['Algorithm']['name']
         if re.search(r'\bBMWR\b', name):
             results["BMWR"].append(temp)
@@ -66,8 +68,10 @@ def compare_experiments(problem, test_name, selction_metric='HV'):
     # Sort each category (BMR, BWR, BMWR) internally
     for rt in results:
         results[rt].sort(key=get_suffix_priority)
-    others.sort()
+    
+    others.sort(key=lambda x: x['Info']['Algorithm']['name'])
 
+    net_res = {}
     for rc in results:
         for m in metrics:
             plot_data = {'ydata' : [],
@@ -82,7 +86,12 @@ def compare_experiments(problem, test_name, selction_metric='HV'):
                 plot_data['point' ].append(r['convergence-pts'][m])
                 plot_data['legend'].append(r['Info']['Algorithm']['name'])
             multi_line_plot(plot_data, comparison_dir, f"{m}-{rc}")
+        
+        for rn in results[rc]:
+            net_res[rn['Info']['Algorithm']['name']] = rn['net-result']
 
+    for rn in others:
+        net_res[rn['Info']['Algorithm']['name']] = rn['net-result']
 
-
-
+    net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
+    net_res.to_csv(f"{comparison_dir}/net-results.csv", index=False)
