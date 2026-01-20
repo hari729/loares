@@ -15,8 +15,14 @@ def random_bw_selection(population):
     M_b = len(population_b)
     M_w = len(population_w)
 
-    selected_b = np.random.randint(0, 10 if M_b>10 else M_b,pool_size)
-    selected_w = np.random.randint(M_w-10 if M_w>20 else 0,M_w,pool_size)
+    try:
+        selected_b = np.random.randint(0, 10 if M_b>10 else M_b,pool_size)
+        selected_w = np.random.randint(M_w-10 if M_w>20 else 0,M_w,pool_size)
+
+    except Exception as e:
+        print(str(e), f"M_b = {M_b}, M_w = {M_w}")
+        print(population.metadata)
+        raise
 
     return {"best":population_b[selected_b], "worst":population_w[selected_w]}
 

@@ -76,10 +76,16 @@ class ExperimentRunner:
                 mean[m] = np.mean(values, axis=0)
                 delta = np.diff(mean[m])/mean[m][:-1]
                 convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
-                if len(convergence_pt)>0:
-                    convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
-                else:
-                    convergence[m] = [np.nan, np.nan]
+                # print(convergence_pt)
+                # print(np.diff(convergence_pt))
+                convergence[m] = [np.nan, np.nan]
+                if len(convergence_pt)>1:
+                    cidx = np.where(np.diff(convergence_pt) == 1)[0]
+                    if len(cidx) > 0:
+                        idx = cidx[0]
+                        # print(idx)
+                        convergence[m] = [mean[m][convergence_pt[idx]],mean['evals'][convergence_pt[idx]]]
+                        # convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
                 std[m]  = np.std(values, axis=0)
                 ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
                                     'xdata': [mean['evals'],std['evals']], 'xlabel' : "Mean-Function-Evaluations",
