@@ -1,6 +1,9 @@
 import numpy as np
 from opti.core.problem import Problem as optiProblem
+from opti.core.results import Result as optiResult
+from opti.core.population import Population
 from pymoo.core.problem import Problem as pymooProblem
+from pymoo.core.result import Result as pymooResult
 
 class pymoo_to_opti_prob(optiProblem):
     def __init__(self,
@@ -31,8 +34,6 @@ class pymoo_to_opti_prob(optiProblem):
         F = self.function(solutions)
         return F, np.full((solutions.shape[0], 1), -1)
 
-
-
 class opti_to_pymoo_prob(pymooProblem):
 
     def __init__(self, opti_prob):
@@ -45,3 +46,16 @@ class opti_to_pymoo_prob(pymooProblem):
 
     def _evaluate(self, x, out, *args, **kwargs):
         out["F"], out["G"] = self.custom_eval(x)
+
+def pymoo_to_opti_res(problem_info, algorithm_info, seed, pymooResult, populationHandler):
+    result = optiResult(problem_info, algorithm_info, seed)
+    for algo in pymooResult.history:
+        pop = Population(algo.opt.get("X"),
+                         algo.opt.get("F"),
+                         algo.opt.get("G"), 
+                         np.hstack([np.atleast_2d(algo.opt.get("rank")).T,
+                                    np.atleast_2d(algo.opt.get("crowding")).T]))
+        result.record(pop, algo.evaluator.n_eval)
+    result.stop(populationHandler.get_refined_dict(pop))
+    return result
+

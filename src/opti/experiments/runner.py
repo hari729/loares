@@ -2,12 +2,16 @@ from pathlib import Path
 from matplotlib.pyplot import ylabel
 import numpy as np
 from multiprocessing import Pool
+from opti.algorithms.moo.base import MOPopulationHandler
 from opti.core.problem import ProblemHandler
-from opti.analysis.moo.metrics import performance_metrics, raw_performance_metrics
-from opti.core.population import PopulationHDF5Reader, PopulationRecorderHDF5
+from opti.analysis.moo.metrics import raw_performance_metrics
+from opti.core.population import PopulationRecorderHDF5
 from opti.core.results import ResultProcessor
 from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
+from opti.core.adapters import opti_to_pymoo_prob, pymoo_to_opti_res
+from pymoo.optimize import minimize
+from pymoo.core.evaluator import Evaluator
 
 class ExperimentRunner:
     def __init__(self, problem, algorithm, test_name, TF=None):
@@ -136,8 +140,41 @@ class ExperimentRunner:
             parallel_coordinates_plot(plot_data, self.output_dir)
 
 
+class PymooExptRunner(ExperimentRunner):
+    def __init__(self, problem, algorithm, test_name, TF=None):
+        self.problem = problem
+        self.algorithm = algorithm
+        self.problem_info = problem.get_info()
+        self.algorithm_info = {'name':self.algorithm.__name__}
+        self.update_info = {'name':f"pymoo defaults for {self.algorithm.__name__}"}
+        self.test_name = test_name
+        output_dir = (Path.home()/"OptiResults"
+                                /self.problem_info["name"]
+                                /test_name
+                                /self.algorithm_info["name"]
+                                /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
+        self.output_dir = Path(output_dir)
+        Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
+        self.processor = ResultProcessor()
+        self.TF = TF
+        if self.problem_info['n_obj']>1:
+            self.populationHandler = MOPopulationHandler()
+        else:
+            print("Implement SO PopulationHandler First")
+            raise
 
-
-class pymooExptRunner(ExperimentRunner):
-    def __init__(self, problem, algorithm, test_name):
-        super().__init__(problem, algorithm, test_name)
+    def run(self, seed):
+        problem = opti_to_pymoo_prob(self.problem)
+        algorithm = self.algorithm(pop_size=self.problem.psize)
+        res = minimize(problem,
+                    algorithm,
+                    ('n_eval', self.problem.max_evals),
+                    seed=int(seed),
+                    save_history=True,
+                    evaluator=Evaluator(n_workers=1),
+                    )
+        return pymoo_to_opti_res(self.problem_info,
+                                 self.algorithm_info,
+                                 seed,
+                                 res,
+                                 self.populationHandler)

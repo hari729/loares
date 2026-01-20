@@ -65,8 +65,9 @@ def compare_experiments(problem, test_name, selction_metric='HV'):
 
     # Sort each category (BMR, BWR, BMWR) internally
     for rt in results:
-        results[rt].sort(key=get_suffix_priority)   
-    
+        results[rt].sort(key=get_suffix_priority)
+    others.sort()
+
     for rc in results:
         for m in metrics:
             plot_data = {'ydata' : [],
@@ -74,7 +75,7 @@ def compare_experiments(problem, test_name, selction_metric='HV'):
                         'xlabel' : "Mean-Function-Evaluations",
                         'point' : [],
                         'legend':[]}
-            for r in results[rc]:
+            for r in results[rc]+others:
                 plot_data['ylabel']=f"{m}"
                 plot_data['ydata' ].append(r['mean-history'][m])
                 plot_data['xdata'].append(r['mean-history']['evals']) 
