@@ -44,7 +44,10 @@ def extract_population_paths(test_dir, psize, evals):
     algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
     result_paths = []
     for path in algo_paths:
-        result_paths.append(path/f"{psize}-{evals}")
+        if re.search(r'\bBMWR\b', str(path)) or re.search(r'\bBMR\b', str(path)) or re.search(r'\bBWR\b', str(path)):
+            result_paths.append(path/f"{psize}-{evals}")
+        else:
+            result_paths.append(path/f"{100}-{evals}")
     return result_paths
 
 def compare_experiments(problem, test_name, selction_metric='HV', CTF=False):
@@ -183,6 +186,7 @@ def compare_experiments(problem, test_name, selction_metric='HV', CTF=False):
     net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
     net_res.to_csv(f"{comparison_dir}/net-results.csv", index=False, float_format="%.5f")
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def compare_experiments_all(problem, test_name, psizes, CTF=False):
     problem_info = problem.get_info()
@@ -320,3 +324,4 @@ def compare_experiments_all(problem, test_name, psizes, CTF=False):
 
         net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
         net_res.to_csv(f"{comparison_dir}/net-results.csv", index=False, float_format="%.5f")
+
