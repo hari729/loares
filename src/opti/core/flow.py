@@ -28,8 +28,9 @@ class FlowHandler():
         self.result.stop(final_dict)
 
     def initialize(self,seed):
+        np.random.seed(seed)
         self.result = Result(self.problemHandler.get_info(), self.get_info(), seed)
-        self.population = self.populationHandler.initialize(self.problemHandler)
+        self.population = self.populationHandler.initialize(self.problemHandler, seed)
         self.record()
 
     def run(self, seed):

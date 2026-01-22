@@ -25,7 +25,7 @@ def multi_line_plot(data, filepath, filename=None):
     plt.ylabel(f"{data['ylabel']}")
     plt.tight_layout()
     if filename is None:
-        filename = f"{data['ylabel']}-vs-{data['xlabel']}"
+        filename = f"{data['ylabel']}-vs-{data['xlabel']}".replace(" ", "-")
     plt.savefig(f"{filepath}/{filename}.png", dpi=600, bbox_inches='tight')
     plt.close()
 

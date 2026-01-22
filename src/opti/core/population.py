@@ -31,11 +31,12 @@ class PopulationHandler():
         self.initializer = initializer
         self.sort = sorting_function
 
-    def initialize(self, ProblemHandler):
+    def initialize(self, ProblemHandler, seed):
+        self.seed = seed
         X = self.initializer(ProblemHandler.problem)
         population = ProblemHandler.evaluate(X)
         return Population(*self.sort(ProblemHandler.problem,
-                            population, population.solutions.shape[0]))
+                            population, population.solutions.shape[0], self.seed))
 
     def raw_update(self,population, X, F, G, M):
         population.solutions = X
@@ -71,7 +72,7 @@ class PopulationHandler():
     def get_sorted(self,population, ProblemHandler, limit=None):
         if limit is None:
             limit = ProblemHandler.problem.psize
-        return Population(*self.sort(ProblemHandler.problem, population, limit))
+        return Population(*self.sort(ProblemHandler.problem, population, limit, self.seed))
 
     def update(self, population_list, ProblemHandler, limit=None):
         temp_population = self.merge(population_list)

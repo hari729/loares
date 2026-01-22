@@ -1,12 +1,13 @@
 from pathlib import Path
+import pandas as pd
 from matplotlib.pyplot import ylabel
 import numpy as np
+import pickle, gzip
 from math import comb
 from multiprocessing import Pool
 from opti.algorithms.moo.base import MOPopulationHandler
 from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import raw_performance_metrics
-from opti.core.population import PopulationRecorderHDF5
 from opti.core.results import ResultProcessor
 from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
@@ -18,6 +19,7 @@ class ExperimentRunner:
     def __init__(self, problem, algorithm, test_name, TF=None):
         self.problem = problem
         self.problemHandler = ProblemHandler(self.problem)
+        self.algorithm_class = algorithm
         self.algorithm = algorithm(self.problemHandler)
         self.problem_info = problem.get_info()
         self.algorithm_info = self.algorithm.get_info()
@@ -29,24 +31,32 @@ class ExperimentRunner:
                                 /self.algorithm_info["name"]
                                 /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
         self.output_dir = Path(output_dir)
-        Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
         self.TF = TF
 
     def run(self, seed):
         np.random.seed(seed)
+        self.problemHandler = ProblemHandler(self.problem)
+        self.algorithm = self.algorithm_class(self.problemHandler)
         result = self.algorithm.run(seed)
         return result
 
-    def multi_thread(self, seeds, threads=5):
+    def multi_thread(self, seeds, threads=5, get=False, min=False):
         print(f"\nOptimizing {self.problem_info['name']} using {self.algorithm_info['name']}")
         print(f"| Population Size: {self.problem_info['psize']} | " +
                 f"Max Evals: {self.problem_info['max_evals']} | Runs: {len(seeds)} |")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
-        print("\nProcessing\n")
-        self._post_process(output)
-        print(f"\nResults saved to {self.output_dir}")
+        if get:
+            return output
+        elif min:
+            print("Processing (Minimal)")
+            return self._minimal_post_process(output)
+        else:
+            print("\nProcessing\n")
+            self._post_process(output)
+            print(f"\nResults saved to {self.output_dir}")
 
     def _post_process(self, output):
 
@@ -54,13 +64,12 @@ class ExperimentRunner:
                        "Algorithm": self.algorithm_info,
                        "UpdateRule": self.update_info}
         dict_to_json(info_dict, self.output_dir, "Info")
-
+        
+        with gzip.open(self.output_dir / "results.pkl.gz", 'wb') as f:
+            pickle.dump(output, f)
+        
         metrics_list = []
         for res in output:
-            recorder = PopulationRecorderHDF5(f"{self.output_dir}/H5/{res.seed:03d}.h5")
-            for i, eval in enumerate(res.history['evals']):
-                recorder.record(res.history['pop'][i], eval)
-            recorder.close()
             temp_dict = self.processor.get_metrics_history(res, raw_performance_metrics,
                                                            self.TF)
             temp_dict["seed"] = [res.seed]
@@ -70,37 +79,11 @@ class ExperimentRunner:
         mean = {"name": f"{self.algorithm_info['name']} (Mean)"}
         std = {"name": f"{self.algorithm_info['name']} (Std)"}
         net = {}
-        # evals = np.array([r['evals'] for r in metrics_list], dtype=float)
-        # mean['evals'] = np.mean(evals, axis=0)
-        # std['evals'] = mean['evals']
-        # convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
-        # ind_metrics = []
-        # for m in metrics:
-        #     if m not in ["seed", "evals"]:
-        #         values = np.array([r[m] for r in metrics_list], dtype=float)
-        #         mean[m] = np.mean(values, axis=0)
-        #         delta = np.diff(mean[m])/mean[m][:-1]
-        #         convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
-        #         # print(convergence_pt)
-        #         # print(np.diff(convergence_pt))
-        #         convergence[m] = [np.nan, np.nan]
-        #         if len(convergence_pt)>1:
-        #             cidx = np.where(np.diff(convergence_pt) == 1)[0]
-        #             if len(cidx) > 0:
-        #                 idx = cidx[0]
-        #                 # print(idx)
-        #                 convergence[m] = [mean[m][convergence_pt[idx]],mean['evals'][convergence_pt[idx]]]
-        #                 # convergence[m] = [mean[m][convergence_pt+1][0],mean['evals'][convergence_pt[0]+1]]
-        #         std[m]  = np.std(values, axis=0)
-        #         ind_metrics.append({'ydata' : [mean[m],std[m]], 'ylabel': f"{m}",
-        #                             'xdata': [mean['evals'],std['evals']], 'xlabel' : "Mean-Function-Evaluations",
-        #                             'point' : [convergence[m]],
-        #                             'legend':[mean['name'],std['name']]})
         recording_interval = int(self.problem_info['max_evals'] * 0.05)
         eval_grid = np.arange(recording_interval, 
                             self.problem_info['max_evals'] + 1, 
                             recording_interval)
-# Interpolate each run's metrics to the common grid
+        # Interpolate each run's metrics to the common grid
         mean['evals'] = eval_grid
         std['evals'] = eval_grid
         convergence = {"name": f"{self.algorithm_info['name']} (convergence pts)"}
@@ -180,6 +163,34 @@ class ExperimentRunner:
         else:
             parallel_coordinates_plot(plot_data, self.output_dir)
 
+    def _minimal_post_process(self, output):
+ 
+        with gzip.open(self.output_dir / "results.pkl.gz", 'wb') as f:
+            pickle.dump(output, f)
+
+        metrics_list = []
+        for res in output:
+            temp_dict = raw_performance_metrics(res.population.objectives,self.TF)
+            temp_dict["seed"] = res.seed
+            temp_dict["res"] = res
+            metrics_list.append(temp_dict)
+
+        metrics_df = pd.DataFrame(metrics_list)
+        metrics_df.drop(columns=['res']).to_csv(self.output_dir /"raw-results.csv", index=False, float_format="%.5f")
+        metrics_df['Algorithm'] = self.algorithm_info['name']
+
+        info_dict = {"Problem": self.problem_info,
+                       "Algorithm": self.algorithm_info,
+                       "UpdateRule": self.update_info,
+                     "seeds": str(metrics_df['seed'].tolist())}
+        dict_to_json(info_dict, self.output_dir, "Info")
+
+        print(f"Raw results: HV = {metrics_df['HV'].mean():4f}")
+        print(f"Results saved to {self.output_dir}")
+        return {'name':self.algorithm_info['name'],
+                'psize':self.problem_info['psize'],
+                'data': metrics_df }
+
 def get_das_dennis_partitions(n_obj, target_psize):
     # Find n_partitions that gives closest to target_psize
     for p in range(1, 1000):
@@ -194,7 +205,7 @@ class PymooExptRunner(ExperimentRunner):
         self.pymoo_problem = opti_to_pymoo_prob(self.problem)
         self.algorithm = algorithm
         self.problem_info = problem.get_info()
-        self.algorithm_info = {'name':self.algorithm.__name__}
+        self.algorithm_info = {'name':(self.algorithm.__name__).replace("_", "-")}
         self.update_info = {'name':f"pymoo defaults for {self.algorithm.__name__}"}
         self.test_name = test_name
         output_dir = (Path.home()/"OptiResults"
