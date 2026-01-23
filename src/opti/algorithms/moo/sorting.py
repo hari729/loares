@@ -8,7 +8,7 @@ from pymoo.core.problem import Problem
 
 from opti.moo.population import MoPopulation
 
-def ranking_crowding(problem, population, limit, seed, ndf=False):
+def ranking_crowding(problem, population, limit, seed, ndf=False, all=False):
 
     class DummyProblem(Problem):
         def __init__(self, n_var, n_obj, n_constr):
@@ -24,7 +24,10 @@ def ranking_crowding(problem, population, limit, seed, ndf=False):
                                  n_constr=problem.n_constr)
 
     survival = RankAndCrowdingSurvival()
-    survivors = survival.do(dummy_problem, pop, n_survive=limit, seed=seed)
+    if all:
+        survivors = survival.do(dummy_problem, pop, seed=seed)
+    else:
+        survivors = survival.do(dummy_problem, pop, n_survive=limit, seed=seed)
 
     target_pop = survivors
     if ndf:

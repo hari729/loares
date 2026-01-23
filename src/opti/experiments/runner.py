@@ -6,6 +6,7 @@ import pickle, gzip
 from math import comb
 from multiprocessing import Pool
 from opti.algorithms.moo.base import MOPopulationHandler
+from opti.analysis.moo import metrics
 from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import raw_performance_metrics
 from opti.core.results import ResultProcessor
@@ -185,6 +186,22 @@ class ExperimentRunner:
                      "seeds": str(metrics_df['seed'].tolist())}
         dict_to_json(info_dict, self.output_dir, "Info")
 
+        # highest_hv_result = output[np.argmax(raw_metrics["HV"])]
+        highest_hv_result = metrics_df['res'][metrics_df['HV'].idxmax()]
+        plot_data = highest_hv_result.final_dict
+        dict_to_csv(plot_data, self.output_dir, "pareto-front")
+        plot_data["name"] = highest_hv_result.algorithm_info["name"]
+        plot_data["seed"] = highest_hv_result.seed
+        n_obj = self.problem_info["n_obj"]
+        
+        if n_obj == 1:
+            pass
+        elif n_obj == 2:
+            plot_2d(plot_data, self.output_dir)
+        elif n_obj == 3:
+            plot_3d(plot_data, self.output_dir)
+        else:
+            parallel_coordinates_plot(plot_data, self.output_dir)
         print(f"Raw results: HV = {metrics_df['HV'].mean():4f}")
         print(f"Results saved to {self.output_dir}")
         return {'name':self.algorithm_info['name'],
@@ -214,7 +231,7 @@ class PymooExptRunner(ExperimentRunner):
                                 /self.algorithm_info["name"]
                                 /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
         self.output_dir = Path(output_dir)
-        Path(self.output_dir/"H5").mkdir(parents=True, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
         self.TF = TF
         if self.problem_info['n_obj']>1:

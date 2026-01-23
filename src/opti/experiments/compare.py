@@ -2,6 +2,7 @@ from pathlib import Path
 import pickle
 import gzip
 import os
+from multiprocessing import Pool
 import __main__
 from typing import final
 from opti.algorithms.moo.sorting import ranking_crowding
@@ -14,6 +15,61 @@ from opti.analysis.moo.metrics import raw_performance_metrics
 from opti.algorithms.moo.base import MOPopulationHandler
 from opti.core.results import ResultProcessor
 from pymoo.algorithms.moo.mopso_cd import MOPSO_CD
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+
+class EpsilonArchive:
+    def __init__(self, eps):
+        self.eps = np.array(eps)
+        self.archive = np.empty((0, len(eps)))
+        self.grid = {}   # maps ε-cell -> index in archive
+        self.nds = NonDominatedSorting()
+    def _cell(self, x):
+        return tuple(np.floor(x / self.eps).astype(int))
+
+    def add_population(self, P):
+        # P: (N, m) objective array (preferably already nondominated)
+        for x in P:
+            self.add_point(x)
+
+    def add_point(self, x):
+        c = self._cell(x)
+
+        # If a point already occupies this ε-cell, keep the better one
+        if c in self.grid:
+            y = self.archive[self.grid[c]]
+            if self._dominates(y, x):
+                return
+            elif self._dominates(x, y):
+                self.archive[self.grid[c]] = x
+                return
+            else:
+                return  # same cell, neither dominates → ignore
+
+        # Check ε-dominance against archive
+        if len(self.archive) > 0:
+            F = np.vstack([self.archive, x])
+            idx = self.nds.do(F, only_non_dominated_front=True)
+
+            if len(idx) == len(self.archive):
+                return  # x dominated → discard
+
+            # otherwise x is nondominated, some archive points may die
+            self.archive = F[idx]
+            self._rebuild_grid()
+        else:
+            self.archive = np.array([x])
+
+        # insert new x
+        self.grid[self._cell(x)] = len(self.archive) - 1
+
+    def _rebuild_grid(self):
+        self.grid = {}
+        for i, x in enumerate(self.archive):
+            self.grid[self._cell(x)] = i
+
+    @staticmethod
+    def _dominates(a, b):
+        return np.all(a <= b) and np.any(a < b)
 
 def get_suffix_priority(result_dict):
     name = result_dict['Info']['Algorithm']['name']
@@ -40,7 +96,7 @@ def extract_results_paths(test_dir, selction_metric):
         result_paths.append(path/f"{psize}-{evals}")
     return result_paths
 
-def extract_population_paths(test_dir, psize, evals):
+def extract_population_paths_custom(test_dir, psize, evals):
     algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
     result_paths = []
     for path in algo_paths:
@@ -48,6 +104,13 @@ def extract_population_paths(test_dir, psize, evals):
             result_paths.append(path/f"{psize}-{evals}")
         else:
             result_paths.append(path/f"{100}-{evals}")
+    return result_paths
+
+def extract_population_paths(test_dir, psize, evals):
+    algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
+    result_paths = []
+    for path in algo_paths:
+        result_paths.append(path/f"{psize}-{evals}")
     return result_paths
 
 def compare_experiments(problem, test_name, selction_metric='HV', CTF=False):
@@ -234,13 +297,55 @@ def compare_experiments_all(problem, test_name, psizes, CTF=False):
 
         TF = None
         if CTF:
+            # with Pool(processes=5) as pool:
+            #     output = pool.map(full_ranking, pareto_grouped)
+
+            # refined = []
+            # start = 0
+            # stop = 30
+            # for i in range(16):
+            #     populationHandler = MOPopulationHandler()
+            #     combined_pop = populationHandler.merge(pareto_list[start:stop])
+            #     composite_population_raw = Population(*ranking_crowding(
+            #                                             problem, combined_pop, 100,
+            #                                             ndf=True, seed = 1, all=True))
+            #     refined.append(populationHandler.get_refined(composite_population_raw))
+            #     start = stop
+            #     stop += 30
+            #
             populationHandler = MOPopulationHandler()
             combined_pop = populationHandler.merge(pareto_list)
             composite_population_raw = Population(*ranking_crowding(
-                                                    problem, combined_pop, 100,
-                                                    ndf=True, seed = 1))
+                                                    problem, combined_pop, psize,
+                                                    ndf=True, seed = 1, all=True))
             composite_population = populationHandler.get_refined(composite_population_raw)
+
             TF = composite_population.objectives
+
+            # nds = NonDominatedSorting()
+#           # initialize archive with first population
+#             F0 = pareto_list[0].objectives
+#             idx = nds.do(F0, only_non_dominated_front=True)
+#             A = F0[idx]
+#           # incremental merge
+#             for p in pareto_list[1:]:
+#                 F = np.vstack([A, p.objectives])
+#                 idx = nds.do(F, only_non_dominated_front=True)
+#                 A = F[idx]
+#
+#             TF = A
+            # eps = np.full([pareto_list[0].objectives.shape[1]], 0.1)   # example for 3 objectives
+            # print(eps)
+            # archive = EpsilonArchive(eps)
+            #
+            # for p in pareto_list:  # all final populations from all runs
+            #     archive.add_population(p.objectives)
+            #
+            # TF_eps = archive.archive
+
+            # nds = NonDominatedSorting()
+            # idx = nds.do(TF_eps, only_non_dominated_front=True)
+            # TF = TF_eps[idx]
 
         for algo_class in results:
             for algo in results[algo_class]:
