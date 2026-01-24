@@ -194,6 +194,8 @@ class ExperimentRunner:
         plot_data["seed"] = highest_hv_result.seed
         n_obj = self.problem_info["n_obj"]
         
+        # np.save(self.output_dir / "pareto_front.npy", highest_hv_result.population.objectives)
+
         if n_obj == 1:
             pass
         elif n_obj == 2:
