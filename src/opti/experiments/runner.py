@@ -249,7 +249,7 @@ class PymooExptRunner(ExperimentRunner):
             ref_dirs = get_reference_directions('das-dennis', 
                                                 self.problem.n_obj, 
                                                 n_partitions=n_partitions)
-            algorithm = self.algorithm(ref_dirs=ref_dirs)
+            algorithm = self.algorithm(ref_dirs=ref_dirs, pop_size=len(ref_dirs))
         else:
             algorithm = self.algorithm(pop_size=self.problem.psize)
 
