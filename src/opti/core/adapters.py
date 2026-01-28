@@ -4,6 +4,7 @@ from opti.core.results import Result as optiResult
 from opti.core.population import Population
 from pymoo.core.problem import Problem as pymooProblem
 from pymoo.core.result import Result as pymooResult
+from opti.algorithms.moo.base import MOPopulationHandler
 
 class pymoo_to_opti_prob(optiProblem):
     def __init__(self,
@@ -50,9 +51,10 @@ class opti_to_pymoo_prob(pymooProblem):
 def pymoo_to_opti_res(problem_info, algorithm_info, seed, pymooResult, populationHandler):
     result = optiResult(problem_info, algorithm_info, seed)
     for algo in pymooResult.history:
-        pop = Population(algo.opt.get("X"),
-                         algo.opt.get("F"),
-                         algo.opt.get("G"))
+        feasible = np.all(algo.opt.get("G") < 0, axis=1)
+        pop = Population(algo.opt.get("X")[feasible],
+                         algo.opt.get("F")[feasible],
+                         algo.opt.get("G")[feasible])
         result.record(pop, algo.evaluator.n_eval)
     result.stop(populationHandler.get_dict(pop)) 
     return result
