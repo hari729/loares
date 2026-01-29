@@ -6,6 +6,8 @@ import os
 from multiprocessing import Pool
 import __main__
 from typing import final
+
+from numpy.linalg import cond
 from opti.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
 import numpy as np
@@ -13,7 +15,9 @@ import re
 from opti.core.population import Population
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
 from opti.analysis.moo.metrics import raw_performance_metrics
+from opti.analysis.soo.metrics import bw_fitness
 from opti.algorithms.moo.base import MOPopulationHandler
+from opti.algorithms.soo.base import SOPopulationHandler
 from opti.core.results import ResultProcessor
 from pymoo.algorithms.moo.mopso_cd import MOPSO_CD
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
@@ -227,6 +231,17 @@ class compare_experiments_all():
         self.test_dir = (Path.home()/"OptiResults"
                                     /self.problem_info["name"]
                                     /self.test_name)
+        if self.problem_info['n_obj']>1:
+            self.populationHandler = MOPopulationHandler()
+            self.metrics_calculator = raw_performance_metrics
+            self.control_metric = 'HV'
+            self.recording_interval = 0.05
+        else:
+            self.populationHandler = SOPopulationHandler()
+            self.metrics_calculator = bw_fitness
+            self.control_metric = 'best'
+            self.recording_interval = 0.005
+
         suffix = ''
         if CTF:
             suffix += "-CTF"
@@ -238,13 +253,13 @@ class compare_experiments_all():
                                 /self.problem_info["name"]
                                 /f"{self.test_name}-comparison{suffix}")
 
-        print(f"Comparing {self.test_name} test for {self.problem_info['name']} " 
-                f"with CTF={self.CTF} and CTF size ={'Full' if self.all else 'Psize'}"
+        print(f"\nComparing {self.test_name} test for {self.problem_info['name']} " 
+                f"with CTF = {self.CTF} and CTF size = {'Full' if self.all else 'Psize'}"
               )
     def run(self, psize):
         print(f"at Psize = {psize}")
         comparison_dir = Path(self.main_comparison_dir/f"{psize}")
-        os.makedirs(comparison_dir, exist_ok=True)
+        os.makedirs(comparison_dir/"parquets", exist_ok=True)
 
         result_paths = extract_population_paths(self.test_dir, psize, self.problem_info['max_evals'])
         results = {"BMR": [], "BWR": [], "BMWR":[]}
@@ -259,7 +274,7 @@ class compare_experiments_all():
                     'res_obj': results_obj_list
                     }
             final_metrics = pd.read_csv(path/"raw-results.csv")
-            best_seed = final_metrics['seed'][final_metrics['HV'].idxmax()]
+            best_seed = final_metrics['seed'][final_metrics[self.control_metric].idxmax()]
             for robj in results_obj_list:
                 if robj.seed == best_seed:
                     pareto_list.append(robj.population)
@@ -278,17 +293,16 @@ class compare_experiments_all():
         results['others'] = others
 
         TF = None
-        if self.CTF:
+        if self.CTF and self.problem_info['n_obj'] > 1:
             CTf_path = Path(comparison_dir / "composite_true_front.npy")
             if CTf_path.exists():
                 TF = np.load(CTf_path)
             else:
-                populationHandler = MOPopulationHandler()
-                combined_pop = populationHandler.merge(pareto_list)
+                combined_pop = self.populationHandler.merge(pareto_list)
                 composite_population_raw = Population(*ranking_crowding(
                                                         self.problem, combined_pop, psize,
                                                         ndf=True, seed = 1, all=self.all))
-                composite_population = populationHandler.get_refined(composite_population_raw)
+                composite_population = self.populationHandler.get_refined(composite_population_raw)
 
                 TF = composite_population.objectives
                 np.save(comparison_dir / "composite_true_front.npy", TF)
@@ -298,7 +312,7 @@ class compare_experiments_all():
                 output = algo['res_obj']
                 metrics_list = []
                 for res in output:
-                    temp_dict = resultProcessor.get_metrics_history(res, raw_performance_metrics,
+                    temp_dict = resultProcessor.get_metrics_history(res, self.metrics_calculator,
                                                                     TF=TF)
                     temp_dict["seed"] = [res.seed]
                     metrics_list.append(temp_dict)
@@ -309,7 +323,8 @@ class compare_experiments_all():
                 net = {'Psize':algo['Info']['Problem']['psize'],
                     'Max-evals':algo['Info']['Problem']['max_evals']}
 
-                recording_interval = int(algo['Info']['Problem']['max_evals'] * 0.05)
+                recording_interval = int(algo['Info']['Problem']['max_evals']
+                                         * self.recording_interval)
                 eval_grid = np.arange(recording_interval, 
                                     algo['Info']['Problem']['max_evals'] + 1, 
                                     recording_interval)
@@ -331,21 +346,23 @@ class compare_experiments_all():
                         std[m] = np.std(values, axis=0)
                         
                         # Rest of convergence logic remains the same...
-                        delta = np.diff(mean[m]) / mean[m][:-1]
-                        convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
+                        # delta = np.diff(mean[m]) / mean[m][:-1]
+                        # convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
                         convergence[m] = [np.nan, np.nan]
-                        if len(convergence_pt) > 1:
-                            cidx = np.where(np.diff(convergence_pt) == 1)[0]
-                            if len(cidx) > 0:
-                                idx = cidx[0]
-                                convergence[m] = [mean[m][convergence_pt[idx]], 
-                                                mean['evals'][convergence_pt[idx]]]
+                        # if len(convergence_pt) > 1:
+                        #     cidx = np.where(np.diff(convergence_pt) == 1)[0]
+                        #     if len(cidx) > 0:
+                        #         idx = cidx[0]
+                        #         convergence[m] = [mean[m][convergence_pt[idx]], 
+                        #                         mean['evals'][convergence_pt[idx]]]
 
 
                         net[f"{m}(mean)"] = [mean[m][-1]]
                         net[f"{m}(std)"] = [std[m][-1]]
 
                 algo['mean-history'] = pd.DataFrame(mean)
+                algo['mean-history'].to_parquet(
+                    comparison_dir/'parquets'/f"{algo['Info']['Algorithm']['name']}-mean-history.parquet", engine='pyarrow')
                 algo['convergence-pts'] = pd.DataFrame(convergence)
                 algo['net-result'] = pd.DataFrame(net)
 
@@ -373,6 +390,7 @@ class compare_experiments_all():
 
         net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
         net_res.to_csv(f"{comparison_dir}/net-results.csv", index=False, float_format="%.5f")
+
 
     def multi_thread(self, threads=5):
         with Pool(processes=threads) as pool:

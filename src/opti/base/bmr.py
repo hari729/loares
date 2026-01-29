@@ -11,7 +11,6 @@ def bmr(problem, population, pool):
     T = np.random.choice([1, 2], size=(pop_size, 1))
 
     best_pop = pool["best"]
-    worst_pop = pool["worst"]
     mean = np.mean(population.solutions, axis=0)
     random_pop = population.solutions[r_i]
     

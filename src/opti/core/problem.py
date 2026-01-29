@@ -67,7 +67,10 @@ class ProblemHandler():
         self.max_evals = problem.max_evals
         self.evals = 0
         self.prev_evals = 0
-        self.recording_interval = int(self.max_evals * 0.05)
+        if self.problem.n_obj > 1:
+            self.recording_interval = int(self.max_evals * 0.05)
+        else:
+            self.recording_interval = int(self.max_evals * 0.005)
 
     def remaining_evals(self):
         return self.max_evals - self.evals

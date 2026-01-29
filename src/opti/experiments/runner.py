@@ -6,9 +6,10 @@ import pickle, gzip
 from math import comb
 from multiprocessing import Pool
 from opti.algorithms.moo.base import MOPopulationHandler
-from opti.analysis.moo import metrics
+from opti.algorithms.soo.base import SOPopulationHandler
 from opti.core.problem import ProblemHandler
 from opti.analysis.moo.metrics import raw_performance_metrics
+from opti.analysis.soo.metrics import bw_fitness
 from opti.core.results import ResultProcessor
 from opti.analysis.utils import dict_to_csv, dict_to_json, modify_master_list
 from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
@@ -35,6 +36,14 @@ class ExperimentRunner:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
         self.TF = TF
+        if self.problem_info['n_obj']>1:
+            self.populationHandler = MOPopulationHandler()
+            self.metrics_calculator = raw_performance_metrics
+            self.control_metric = 'HV'
+        else:
+            self.populationHandler = SOPopulationHandler()
+            self.metrics_calculator = bw_fitness
+            self.control_metric = 'best'
 
     def run(self, seed):
         np.random.seed(seed)
@@ -71,7 +80,7 @@ class ExperimentRunner:
         
         metrics_list = []
         for res in output:
-            temp_dict = self.processor.get_metrics_history(res, raw_performance_metrics,
+            temp_dict = self.processor.get_metrics_history(res, self.metrics_calculator,
                                                            self.TF)
             temp_dict["seed"] = [res.seed]
             metrics_list.append(temp_dict)
@@ -102,15 +111,15 @@ class ExperimentRunner:
                 std[m] = np.std(values, axis=0)
                 
                 # Rest of convergence logic remains the same...
-                delta = np.diff(mean[m]) / mean[m][:-1]
-                convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
+                # delta = np.diff(mean[m]) / mean[m][:-1]
+                # convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
                 convergence[m] = [np.nan, np.nan]
-                if len(convergence_pt) > 1:
-                    cidx = np.where(np.diff(convergence_pt) == 1)[0]
-                    if len(cidx) > 0:
-                        idx = cidx[0]
-                        convergence[m] = [mean[m][convergence_pt[idx]], 
-                                        mean['evals'][convergence_pt[idx]]]
+                # if len(convergence_pt) > 1:
+                #     cidx = np.where(np.diff(convergence_pt) == 1)[0]
+                #     if len(cidx) > 0:
+                #         idx = cidx[0]
+                #         convergence[m] = [mean[m][convergence_pt[idx]], 
+                #                         mean['evals'][convergence_pt[idx]]]
                 
                 ind_metrics.append({
                     'ydata': [mean[m], std[m]], 
@@ -171,7 +180,7 @@ class ExperimentRunner:
 
         metrics_list = []
         for res in output:
-            temp_dict = raw_performance_metrics(res.population.objectives,self.TF)
+            temp_dict = self.metrics_calculator(res.population.objectives,self.TF)
             temp_dict["seed"] = res.seed
             temp_dict["res"] = res
             metrics_list.append(temp_dict)
@@ -187,11 +196,11 @@ class ExperimentRunner:
         dict_to_json(info_dict, self.output_dir, "Info")
 
         # highest_hv_result = output[np.argmax(raw_metrics["HV"])]
-        highest_hv_result = metrics_df['res'][metrics_df['HV'].idxmax()]
-        plot_data = highest_hv_result.final_dict
+        best_result = metrics_df['res'][metrics_df[self.control_metric].idxmax()]
+        plot_data = best_result.final_dict
         dict_to_csv(plot_data, self.output_dir, "pareto-front")
-        plot_data["name"] = highest_hv_result.algorithm_info["name"]
-        plot_data["seed"] = highest_hv_result.seed
+        plot_data["name"] = best_result.algorithm_info["name"]
+        plot_data["seed"] = best_result.seed
         n_obj = self.problem_info["n_obj"]
         
         # np.save(self.output_dir / "pareto_front.npy", highest_hv_result.population.objectives)
@@ -204,7 +213,7 @@ class ExperimentRunner:
             plot_3d(plot_data, self.output_dir)
         else:
             parallel_coordinates_plot(plot_data, self.output_dir)
-        print(f"Raw results: HV = {metrics_df['HV'].mean():4f}")
+        print(f"Raw results: {self.control_metric} = {metrics_df[self.control_metric].mean():4f}")
         print(f"Results saved to {self.output_dir}")
         return {'name':self.algorithm_info['name'],
                 'psize':self.problem_info['psize'],
@@ -239,8 +248,7 @@ class PymooExptRunner(ExperimentRunner):
         if self.problem_info['n_obj']>1:
             self.populationHandler = MOPopulationHandler()
         else:
-            print("Implement SO PopulationHandler First")
-            raise
+            self.populationHandler = SOPopulationHandler()
 
     def run(self, seed):
         if self.algorithm_info['name'] in ['MOEAD', 'NSGA3']:

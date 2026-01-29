@@ -6,8 +6,6 @@ from pymoo.algorithms.moo.nsga3 import ReferenceDirectionSurvival
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.core.problem import Problem
 
-from opti.moo.population import MoPopulation
-
 def ranking_crowding(problem, population, limit, seed, ndf=False, all=False):
 
     class DummyProblem(Problem):
