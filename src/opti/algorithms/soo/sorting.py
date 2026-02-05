@@ -7,6 +7,7 @@ from pymoo.core.problem import Problem
 def bw_sorting(problem, population, limit, seed, ndf=False, all=False):
     if limit is None:
         limit = problem.psize
+    # print(population.constraints)
     violation_count = np.atleast_2d((population.constraints > 0).sum(axis=1)).T
     # print(population.solutions)
     # print(population.objectives)

@@ -51,7 +51,7 @@ class opti_to_pymoo_prob(pymooProblem):
 def pymoo_to_opti_res(problem_info, algorithm_info, seed, pymooResult, populationHandler):
     result = optiResult(problem_info, algorithm_info, seed)
     for algo in pymooResult.history:
-        feasible = np.all(algo.opt.get("G") < 0, axis=1)
+        feasible = np.all(algo.opt.get("G") <= 0, axis=1)
         pop = Population(algo.opt.get("X")[feasible],
                          algo.opt.get("F")[feasible],
                          algo.opt.get("G")[feasible])

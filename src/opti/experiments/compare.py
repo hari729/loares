@@ -375,10 +375,11 @@ class compare_experiments_all():
                     plot_data = {'ydata' : [],
                                 'xdata': [],
                                 'xlabel' : "Function Evaluations",
+                                'ylabel' : f"{m}",
                                 'point' : [],
                                 'legend':[]}
                     for r in results[rc]+results['others']:
-                        plot_data['ylabel']=f"{m}"
+                        # plot_data['ylabel']=f"{m}"
                         plot_data['ydata' ].append(r['mean-history'][m])
                         plot_data['xdata'].append(r['mean-history']['evals']) 
                         plot_data['point' ].append(r['convergence-pts'][m])

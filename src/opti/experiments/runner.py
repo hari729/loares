@@ -247,8 +247,12 @@ class PymooExptRunner(ExperimentRunner):
         self.TF = TF
         if self.problem_info['n_obj']>1:
             self.populationHandler = MOPopulationHandler()
+            self.metrics_calculator = raw_performance_metrics
+            self.control_metric = 'HV'
         else:
             self.populationHandler = SOPopulationHandler()
+            self.metrics_calculator = bw_fitness
+            self.control_metric = 'best'
 
     def run(self, seed):
         if self.algorithm_info['name'] in ['MOEAD', 'NSGA3']:

@@ -3,12 +3,15 @@ import numpy as np
 from opti.core.population import Population
 
 def no_modifier(X):
-    return X 
+    return X
+
+def dummy_function(X):
+    return X
 
 class Problem():
 
     def __init__(self,
-                 function,
+                 function=dummy_function,
                  name = None,
                  n_vars = 1,
                  n_obj = 1,
@@ -48,6 +51,7 @@ class Problem():
             "name": name,
             "n_obj" : self.n_obj,
             "n_vars" : self.n_vars,
+            "n_constr" : self.n_constr,
             "bounds" : str(self.bounds.tolist()),
             "psize" : self.psize,
             "max_evals" : self.max_evals,
@@ -68,9 +72,9 @@ class ProblemHandler():
         self.evals = 0
         self.prev_evals = 0
         if self.problem.n_obj > 1:
-            self.recording_interval = int(self.max_evals * 0.05)
+            self.recording_interval = max(int(self.max_evals * 0.05),1)
         else:
-            self.recording_interval = int(self.max_evals * 0.005)
+            self.recording_interval = max(int(self.max_evals * 0.005),1)
 
     def remaining_evals(self):
         return self.max_evals - self.evals

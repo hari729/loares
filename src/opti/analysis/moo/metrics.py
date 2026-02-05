@@ -79,6 +79,14 @@ def raw_performance_metrics(objective_values, truefront):
     metrics = {}
 
     if truefront is not None:
+        if objective_values.shape[0] == 0:
+            metrics['HV'] = np.nan
+            metrics['SPC'] = np.nan
+            metrics['GD'] = np.nan
+            metrics['IGD'] = np.nan
+            metrics['SPR'] = np.nan
+            return metrics
+
         fmax = truefront.max(axis=0)
         fmin = truefront.min(axis=0)
 
@@ -103,6 +111,11 @@ def raw_performance_metrics(objective_values, truefront):
         metrics["HV"] = hv(obj_norm)
     
     else:
+        if objective_values.shape[0] == 0:
+            metrics['HV'] = np.nan
+            metrics['SPC'] = np.nan
+            return metrics
+
         fmax = objective_values.max(axis=0)
         fmin = objective_values.min(axis=0)
 
