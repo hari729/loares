@@ -398,5 +398,57 @@ class compare_experiments_all():
             pool.map(self.run, self.psizes)
         return self.main_comparison_dir
 
-
+    def generate_final_metrics_per_run(self, psize):
+        """
+        Generate final metrics per run for each algorithm at the specified psize.
+        
+        Outputs one CSV per algorithm: '{algorithm_name}-final-metrics.csv'
+        Columns: seed, GD, IGD, SPC, SPR, HV
+        
+        Uses existing CTF if available. Fails if CTF is required but doesn't exist.
+        """
+        print(f"Generating final metrics per run at Psize = {psize}")
+        comparison_dir = Path(self.main_comparison_dir / f"{psize}")
+        
+        if not comparison_dir.exists():
+            raise FileNotFoundError(f"Comparison directory not found: {comparison_dir}. Run full comparison first.")
+        
+        result_paths = extract_population_paths(self.test_dir, psize, self.problem_info['max_evals'])
+        
+        # Load CTF if required
+        TF = None
+        if self.CTF and self.problem_info['n_obj'] > 1:
+            CTF_path = comparison_dir / "composite_true_front.npy"
+            if not CTF_path.exists():
+                raise FileNotFoundError(
+                    f"Composite True Front not found: {CTF_path}. "
+                    "Run full comparison first to generate CTF."
+                )
+            TF = np.load(CTF_path)
+            print(f"  Loaded CTF from {CTF_path}")
+        
+        # Process each algorithm
+        for path in result_paths:
+            with gzip.open(path / "results.pkl.gz", 'rb') as f:
+                results_obj_list = pickle.load(f)
+            
+            info = pd.read_json(path / "Info.json")
+            algo_name = info['Algorithm']['name']
+            
+            # Extract final metrics for each run
+            final_metrics_per_run = []
+            for res in results_obj_list:
+                metrics = resultProcessor.get_final_metric(
+                    res, self.metrics_calculator, TF=TF
+                )
+                
+                metrics['seed'] = res.seed
+                final_metrics_per_run.append(metrics)
+            
+            # Save CSV for this algorithm
+            algo_final_df = pd.DataFrame(final_metrics_per_run)
+            output_path = comparison_dir /"final-metrics"
+            os.makedirs(output_path/"parquets", exist_ok=True)
+            algo_final_df.to_csv(output_path/f"{algo_name}-final-metrics.csv" , index=False, float_format="%.5f")
+            print(f"  Saved: {output_path}")
 

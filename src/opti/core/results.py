@@ -30,5 +30,8 @@ class ResultProcessor():
 
         return metrics_history
 
+    def get_final_metric(self, result, performance_metrics, TF=None):
+        return performance_metrics(result.history['pop'][-1].objectives, TF)
+
     def get_final_pop(self, result):
         return result.history['pop'][-1]

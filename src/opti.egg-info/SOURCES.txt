@@ -7,6 +7,7 @@ src/opti.egg-info/SOURCES.txt
 src/opti.egg-info/dependency_links.txt
 src/opti.egg-info/requires.txt
 src/opti.egg-info/top_level.txt
+src/opti/algorithms/__init__.py
 src/opti/algorithms/moo/__init__.py
 src/opti/algorithms/moo/archive.py
 src/opti/algorithms/moo/base.py
@@ -15,9 +16,14 @@ src/opti/algorithms/moo/opposition.py
 src/opti/algorithms/moo/samp.py
 src/opti/algorithms/moo/selection.py
 src/opti/algorithms/moo/sorting.py
+src/opti/algorithms/soo/__init__.py
+src/opti/algorithms/soo/base.py
+src/opti/algorithms/soo/selection.py
+src/opti/algorithms/soo/sorting.py
 src/opti/analysis/plots.py
 src/opti/analysis/utils.py
 src/opti/analysis/moo/metrics.py
+src/opti/analysis/soo/metrics.py
 src/opti/base/__init__.py
 src/opti/base/bmr.py
 src/opti/base/bmwr.py
