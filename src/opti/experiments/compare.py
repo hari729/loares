@@ -448,7 +448,7 @@ class compare_experiments_all():
             # Save CSV for this algorithm
             algo_final_df = pd.DataFrame(final_metrics_per_run)
             output_path = comparison_dir /"final-metrics"
-            os.makedirs(output_path/"parquets", exist_ok=True)
+            os.makedirs(output_path, exist_ok=True)
             algo_final_df.to_csv(output_path/f"{algo_name}-final-metrics.csv" , index=False, float_format="%.5f")
             print(f"  Saved: {output_path}")
 
