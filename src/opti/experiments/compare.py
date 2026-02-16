@@ -13,7 +13,12 @@ import pandas as pd
 import numpy as np
 import re
 from opti.core.population import Population
-from opti.analysis.plots import multi_line_plot, plot_2d, plot_3d, parallel_coordinates_plot
+from opti.analysis.plots import (
+    multi_line_plot,
+    plot_2d,
+    plot_3d,
+    parallel_coordinates_plot,
+)
 from opti.analysis.moo.metrics import raw_performance_metrics
 from opti.analysis.soo.metrics import bw_fitness
 from opti.algorithms.moo.base import MOPopulationHandler
@@ -22,46 +27,56 @@ from opti.core.results import ResultProcessor
 from pymoo.algorithms.moo.mopso_cd import MOPSO_CD
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
+
 def get_suffix_priority(result_dict):
-    name = result_dict['Info']['Algorithm']['name']
+    name = result_dict["Info"]["Algorithm"]["name"]
     # Priority order: None -> archive -> opposition -> samp
-    if name.endswith('SAMP'):
+    if name.endswith("SAMP"):
         return 3
-    if name.endswith('OPPOSITION'):
+    if name.endswith("OPPOSITION"):
         return 2
-    if name.endswith('ARCHIVE'):
+    if name.endswith("ARCHIVE"):
         return 1
     return 0  # No suffix (Base version)
 
+
 resultProcessor = ResultProcessor()
+
 
 def extract_results_paths(test_dir, selction_metric):
     algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
     result_paths = []
     for path in algo_paths:
-        master_df = pd.read_csv(path/"master.csv")
+        master_df = pd.read_csv(path / "master.csv")
         best_idx = master_df[f"{selction_metric}(mean)"].idxmax()
-        psize = master_df['Psize'][best_idx]
-        evals = master_df['Max-evals'][best_idx]
-        result_paths.append(path/f"{psize}-{evals}")
+        psize = master_df["Psize"][best_idx]
+        evals = master_df["Max-evals"][best_idx]
+        result_paths.append(path / f"{psize}-{evals}")
     return result_paths
+
 
 def extract_population_paths_custom(test_dir, psize, evals):
     algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
     result_paths = []
     for path in algo_paths:
-        if re.search(r'\bBMWR\b', str(path)) or re.search(r'\bBMR\b', str(path)) or re.search(r'\bBWR\b', str(path)):
-            result_paths.append(path/f"{psize}-{evals}")
+        if (
+            re.search(r"\bBMWR\b", str(path))
+            or re.search(r"\bBMR\b", str(path))
+            or re.search(r"\bBWR\b", str(path))
+        ):
+            result_paths.append(path / f"{psize}-{evals}")
         else:
-            result_paths.append(path/f"{100}-{evals}")
+            result_paths.append(path / f"{100}-{evals}")
     return result_paths
+
 
 def extract_population_paths(test_dir, psize, evals):
     algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
     result_paths = []
     for path in algo_paths:
-        result_paths.append(path/f"{psize}-{evals}")
+        result_paths.append(path / f"{psize}-{evals}")
     return result_paths
+
 
 # Define which metrics to minimize vs maximize (for mean values)
 # Only HV(mean) is higher is better, all others are lower is better
@@ -71,6 +86,7 @@ MAXIMIZE_MEAN_METRICS = ["HV(mean)"]
 # All std metrics - lower is better (more consistent)
 STD_METRICS = ["GD(std)", "IGD(std)", "SPC(std)", "SPR(std)", "HV(std)"]
 STD_METRICS = []
+
 
 def get_best_algorithm(df: pd.DataFrame, metric: str, minimize: bool = True) -> str:
     """
@@ -94,6 +110,7 @@ def get_best_algorithm(df: pd.DataFrame, metric: str, minimize: bool = True) -> 
 
     # return df.loc[idx, "Algorithm"]
     return df.loc[idx, "Algorithm"], df.loc[idx, metric]
+
 
 def process_comparison_folder(comparison_folder: Path) -> pd.DataFrame:
     """
@@ -139,17 +156,17 @@ def process_comparison_folder(comparison_folder: Path) -> pd.DataFrame:
 
         # Find best algorithm for metrics to minimize (mean)
         for metric in MINIMIZE_MEAN_METRICS:
-            best_algo,best_value = get_best_algorithm(df, metric, minimize=True)
+            best_algo, best_value = get_best_algorithm(df, metric, minimize=True)
             row[metric] = best_algo
             row[f"{metric}_value"] = best_value
         # Find best algorithm for metrics to maximize (mean)
         for metric in MAXIMIZE_MEAN_METRICS:
-            best_algo ,best_value= get_best_algorithm(df, metric, minimize=False)
+            best_algo, best_value = get_best_algorithm(df, metric, minimize=False)
             row[metric] = best_algo
             row[f"{metric}_value"] = best_value
         # Find best algorithm for std metrics (always minimize - lower variance is better)
         for metric in STD_METRICS:
-            best_algo,best_value = get_best_algorithm(df, metric, minimize=True)
+            best_algo, best_value = get_best_algorithm(df, metric, minimize=True)
             row[metric] = best_algo
             row[f"{metric}_value"] = best_value
         results.append(row)
@@ -159,37 +176,37 @@ def process_comparison_folder(comparison_folder: Path) -> pd.DataFrame:
         result_df = pd.DataFrame(results)
         # Order columns to match net-results.csv structure
         cols = [
-                    "Population",
-                    "Max-evals",
-                    "GD(mean)",
-                    "GD(mean)_value",
-                    "GD(std)",
-                    "GD(std)_value",
-                    "IGD(mean)",
-                    "IGD(mean)_value",
-                    "IGD(std)",
-                    "IGD(std)_value",
-                    "SPC(mean)",
-                    "SPC(mean)_value",
-                    "SPC(std)",
-                    "SPC(std)_value",
-                    "SPR(mean)",
-                    "SPR(mean)_value",
-                    "SPR(std)",
-                    "SPR(std)_value",
-                    "HV(mean)",
-                    "HV(mean)_value",
-                    "HV(std)",
-                    "HV(std)_value",
-                ]
+            "Population",
+            "Max-evals",
+            "GD(mean)",
+            "GD(mean)_value",
+            "GD(std)",
+            "GD(std)_value",
+            "IGD(mean)",
+            "IGD(mean)_value",
+            "IGD(std)",
+            "IGD(std)_value",
+            "SPC(mean)",
+            "SPC(mean)_value",
+            "SPC(std)",
+            "SPC(std)_value",
+            "SPR(mean)",
+            "SPR(mean)_value",
+            "SPR(std)",
+            "SPR(std)_value",
+            "HV(mean)",
+            "HV(mean)_value",
+            "HV(std)",
+            "HV(std)_value",
+        ]
         result_df = result_df[[c for c in cols if c in result_df.columns]]
         return result_df
 
     return pd.DataFrame()
 
+
 def compare_metrics(problem_name, compare_dir_path):
     """Main function to process a specific test's comparison folder."""
-
 
     # Build the comparison folder path
     comparison_folder = Path(compare_dir_path)
@@ -220,7 +237,8 @@ def compare_metrics(problem_name, compare_dir_path):
     print(f"\nResults:")
     print(result_df.to_string(index=False))
 
-class compare_experiments_all():
+
+class compare_experiments_all:
     def __init__(self, problem, test_name, psizes, CTF=False, all=False):
         self.problem = problem
         self.problem_info = problem.get_info()
@@ -228,123 +246,149 @@ class compare_experiments_all():
         self.psizes = psizes
         self.CTF = CTF
         self.all = all
-        self.test_dir = (Path.home()/"OptiResults"
-                                    /self.problem_info["name"]
-                                    /self.test_name)
-        if self.problem_info['n_obj']>1:
+        self.test_dir = (
+            Path.home() / "OptiResults" / self.problem_info["name"] / self.test_name
+        )
+        if self.problem_info["n_obj"] > 1:
             self.populationHandler = MOPopulationHandler()
             self.metrics_calculator = raw_performance_metrics
-            self.control_metric = 'HV'
+            self.control_metric = "HV"
             self.recording_interval = 0.05
         else:
             self.populationHandler = SOPopulationHandler()
             self.metrics_calculator = bw_fitness
-            self.control_metric = 'best'
+            self.control_metric = "best"
             self.recording_interval = 0.005
 
-        suffix = ''
+        suffix = ""
         if CTF:
             suffix += "-CTF"
             if all:
                 suffix += "-FLL"
             else:
                 suffix += "-Psize"
-        self.main_comparison_dir = (Path.home()/"OptiResults"
-                                /self.problem_info["name"]
-                                /f"{self.test_name}-comparison{suffix}")
+        self.main_comparison_dir = (
+            Path.home()
+            / "OptiResults"
+            / self.problem_info["name"]
+            / f"{self.test_name}-comparison{suffix}"
+        )
 
-        print(f"\nComparing {self.test_name} test for {self.problem_info['name']} " 
-                f"with CTF = {self.CTF} and CTF size = {'Full' if self.all else 'Psize'}"
-              )
+        print(
+            f"\nComparing {self.test_name} test for {self.problem_info['name']} "
+            f"with CTF = {self.CTF} and CTF size = {'Full' if self.all else 'Psize'}"
+        )
+
     def run(self, psize):
         print(f"at Psize = {psize}")
-        comparison_dir = Path(self.main_comparison_dir/f"{psize}")
-        os.makedirs(comparison_dir/"parquets", exist_ok=True)
+        comparison_dir = Path(self.main_comparison_dir / f"{psize}")
+        os.makedirs(comparison_dir / "parquets", exist_ok=True)
 
-        result_paths = extract_population_paths(self.test_dir, psize, self.problem_info['max_evals'])
-        results = {"BMR": [], "BWR": [], "BMWR":[]}
+        result_paths = extract_population_paths(
+            self.test_dir, psize, self.problem_info["max_evals"]
+        )
+        results = {"BMR": [], "BWR": [], "BMWR": []}
         others = []
         pareto_list = []
         for path in result_paths:
-            with gzip.open(path / "results.pkl.gz", 'rb') as f:
+            with gzip.open(path / "results.pkl.gz", "rb") as f:
                 results_obj_list = pickle.load(f)
             temp = {
-                    # 'pf': pd.read_csv(path/"pareto-front.csv"),
-                    'Info': pd.read_json(path/"Info.json"),
-                    'res_obj': results_obj_list
-                    }
-            final_metrics = pd.read_csv(path/"raw-results.csv")
-            best_seed = final_metrics['seed'][final_metrics[self.control_metric].idxmax()]
+                # 'pf': pd.read_csv(path/"pareto-front.csv"),
+                "Info": pd.read_json(path / "Info.json"),
+                "res_obj": results_obj_list,
+            }
+            final_metrics = pd.read_csv(path / "raw-results.csv")
+            best_seed = final_metrics["seed"][
+                final_metrics[self.control_metric].idxmax()
+            ]
             for robj in results_obj_list:
                 if robj.seed == best_seed:
                     pareto_list.append(robj.population)
-            name = temp['Info']['Algorithm']['name']
-            if re.search(r'\bBMWR\b', name):
+            name = temp["Info"]["Algorithm"]["name"]
+            if re.search(r"\bBMWR\b", name):
                 results["BMWR"].append(temp)
-            elif re.search(r'\bBMR\b', name):
+            elif re.search(r"\bBMR\b", name):
                 results["BMR"].append(temp)
-            elif re.search(r'\bBWR\b', name):
+            elif re.search(r"\bBWR\b", name):
                 results["BWR"].append(temp)
             else:
                 others.append(temp)
         for rt in results:
             results[rt].sort(key=get_suffix_priority)
-        others.sort(key=lambda x: x['Info']['Algorithm']['name'])
-        results['others'] = others
+        others.sort(key=lambda x: x["Info"]["Algorithm"]["name"])
+        results["others"] = others
 
         TF = None
-        if self.CTF and self.problem_info['n_obj'] > 1:
+        if self.CTF and self.problem_info["n_obj"] > 1:
             CTf_path = Path(comparison_dir / "composite_true_front.npy")
             if CTf_path.exists():
                 TF = np.load(CTf_path)
             else:
                 combined_pop = self.populationHandler.merge(pareto_list)
-                composite_population_raw = Population(*ranking_crowding(
-                                                        self.problem, combined_pop, psize,
-                                                        ndf=True, seed = 1, all=self.all))
-                composite_population = self.populationHandler.get_refined(composite_population_raw)
+                composite_population_raw = Population(
+                    *ranking_crowding(
+                        self.problem,
+                        combined_pop,
+                        psize,
+                        ndf=True,
+                        seed=1,
+                        all=self.all,
+                    )
+                )
+                composite_population = self.populationHandler.get_refined(
+                    composite_population_raw
+                )
 
                 TF = composite_population.objectives
                 np.save(comparison_dir / "composite_true_front.npy", TF)
 
         for algo_class in results:
             for algo in results[algo_class]:
-                output = algo['res_obj']
+                output = algo["res_obj"]
                 metrics_list = []
                 for res in output:
-                    temp_dict = resultProcessor.get_metrics_history(res, self.metrics_calculator,
-                                                                    TF=TF)
+                    temp_dict = resultProcessor.get_metrics_history(
+                        res, self.metrics_calculator, TF=TF
+                    )
                     temp_dict["seed"] = [res.seed]
                     metrics_list.append(temp_dict)
 
                 metrics = metrics_list[0].keys()
                 mean = {"name": f"{algo['Info']['Algorithm']['name']} (Mean)"}
                 std = {"name": f"{algo['Info']['Algorithm']['name']} (Std)"}
-                net = {'Psize':algo['Info']['Problem']['psize'],
-                    'Max-evals':algo['Info']['Problem']['max_evals']}
+                net = {
+                    "Psize": algo["Info"]["Problem"]["psize"],
+                    "Max-evals": algo["Info"]["Problem"]["max_evals"],
+                }
 
-                recording_interval = int(algo['Info']['Problem']['max_evals']
-                                         * self.recording_interval)
-                eval_grid = np.arange(recording_interval, 
-                                    algo['Info']['Problem']['max_evals'] + 1, 
-                                    recording_interval)
+                recording_interval = int(
+                    algo["Info"]["Problem"]["max_evals"] * self.recording_interval
+                )
+                eval_grid = np.arange(
+                    recording_interval,
+                    algo["Info"]["Problem"]["max_evals"] + 1,
+                    recording_interval,
+                )
                 # Interpolate each run's metrics to the common grid
-                mean['evals'] = eval_grid
-                std['evals'] = eval_grid
-                convergence = {"name": f"{algo['Info']['Algorithm']['name']} (convergence pts)"}
+                mean["evals"] = eval_grid
+                std["evals"] = eval_grid
+                convergence = {
+                    "name": f"{algo['Info']['Algorithm']['name']} (convergence pts)"
+                }
                 ind_metrics = []
                 for m in metrics:
                     if m not in ["seed", "evals"]:
                         interpolated_values = []
                         for r in metrics_list:
                             # Linear interpolation to common evaluation grid
-                            interp_vals = np.interp(eval_grid, r['evals'], r[m])
+                            interp_vals = np.interp(eval_grid, r["evals"], r[m])
                             interpolated_values.append(interp_vals)
-                        
+
                         values = np.array(interpolated_values, dtype=float)
                         mean[m] = np.mean(values, axis=0)
                         std[m] = np.std(values, axis=0)
-                        
+
                         # Rest of convergence logic remains the same...
                         # delta = np.diff(mean[m]) / mean[m][:-1]
                         # convergence_pt = np.where(np.abs(delta) < 1e-3)[0]
@@ -353,45 +397,51 @@ class compare_experiments_all():
                         #     cidx = np.where(np.diff(convergence_pt) == 1)[0]
                         #     if len(cidx) > 0:
                         #         idx = cidx[0]
-                        #         convergence[m] = [mean[m][convergence_pt[idx]], 
+                        #         convergence[m] = [mean[m][convergence_pt[idx]],
                         #                         mean['evals'][convergence_pt[idx]]]
-
 
                         net[f"{m}(mean)"] = [mean[m][-1]]
                         net[f"{m}(std)"] = [std[m][-1]]
 
-                algo['mean-history'] = pd.DataFrame(mean)
-                algo['mean-history'].to_parquet(
-                    comparison_dir/'parquets'/f"{algo['Info']['Algorithm']['name']}-mean-history.parquet", engine='pyarrow')
-                algo['convergence-pts'] = pd.DataFrame(convergence)
-                algo['net-result'] = pd.DataFrame(net)
+                algo["mean-history"] = pd.DataFrame(mean)
+                algo["mean-history"].to_parquet(
+                    comparison_dir
+                    / "parquets"
+                    / f"{algo['Info']['Algorithm']['name']}-mean-history.parquet",
+                    engine="pyarrow",
+                )
+                algo["convergence-pts"] = pd.DataFrame(convergence)
+                algo["net-result"] = pd.DataFrame(net)
 
-        metrics = [k for k in results['BMR'][0]['convergence-pts'] if k != 'name']
+        metrics = [k for k in results["BMR"][0]["convergence-pts"] if k != "name"]
 
         net_res = {}
         for rc in results:
-            if rc not in ['others']:
+            if rc not in ["others"]:
                 for m in metrics:
-                    plot_data = {'ydata' : [],
-                                'xdata': [],
-                                'xlabel' : "Function Evaluations",
-                                'ylabel' : f"{m}",
-                                'point' : [],
-                                'legend':[]}
-                    for r in results[rc]+results['others']:
+                    plot_data = {
+                        "ydata": [],
+                        "xdata": [],
+                        "xlabel": "Function Evaluations",
+                        "ylabel": f"{m}",
+                        "point": [],
+                        "legend": [],
+                    }
+                    for r in results[rc] + results["others"]:
                         # plot_data['ylabel']=f"{m}"
-                        plot_data['ydata' ].append(r['mean-history'][m])
-                        plot_data['xdata'].append(r['mean-history']['evals']) 
-                        plot_data['point' ].append(r['convergence-pts'][m])
-                        plot_data['legend'].append(r['Info']['Algorithm']['name'])
+                        plot_data["ydata"].append(r["mean-history"][m])
+                        plot_data["xdata"].append(r["mean-history"]["evals"])
+                        plot_data["point"].append(r["convergence-pts"][m])
+                        plot_data["legend"].append(r["Info"]["Algorithm"]["name"])
                     multi_line_plot(plot_data, comparison_dir, f"{m}-{rc}")
-            
+
             for rn in results[rc]:
-                net_res[rn['Info']['Algorithm']['name']] = rn['net-result']
+                net_res[rn["Info"]["Algorithm"]["name"]] = rn["net-result"]
 
         net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
-        net_res.to_csv(f"{comparison_dir}/net-results.csv", index=False, float_format="%.5f")
-
+        net_res.to_csv(
+            f"{comparison_dir}/net-results.csv", index=False, float_format="%.5f"
+        )
 
     def multi_thread(self, threads=5):
         with Pool(processes=threads) as pool:
@@ -401,23 +451,27 @@ class compare_experiments_all():
     def generate_final_metrics_per_run(self, psize):
         """
         Generate final metrics per run for each algorithm at the specified psize.
-        
+
         Outputs one CSV per algorithm: '{algorithm_name}-final-metrics.csv'
         Columns: seed, GD, IGD, SPC, SPR, HV
-        
+
         Uses existing CTF if available. Fails if CTF is required but doesn't exist.
         """
         print(f"Generating final metrics per run at Psize = {psize}")
         comparison_dir = Path(self.main_comparison_dir / f"{psize}")
-        
+
         if not comparison_dir.exists():
-            raise FileNotFoundError(f"Comparison directory not found: {comparison_dir}. Run full comparison first.")
-        
-        result_paths = extract_population_paths(self.test_dir, psize, self.problem_info['max_evals'])
-        
+            raise FileNotFoundError(
+                f"Comparison directory not found: {comparison_dir}. Run full comparison first."
+            )
+
+        result_paths = extract_population_paths(
+            self.test_dir, psize, self.problem_info["max_evals"]
+        )
+
         # Load CTF if required
         TF = None
-        if self.CTF and self.problem_info['n_obj'] > 1:
+        if self.CTF and self.problem_info["n_obj"] > 1:
             CTF_path = comparison_dir / "composite_true_front.npy"
             if not CTF_path.exists():
                 raise FileNotFoundError(
@@ -426,29 +480,126 @@ class compare_experiments_all():
                 )
             TF = np.load(CTF_path)
             print(f"  Loaded CTF from {CTF_path}")
-        
+
         # Process each algorithm
         for path in result_paths:
-            with gzip.open(path / "results.pkl.gz", 'rb') as f:
+            with gzip.open(path / "results.pkl.gz", "rb") as f:
                 results_obj_list = pickle.load(f)
-            
+
             info = pd.read_json(path / "Info.json")
-            algo_name = info['Algorithm']['name']
-            
+            algo_name = info["Algorithm"]["name"]
+
             # Extract final metrics for each run
             final_metrics_per_run = []
             for res in results_obj_list:
                 metrics = resultProcessor.get_final_metric(
                     res, self.metrics_calculator, TF=TF
                 )
-                
-                metrics['seed'] = res.seed
+
+                metrics["seed"] = res.seed
                 final_metrics_per_run.append(metrics)
-            
+
             # Save CSV for this algorithm
             algo_final_df = pd.DataFrame(final_metrics_per_run)
-            output_path = comparison_dir /"final-metrics"
+            output_path = comparison_dir / "final-metrics"
             os.makedirs(output_path, exist_ok=True)
-            algo_final_df.to_csv(output_path/f"{algo_name}-final-metrics.csv" , index=False, float_format="%.5f")
+            algo_final_df.to_csv(
+                output_path / f"{algo_name}-final-metrics.csv",
+                index=False,
+                float_format="%.5f",
+            )
             print(f"  Saved: {output_path}")
 
+    def regen_convergence_plots(
+        self,
+        psize,
+        overwrite=False,
+        legend_fontsize=10,
+        label_fontsize=14,
+        tick_fontsize=12,
+    ):
+        """
+        Re-generate convergence plots from saved parquet files with configurable font sizes.
+
+        Follows the same grouping as run(): each group (BMR, BWR, BMWR) is plotted
+        together with 'others' (NSGA2, NSGA3, etc.), producing 3 plots per metric.
+
+        Parameters
+        ----------
+        psize : int
+            Population size directory to read parquets from.
+        overwrite : bool
+            If True, save plots into the comparison directory (overwriting originals).
+            If False (default), save into a 'replots/' subdirectory.
+        legend_fontsize : int
+            Font size for legend text (default 14).
+        label_fontsize : int
+            Font size for axis labels (default 16).
+        tick_fontsize : int
+            Font size for tick labels (default 12).
+        """
+        comparison_dir = Path(self.main_comparison_dir / f"{psize}")
+        parquets_dir = comparison_dir / "parquets"
+
+        if not parquets_dir.exists():
+            raise FileNotFoundError(
+                f"Parquets directory not found: {parquets_dir}. Run full comparison first."
+            )
+
+        parquet_files = sorted(parquets_dir.glob("*-mean-history.parquet"))
+        if not parquet_files:
+            raise FileNotFoundError(f"No parquet files found in {parquets_dir}")
+
+        # Read all parquet files and group by algorithm type (same logic as run())
+        groups = {"BMR": [], "BWR": [], "BMWR": []}
+        others = []
+        for pf in parquet_files:
+            df = pd.read_parquet(pf, engine="pyarrow")
+            algo_name = pf.name.replace("-mean-history.parquet", "")
+            entry = {"name": algo_name, "df": df}
+            if re.search(r"\bBMWR\b", algo_name):
+                groups["BMWR"].append(entry)
+            elif re.search(r"\bBMR\b", algo_name):
+                groups["BMR"].append(entry)
+            elif re.search(r"\bBWR\b", algo_name):
+                groups["BWR"].append(entry)
+            else:
+                others.append(entry)
+
+        others.sort(key=lambda x: x["name"])
+
+        # Determine metrics (all columns except 'name' and 'evals')
+        all_entries = [e for g in groups.values() for e in g] + others
+        metrics = [
+            c for c in all_entries[0]["df"].columns if c not in ("name", "evals")
+        ]
+
+        # Determine output directory
+        if overwrite:
+            output_dir = comparison_dir
+        else:
+            output_dir = comparison_dir / "replots"
+            os.makedirs(output_dir, exist_ok=True)
+
+        # For each group, plot group + others (3 plots per metric)
+        for rc, group_algos in groups.items():
+            combined = group_algos + others
+            for m in metrics:
+                plot_data = {
+                    "ydata": [a["df"][m] for a in combined],
+                    "xdata": [a["df"]["evals"] for a in combined],
+                    "xlabel": "Function Evaluations",
+                    "ylabel": m,
+                    "point": [[np.nan, np.nan] for _ in combined],
+                    "legend": [a["name"] for a in combined],
+                }
+                multi_line_plot(
+                    plot_data,
+                    output_dir,
+                    f"{m}-{rc}",
+                    legend_fontsize=legend_fontsize,
+                    label_fontsize=label_fontsize,
+                    tick_fontsize=tick_fontsize,
+                )
+
+        print(f"Replots saved to: {output_dir}")

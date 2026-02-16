@@ -1,5 +1,6 @@
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 from matplotlib.lines import lineStyles
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -8,43 +9,61 @@ import re
 
 colors = sns.color_palette("tab10", 10)
 
-def multi_line_plot(data, filepath, filename=None):
-    for iy, (xdata, ydata) in enumerate(zip(data['xdata'],data['ydata'])):
-        plt.plot(xdata, ydata, linestyle='-',marker='', color=colors[iy])
-    if 'vline' in data:
-        for iv,pt in enumerate(data['vline']):
+
+def multi_line_plot(
+    data,
+    filepath,
+    filename=None,
+    legend_fontsize=8,
+    label_fontsize=None,
+    tick_fontsize=None,
+):
+    for iy, (xdata, ydata) in enumerate(zip(data["xdata"], data["ydata"])):
+        plt.plot(xdata, ydata, linestyle="-", marker="", color=colors[iy])
+    if "vline" in data:
+        for iv, pt in enumerate(data["vline"]):
             y_point, x_point = pt
-            plt.axvline(x=x_point, linestyle='--', color=colors[iv])
-    if 'point' in data:
-        for ip,pt in enumerate(data['point']):
+            plt.axvline(x=x_point, linestyle="--", color=colors[iv])
+    if "point" in data:
+        for ip, pt in enumerate(data["point"]):
             y_point, x_point = pt
-            plt.plot(x_point, y_point, linestyle='', marker='x', color=colors[ip])
-    plt.legend(labels=data['legend'], loc='best', fontsize=8)
-    plt.grid(which='both',linestyle='--',alpha=0.7)
-    plt.xlabel(f"{data['xlabel']}")
-    plt.ylabel(f"{data['ylabel']}")
+            plt.plot(x_point, y_point, linestyle="", marker="x", color=colors[ip])
+    plt.legend(labels=data["legend"], loc="best", fontsize=legend_fontsize)
+    plt.grid(which="both", linestyle="--", alpha=0.7)
+    plt.xlabel(f"{data['xlabel']}", fontsize=label_fontsize)
+    plt.ylabel(f"{data['ylabel']}", fontsize=label_fontsize)
+    if tick_fontsize is not None:
+        plt.tick_params(labelsize=tick_fontsize)
     plt.tight_layout()
     if filename is None:
         filename = f"{data['ylabel']}-vs-{data['xlabel']}".replace(" ", "-")
-    plt.savefig(f"{filepath}/{filename}.pdf", bbox_inches='tight')
+    plt.savefig(f"{filepath}/{filename}.pdf", bbox_inches="tight")
     plt.close()
+
 
 def plot_2d(data, filepath, cid=0):
     color = sns.color_palette("tab10")[cid]
     legend = [data["name"]]
-    plt.figure() 
-    plt.plot(data["f1"], data["f2"], linestyle='',marker='o',markeredgecolor='white',
-             markeredgewidth=0.5, markerfacecolor=color)
-    plt.legend(labels=legend, loc='best', fontsize=8)
-    plt.grid(which='both',linestyle='--',alpha=0.7)
+    plt.figure()
+    plt.plot(
+        data["f1"],
+        data["f2"],
+        linestyle="",
+        marker="o",
+        markeredgecolor="white",
+        markeredgewidth=0.5,
+        markerfacecolor=color,
+    )
+    plt.legend(labels=legend, loc="best", fontsize=8)
+    plt.grid(which="both", linestyle="--", alpha=0.7)
     plt.xlabel("f1")
     plt.ylabel(f"f2")
     plt.tight_layout()
-    plt.savefig(f"{filepath}/{data['seed']}-pareto-front-2D.pdf", bbox_inches='tight')
+    plt.savefig(f"{filepath}/{data['seed']}-pareto-front-2D.pdf", bbox_inches="tight")
     plt.close()
 
 
-def plot_3d(pareto_dict, filepath, cid=0,mid=0):
+def plot_3d(pareto_dict, filepath, cid=0, mid=0):
     sns.set_theme(style="whitegrid")
 
     markers = ["o", "X", "s", "P", "v", "^", "D", "p", "*"]
@@ -62,7 +81,7 @@ def plot_3d(pareto_dict, filepath, cid=0,mid=0):
         marker=markers[mid],
         edgecolors="white",
         linewidths=0.4,
-        label=pareto_dict.get("name", None)
+        label=pareto_dict.get("name", None),
     )
 
     # Axis labels
@@ -100,7 +119,7 @@ def plot_3d(pareto_dict, filepath, cid=0,mid=0):
             framealpha=0.5,
             edgecolor="black",
             fontsize=10,
-            bbox_transform=ax.transAxes
+            bbox_transform=ax.transAxes,
         )
 
     plt.tight_layout()
@@ -108,10 +127,10 @@ def plot_3d(pareto_dict, filepath, cid=0,mid=0):
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
+
 def parallel_coordinates_plot(data, filepath, alpha=0.6):
     keys = sorted(
-    [k for k in data.keys() if re.fullmatch(r"f\d+", k)],
-    key=lambda x: int(x[1:])
+        [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
     )
     # keys = list(data.keys())
     values = np.array([data[f] for f in keys]).T  # shape: (n_points, n_dims)
