@@ -1,4 +1,6 @@
 
+import h5py
+
 class Result():
     def __init__(self, problem_info, algo_info, seed):
         self.problem_info = problem_info
@@ -35,3 +37,46 @@ class ResultProcessor():
 
     def get_final_pop(self, result):
         return result.history['pop'][-1]
+
+    def to_hdf5(self, results, path):
+        with h5py.File(path, "w") as file:
+            runs_grp = file.create_group("runs")
+            for res in results:
+                seed_grp = runs_grp.create_group(f"{int(res.seed):03d}")
+                fe_group = seed_grp.create_group("function_evals")
+                for i,evals in enumerate(res.history['evals']):
+                    grp = fe_group.create_group(f"{evals:06d}")
+                    grp.create_dataset("X", data=res.history['pop'][i].solutions)
+                    grp.create_dataset("F", data=res.history['pop'][i].objectives)
+                    grp.create_dataset("G", data=res.history['pop'][i].constraints)
+                # grp.create_dataset("M", data=population.metadata)
+                #
+    def from_hdf5(self, path, problem_info, algo_info):
+        """
+        Load all runs from one history.h5 and reconstruct Result objects.
+        """
+        from opti.core.population import Population  # local import avoids circulars
+        results = []
+        with h5py.File(path, "r") as file:
+            runs_grp = file["runs"]
+            for seed_key in sorted(runs_grp.keys()):
+                seed = int(seed_key)
+                seed_grp = runs_grp[seed_key]
+                fe_group = seed_grp["function_evals"]
+                res = Result(problem_info, algo_info, seed)
+                # eval groups are zero-padded strings, sort numerically
+                eval_keys = sorted(fe_group.keys(), key=lambda k: int(k))
+                for ek in eval_keys:
+                    grp = fe_group[ek]
+                    X = grp["X"][:]
+                    F = grp["F"][:]
+                    G = grp["G"][:]
+                    pop = Population(X, F, G)
+                    res.record(pop, int(ek))
+                # reconstruct final fields
+                if res.history["pop"]:
+                    res.population = res.history["pop"][-1]
+                    # optional: final_dict can be reconstructed later if needed
+                    # res.final_dict = ...
+                results.append(res)
+        return results

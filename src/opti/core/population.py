@@ -1,7 +1,6 @@
 import numpy as np 
 import warnings
 from opti.core.initializer import random_initialize
-import h5py
 
 
 class Population():
@@ -84,59 +83,3 @@ class PopulationHandler():
     def get_refined_dict(self, population):
         return population
 
-class PopulationRecorderHDF5():
-    def __init__(self, filename):
-        self.file = h5py.File(filename, "w")
-        self.iter_group = self.file.create_group("function_evals")
-
-    def record(self, population, evals):
-        grp = self.iter_group.create_group(f"{evals:06d}")
-        grp.create_dataset("X", data=population.solutions)
-        grp.create_dataset("F", data=population.objectives)
-        grp.create_dataset("G", data=population.constraints)
-        # grp.create_dataset("M", data=population.metadata)
-    def close(self):
-        self.file.close()
-
-class PopulationHDF5Reader:
-    def __init__(self, problem, perofrmance_metrics):
-        self.perofrmance_metrics = perofrmance_metrics
-        self.problem = problem
-
-    def list_keys(self, filepath):
-        file = h5py.File(filepath, "r")
-        keys = sorted(file.keys())
-        file.close()
-        return keys
-
-    def get_metrics_history(self, filepath, group):
-        file = h5py.File(filepath, "r")
-        convergence_data = {}
-        for it in file[group]:
-            X = file[group][it]['X'][:]
-            F = file[group][it]['F'][:]
-            G = file[group][it]['G'][:]
-            M = file[group][it]['M'][:]
-
-            population = Population(X, F, G, M)
-
-            metrics = self.perofrmance_metrics(self.problem, population)
-
-            for key, value in metrics.items():
-                convergence_data.setdefault(key, []).append(value)
-            convergence_data.setdefault("evals", []).append(it)
-
-        file.close()
-        return convergence_data
-
-    def get_final_population(self, filepath, group):
-        file = h5py.File(filepath, "r")
-        it = f"{self.problem.max_evals:06d}"
-        X = file[group][it]['X'][:]
-        F = file[group][it]['F'][:]
-        G = file[group][it]['G'][:]
-        M = file[group][it]['M'][:]
-
-        population = Population(X, F, G, M)
-
-        return population
