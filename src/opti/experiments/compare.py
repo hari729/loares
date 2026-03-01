@@ -5,9 +5,7 @@ import sys
 import os
 from multiprocessing import Pool
 import __main__
-from typing import final
 
-from numpy.linalg import cond
 from opti.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
 import numpy as np

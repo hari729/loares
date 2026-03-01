@@ -1,5 +1,5 @@
-
 import h5py
+import json
 
 class Result():
     def __init__(self, problem_info, algo_info, seed):
@@ -40,9 +40,13 @@ class ResultProcessor():
 
     def to_hdf5(self, results, path):
         with h5py.File(path, "w") as file:
+            meta_grp = file.create_group("metadata")
+            meta_grp.attrs["problem_info_json"] = json.dumps(results[0].problem_info)
+            meta_grp.attrs["algorithm_info_json"] = json.dumps(results[0].algorithm_info)
             runs_grp = file.create_group("runs")
             for res in results:
                 seed_grp = runs_grp.create_group(f"{int(res.seed):03d}")
+                seed_grp.attrs["final_dict_json"] = json.dumps(res.final_dict)
                 fe_group = seed_grp.create_group("function_evals")
                 for i,evals in enumerate(res.history['evals']):
                     grp = fe_group.create_group(f"{evals:06d}")
@@ -51,19 +55,22 @@ class ResultProcessor():
                     grp.create_dataset("G", data=res.history['pop'][i].constraints)
                 # grp.create_dataset("M", data=population.metadata)
                 #
-    def from_hdf5(self, path, problem_info, algo_info):
+    def from_hdf5(self, path):
         """
         Load all runs from one history.h5 and reconstruct Result objects.
         """
         from opti.core.population import Population  # local import avoids circulars
         results = []
         with h5py.File(path, "r") as file:
+            meta_grp = file["metadata"]
+            problem_info = json.loads(meta_grp.attrs["problem_info_json"])
+            algorithm_info = json.loads(meta_grp.attrs["algorithm_info_json"])
             runs_grp = file["runs"]
             for seed_key in sorted(runs_grp.keys()):
                 seed = int(seed_key)
                 seed_grp = runs_grp[seed_key]
                 fe_group = seed_grp["function_evals"]
-                res = Result(problem_info, algo_info, seed)
+                res = Result(problem_info, algorithm_info, seed)
                 # eval groups are zero-padded strings, sort numerically
                 eval_keys = sorted(fe_group.keys(), key=lambda k: int(k))
                 for ek in eval_keys:
@@ -76,7 +83,6 @@ class ResultProcessor():
                 # reconstruct final fields
                 if res.history["pop"]:
                     res.population = res.history["pop"][-1]
-                    # optional: final_dict can be reconstructed later if needed
-                    # res.final_dict = ...
+                    res.final_dict = json.loads(seed_grp.attrs["final_dict_json"])
                 results.append(res)
         return results

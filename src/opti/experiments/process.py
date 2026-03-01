@@ -1,0 +1,319 @@
+from datetime import datetime
+
+from pathlib import Path
+import os
+from multiprocessing import Pool
+import __main__
+
+from opti.algorithms.moo.sorting import ranking_crowding
+import pandas as pd
+import numpy as np
+import re
+from opti.core.population import Population
+from opti.analysis.plots import (
+    multi_line_plot,
+    plot_2d,
+    plot_3d,
+    parallel_coordinates_plot,
+)
+from opti.analysis.moo.metrics import raw_performance_metrics
+from opti.analysis.soo.metrics import bw_fitness
+from opti.algorithms.moo.base import MOPopulationHandler
+from opti.algorithms.soo.base import SOPopulationHandler
+from opti.core.results import ResultProcessor
+
+class post_process:
+    def __init__(self, problem, test_name, psizes, algo_grps,
+                 true_f=None, gen_rf=False, rf_size=5000):
+        self.problem = problem
+        self.problem_info = problem.get_info()
+        self.test_name = test_name
+        self.psizes = psizes
+        self.algo_grps = algo_grps
+        self.true_f = true_f
+        self.gen_rf = gen_rf
+        self.rf_size = rf_size
+        self.test_dir = (
+            Path.home() / "OptiResults" / self.problem_info["name"] / self.test_name
+        )
+        if self.problem_info["n_obj"] > 1:
+            self.populationHandler = MOPopulationHandler()
+            self.metrics_calculator = raw_performance_metrics
+            self.control_metric = "HV"
+            self.recording_interval = 0.05
+        else:
+            self.populationHandler = SOPopulationHandler()
+            self.metrics_calculator = bw_fitness
+            self.control_metric = "best"
+            self.recording_interval = 0.005
+
+        self.timestamp = datetime.now().timestamp()
+        self.result_dir = (
+            Path.home()
+            / "OptiResults"
+            / self.problem_info["name"]
+            / f"{self.test_name}-proc-{self.timestamp}"
+        )
+        os.makedirs(self.result_dir, exist_ok=True)
+        self.result_processor = ResultProcessor()
+        print(
+            f"\nComparing {self.test_name} test for {self.problem_info['name']} "
+            f"with RF = {self.gen_rf} and RF size = {self.rf_size}"
+        )
+
+    def extract_population_paths(self, test_dir, psize, evals):
+        algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
+        result_paths = []
+        for path in algo_paths:
+            result_paths.append(path / f"{psize}-{evals}")
+        return result_paths
+
+    def generate_rf(self):
+
+        all_result_paths = []
+        for psize in self.psizes:
+            result_paths = self.extract_population_paths(
+                self.test_dir, psize, self.problem_info["max_evals"]
+            )
+            all_result_paths.extend(result_paths)
+
+        pareto_list = []
+        for path in all_result_paths:
+            results_obj_list = self.result_processor.from_hdf5(path / "history.h5")
+            for res in results_obj_list:
+                pareto_list.append(res.population)
+
+        rf_path = Path(self.result_dir / "ref_front.npy")
+        if rf_path.exists():
+            self.true_f = np.load(rf_path)
+        else:
+            combined_pop = self.populationHandler.merge(pareto_list)
+            composite_population_raw = Population(
+                *ranking_crowding(
+                    self.problem,
+                    combined_pop,
+                    self.rf_size,
+                    ndf=True,
+                    seed=1,
+                )
+            )
+            composite_population = self.populationHandler.get_refined(
+                composite_population_raw
+            )
+            self.true_f = composite_population.objectives
+            np.save(rf_path, self.true_f)
+
+    def run(self, psize):
+        print(f"at Psize = {psize}")
+        pop_dir = Path(self.result_dir / f"{psize}")
+        os.makedirs(pop_dir / "parquets", exist_ok=True)
+
+        result_paths = self.extract_population_paths(
+            self.test_dir, psize, self.problem_info["max_evals"]
+        )
+
+        all_results = {}
+        for path in result_paths:
+            results_obj_list = self.result_processor.from_hdf5(path / "history.h5")
+            temp = {
+                "Info": pd.read_json(path / "Info.json"),
+            }
+            name = temp["Info"]["Algorithm"]["name"]
+            all_results[name] = {"Info" : temp["Info"],
+                                    "output" :results_obj_list}
+
+        if self.true_f is None and self.problem_info["n_obj"] > 1:
+            rf_path = Path(self.result_dir / "ref_front.npy")
+            if rf_path.exists():
+                self.true_f = np.load(rf_path)
+
+        net_res = {}
+        for algo in all_results:
+            output = all_results[algo]["output"]
+            metrics_list = []
+            final_metrics_per_run = []
+            for res in output:
+                temp_dict = self.result_processor.get_metrics_history(
+                    res, self.metrics_calculator, TF=self.true_f
+                )
+                final_metrics = self.result_processor.get_final_metric(
+                    res, self.metrics_calculator, TF=self.true_f
+                )
+
+                final_metrics["seed"] = res.seed
+                final_metrics_per_run.append(final_metrics)
+                temp_dict["seed"] = [res.seed]
+                metrics_list.append(temp_dict)
+
+            # Save CSV for this algorithm
+            algo_final_df = pd.DataFrame(final_metrics_per_run)
+            algo_final_df.to_csv(
+                pop_dir / f"{algo}-final-metrics.csv",
+                index=False,
+                float_format="%.5f",
+            )
+
+            metrics = metrics_list[0].keys()
+            mean = {"name": f"{algo} (Mean)"}
+            std = {"name": f"{algo} (Std)"}
+            net = {
+                "Psize": all_results[algo]["Info"]["Problem"]["psize"],
+                "Max-evals": all_results[algo]["Info"]["Problem"]["max_evals"],
+            }
+
+            recording_interval = int(
+                all_results[algo]["Info"]["Problem"]["max_evals"] * self.recording_interval
+            )
+            eval_grid = np.arange(
+                recording_interval,
+                all_results[algo]["Info"]["Problem"]["max_evals"] + 1,
+                recording_interval,
+            )
+            # Interpolate each run's metrics to the common grid
+            mean["evals"] = eval_grid
+            std["evals"] = eval_grid
+            convergence = {
+                "name": f"{algo} (convergence pts)"
+            }
+            for m in metrics:
+                if m not in ["seed", "evals"]:
+                    interpolated_values = []
+                    for r in metrics_list:
+                        # Linear interpolation to common evaluation grid
+                        interp_vals = np.interp(eval_grid, r["evals"], r[m])
+                        interpolated_values.append(interp_vals)
+
+                    values = np.array(interpolated_values, dtype=float)
+                    mean[m] = np.mean(values, axis=0)
+                    std[m] = np.std(values, axis=0)
+
+                    convergence[m] = [np.nan, np.nan]
+
+                    net[f"{m}(mean)"] = [mean[m][-1]]
+                    net[f"{m}(std)"] = [std[m][-1]]
+
+            all_results[algo]["mean-history"] = pd.DataFrame(mean)
+            all_results[algo]["mean-history"].to_parquet(
+                pop_dir
+                / "parquets"
+                / f"{algo}-mean-history.parquet",
+                engine="pyarrow",
+            )
+            all_results[algo]["convergence-pts"] = pd.DataFrame(convergence)
+            all_results[algo]["net-result"] = pd.DataFrame(net)
+
+            net_res[algo] = pd.DataFrame(net) 
+
+        net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
+        net_res.to_csv(
+            f"{pop_dir}/net-results.csv", index=False, float_format="%.5f"
+        )
+
+        for grp in self.algo_grps: 
+            if grp != "common":
+                for m in metrics:
+                    if m not in ["seed", "evals"]:
+                        plot_data = {
+                            "ydata": [],
+                            "xdata": [],
+                            "xlabel": "Function Evaluations",
+                            "ylabel": f"{m}",
+                            "point": [],
+                            "legend": [],
+                        }
+                        for alg in self.algo_grps[grp] + self.algo_grps["common"]:
+                            plot_data["ydata"].append(all_results[alg]["mean-history"][m])
+                            plot_data["xdata"].append(all_results[alg]["mean-history"]["evals"])
+                            plot_data["point"].append(all_results[alg]["convergence-pts"][m])
+                            plot_data["legend"].append(all_results[alg]["Info"]["Algorithm"]["name"])
+                        multi_line_plot(plot_data, pop_dir, f"{m}-{grp}")
+
+
+    def multi_thread(self, threads=5):
+        if self.true_f is None:
+            if self.gen_rf and self.problem_info["n_obj"] > 1:
+                self.generate_rf()
+        with Pool(processes=threads) as pool:
+            pool.map(self.run, self.psizes)
+        return self.result_dir
+
+    def regen_convergence_plots(
+        self,
+        psize,
+        overwrite=False,
+        legend_fontsize=10,
+        label_fontsize=14,
+        tick_fontsize=12,
+    ):
+        """
+        Re-generate convergence plots from saved parquet files with configurable font sizes.
+
+        Follows the same grouping as run(): each group (BMR, BWR, BMWR) is plotted
+        together with 'others' (NSGA2, NSGA3, etc.), producing 3 plots per metric.
+
+        Parameters
+        ----------
+        psize : int
+            Population size directory to read parquets from.
+        overwrite : bool
+            If True, save plots into the comparison directory (overwriting originals).
+            If False (default), save into a 'replots/' subdirectory.
+        legend_fontsize : int
+            Font size for legend text (default 14).
+        label_fontsize : int
+            Font size for axis labels (default 16).
+        tick_fontsize : int
+            Font size for tick labels (default 12).
+        """
+        comparison_dir = Path(self.result_dir / f"{psize}")
+        parquets_dir = comparison_dir / "parquets"
+
+        if not parquets_dir.exists():
+            raise FileNotFoundError(
+                f"Parquets directory not found: {parquets_dir}. Generate metrics history first."
+            )
+
+        parquet_files = sorted(parquets_dir.glob("*-mean-history.parquet"))
+        if not parquet_files:
+            raise FileNotFoundError(f"No parquet files found in {parquets_dir}")
+
+        history_dict = {}
+        for pf in parquet_files:
+            df = pd.read_parquet(pf, engine="pyarrow")
+            algo_name = pf.name.replace("-mean-history.parquet", "")
+            history_dict[algo_name] = df
+
+        metrics = [
+            c for c in df.columns if c not in ("name", "evals")
+        ]
+
+        # Determine output directory
+        if overwrite:
+            output_dir = comparison_dir
+        else:
+            output_dir = comparison_dir / "replots"
+            os.makedirs(output_dir, exist_ok=True)
+
+        # For each group, plot group + others (3 plots per metric)
+        for grp in self.algo_grps:
+            if grp != "common":
+                combined = self.algo_grps[grp] + self.algo_grps["common"]
+                for m in metrics:
+                    plot_data = {
+                        "ydata": [history_dict[a][m] for a in combined],
+                        "xdata": [history_dict[a]["evals"] for a in combined],
+                        "xlabel": "Function Evaluations",
+                        "ylabel": m,
+                        "point": [[np.nan, np.nan] for _ in combined],
+                        "legend": [a for a in combined],
+                    }
+                    multi_line_plot(
+                        plot_data,
+                        output_dir,
+                        f"{m}-{grp}",
+                        legend_fontsize=legend_fontsize,
+                        label_fontsize=label_fontsize,
+                        tick_fontsize=tick_fontsize,
+                    )
+
+        print(f"Replots saved to: {output_dir}")
