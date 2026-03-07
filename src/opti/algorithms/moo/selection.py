@@ -1,63 +1,43 @@
-
 import numpy as np
+
+SELECTION_RATIO = 0.1
+
+
+def _top_bottom_indices(M_b, M_w, pool_size):
+    top_k = max(1, int(SELECTION_RATIO * M_b))
+    bottom_k = max(1, int(SELECTION_RATIO * M_w))
+    selected_b = np.random.randint(0, top_k, pool_size)
+    selected_w = np.random.randint(M_w - bottom_k, M_w, pool_size)
+    return selected_b, selected_w
+
 
 def random_bw_selection(population):
     pool_size = population.solutions.shape[0]
-    if np.any(population.metadata[:,0]!=0):
-        population_b = population.solutions[population.metadata[:,0]==0]
-        population_w = population.solutions[population.metadata[:,0]!=0]
-
-    else: 
-        half = pool_size//2
-        population_b = population.solutions[:half,:]
-        population_w = population.solutions[half:,:]
+    if np.any(population.metadata[:, 0] != 0):
+        population_b = population.solutions[population.metadata[:, 0] == 0]
+        population_w = population.solutions[population.metadata[:, 0] != 0]
+    else:
+        half = pool_size // 2
+        population_b = population.solutions[:half, :]
+        population_w = population.solutions[half:, :]
 
     M_b = len(population_b)
     M_w = len(population_w)
-
-    try:
-        selected_b = np.random.randint(0, 10 if M_b>10 else M_b,pool_size)
-        selected_w = np.random.randint(M_w-10 if M_w>20 else 0,M_w,pool_size)
-
-    except Exception as e:
-        print(str(e), f"M_b = {M_b}, M_w = {M_w}")
-        print(population.metadata)
-        raise
-
-    return {"best":population_b[selected_b], "worst":population_w[selected_w]}
-
-def bw_selection(population):
-    best = population.solutions[0,:]
-    worst = population.solutions[-1,:]
-    return {"best":best, "worst":worst}
-
-def bw_selection_a(population, archive):
-    best = archive.solutions[0,:]
-    worst = population.solutions[-1,0]
-    return {"best":best, "worst":worst}
+    selected_b, selected_w = _top_bottom_indices(M_b, M_w, pool_size)
+    return {"best": population_b[selected_b], "worst": population_w[selected_w]}
 
 
 def archive_bw_selection(population, archive):
     pool_size = population.get_size()
-    if np.any(population.metadata[:,0]!=0):
+    if np.any(population.metadata[:, 0] != 0):
         population_b = archive.solutions
-        population_w = population.solutions[population.metadata[:,0]!=0]
-
-        M_b = len(population_b)
-        M_w = len(population_w)
-
-        selected_b = np.random.randint(0,M_b,pool_size)
-        selected_w = np.random.randint(0,M_w,pool_size)
-
-    else: 
-        half = pool_size//2
+        population_w = population.solutions[population.metadata[:, 0] != 0]
+    else:
+        half = pool_size // 2
         population_b = archive.solutions
-        population_w = population.solutions[half:,:]
+        population_w = population.solutions[half:, :]
 
-        M_b = len(population_b)
-        M_w = len(population_w)
-
-        selected_b = np.random.randint(0,M_b,pool_size)
-        selected_w = np.random.randint(0,M_w,pool_size)
-
-    return {"best":population_b[selected_b], "worst":population_w[selected_w]}
+    M_b = len(population_b)
+    M_w = len(population_w)
+    selected_b, selected_w = _top_bottom_indices(M_b, M_w, pool_size)
+    return {"best": population_b[selected_b], "worst": population_w[selected_w]}
