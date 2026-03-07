@@ -1,6 +1,5 @@
 from pathlib import Path
 import sys
-import __main__
 import pandas as pd
 
 # Define which metrics to minimize vs maximize (for mean values)
@@ -161,5 +160,3 @@ def compare_metrics(problem_name, compare_dir_path):
     print(f"Saved: {output_path}")
     print(f"\nResults:")
     print(result_df.to_string(index=False))
-
-

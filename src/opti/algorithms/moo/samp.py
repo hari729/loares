@@ -54,7 +54,9 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
         )["HV"]
 
         if new_indicator > self.indicator:
-            new_n = min(self.n + 1, 20)
+            new_n = min(
+                self.n + 1, max(2, int(0.1 * self.problemHandler.problem.psize))
+            )
         elif self.n > 1:
             new_n = self.n - 1
         else:

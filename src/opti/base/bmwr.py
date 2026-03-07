@@ -1,8 +1,8 @@
 import numpy as np
 
+
 def bmwr(problem, population, pool):
     pop_size = population.get_size()
-    variables = problem.n_vars
     bounds = problem.bounds
 
     r_i = np.random.randint(0, pop_size, size=pop_size)
@@ -12,13 +12,15 @@ def bmwr(problem, population, pool):
 
     best_pop = pool["best"]
     worst_pop = pool["worst"]
-    mean = np.mean(population.solutions, axis = 0)
+    mean = np.mean(population.solutions, axis=0)
     random_pop = population.solutions[r_i]
-    
-    new = (population.solutions + 
-                 r1  * (best_pop - T * mean) -
-                 r2  * (worst_pop - random_pop))
-    
-    new = np.clip(new,bounds[:,0],bounds[:,1])
+
+    new = (
+        population.solutions
+        + r1 * (best_pop - T * mean)
+        - r2 * (worst_pop - random_pop)
+    )
+
+    new = np.clip(new, bounds[:, 0], bounds[:, 1])
 
     return new

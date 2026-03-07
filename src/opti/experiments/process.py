@@ -3,7 +3,6 @@ from datetime import datetime
 from pathlib import Path
 import os
 from multiprocessing import Pool
-import __main__
 from opti.analysis.utils import dict_to_csv
 from opti.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
@@ -77,6 +76,7 @@ class post_process:
             f"with RF = {self.gen_rf} and RF size = {self.rf_size}"
         )
         self.threads = 2
+        self._per_algo_accumulator = []
 
     def extract_population_paths(self, test_dir, psize, evals):
         algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
@@ -151,7 +151,7 @@ class post_process:
         return metrics_history, final_metrics
 
     def run(self, psize):
-        print(f"Runnig psize = {psize}")
+        print(f"Running psize = {psize}")
         pop_dir = Path(self.result_dir / f"{psize}")
         os.makedirs(pop_dir / "parquets", exist_ok=True)
 

@@ -1,7 +1,6 @@
 import matplotlib
 
 matplotlib.use("Agg")
-from matplotlib.lines import lineStyles
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -57,7 +56,7 @@ def plot_2d(data, filepath, cid=0):
     plt.legend(labels=legend, loc="best", fontsize=8)
     plt.grid(which="both", linestyle="--", alpha=0.7)
     plt.xlabel("f1")
-    plt.ylabel(f"f2")
+    plt.ylabel("f2")
     plt.tight_layout()
     plt.savefig(f"{filepath}/{data['seed']}-pareto-front-2D.pdf", bbox_inches="tight")
     plt.close()
