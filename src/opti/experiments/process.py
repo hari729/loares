@@ -72,7 +72,6 @@ class post_process:
             / "analysis"
         )
         os.makedirs(self.result_dir, exist_ok=True)
-        self.result_processor = ResultProcessor()
         print(
             f"\nComparing {self.test_name} test for {self.problem_info['name']} "
             f"with RF = {self.gen_rf} and RF size = {self.rf_size}"
@@ -85,6 +84,10 @@ class post_process:
         for path in algo_paths:
             result_paths.append(path / f"{psize}-{evals}")
         return result_paths
+
+    @staticmethod
+    def _get_seed_files(algo_dir):
+        return sorted(algo_dir.glob("seed_*.h5"))
 
     def sort_pop_list(self, pareto_list):
         combined_pop = self.populationHandler.merge(pareto_list)
@@ -113,9 +116,8 @@ class post_process:
         pareto_list = []
         for path in all_result_paths:
             local_list = []
-            results_obj_list = self.result_processor.from_hdf5(path / "history.h5")
-            for res in results_obj_list:
-                local_list.append(res.population)
+            for sf in self._get_seed_files(path):
+                local_list.append(ResultProcessor.read_final_population(sf))
             pareto_list.append(local_list)
 
         rf_path = Path(self.result_dir / "ref_front.npy")
@@ -131,16 +133,22 @@ class post_process:
             self.true_f = reference_pop.objectives
             np.save(rf_path, self.true_f)
 
-    def _metrics_worker(self, res):
-        hist = self.result_processor.get_metrics_history(
-            res, self.metrics_calculator, TF=self.true_f
-        )
-        final = self.result_processor.get_final_metric(
-            res, self.metrics_calculator, TF=self.true_f
-        )
-        final["seed"] = res.seed
-        hist["seed"] = [res.seed]
-        return hist, final
+    def _metrics_worker(self, hdf5_path):
+        seed = ResultProcessor.read_seed(hdf5_path)
+        metrics_history = {}
+        final_metrics = None
+        for evals, metrics in ResultProcessor.stream_metrics(
+            hdf5_path, self.metrics_calculator, TF=self.true_f
+        ):
+            for key, value in metrics.items():
+                metrics_history.setdefault(key, []).append(value)
+            metrics_history.setdefault("evals", []).append(evals)
+            final_metrics = metrics
+
+        if final_metrics is not None:
+            final_metrics["seed"] = seed
+        metrics_history["seed"] = [seed]
+        return metrics_history, final_metrics
 
     def run(self, psize):
         print(f"Runnig psize = {psize}")
@@ -153,12 +161,12 @@ class post_process:
 
         all_results = {}
         for path in result_paths:
-            results_obj_list = self.result_processor.from_hdf5(path / "history.h5")
             temp = {
                 "Info": pd.read_json(path / "Info.json"),
             }
             name = temp["Info"]["Algorithm"]["name"]
-            all_results[name] = {"Info": temp["Info"], "output": results_obj_list}
+            seed_files = self._get_seed_files(path)
+            all_results[name] = {"Info": temp["Info"], "seed_files": seed_files}
 
         if self.true_f is None and self.problem_info["n_obj"] > 1:
             rf_path = Path(self.result_dir / "ref_front.npy")
@@ -168,14 +176,11 @@ class post_process:
         net_res = {}
         with Pool(processes=self.threads) as pool:
             for algo in all_results:
-                output = all_results[algo]["output"]
-                metrics_list = []
-                final_metrics_per_run = []
-                rows = pool.map(self._metrics_worker, output)
+                seed_files = all_results[algo]["seed_files"]
+                rows = pool.map(self._metrics_worker, seed_files)
                 metrics_list = [h for h, _ in rows]
                 final_metrics_per_run = [f for _, f in rows]
 
-                # Save CSV for this algorithm
                 algo_final_df = pd.DataFrame(final_metrics_per_run)
                 algo_final_df.to_csv(
                     pop_dir / f"{algo}-final-metrics.csv",
@@ -187,11 +192,15 @@ class post_process:
                 os.makedirs(pareto_dir, exist_ok=True)
 
                 if self.problem_info["n_obj"] > 1 and "HV" in algo_final_df.columns:
-                    highest_hv_result = output[np.argmax(algo_final_df["HV"])]
-                    plot_data = highest_hv_result.final_dict
+                    best_idx = np.argmax(algo_final_df["HV"])
+                    best_seed_file = seed_files[best_idx]
+                    plot_data = ResultProcessor.read_final_dict(best_seed_file)
                     dict_to_csv(plot_data, pareto_dir, "pareto-front")
-                    plot_data["name"] = highest_hv_result.algorithm_info["name"]
-                    plot_data["seed"] = highest_hv_result.seed
+                    _, algo_info, best_seed = ResultProcessor.read_metadata(
+                        best_seed_file
+                    )
+                    plot_data["name"] = algo_info["name"]
+                    plot_data["seed"] = best_seed
                     n_obj = self.problem_info["n_obj"]
                     if n_obj == 1:
                         pass
@@ -219,7 +228,6 @@ class post_process:
                     all_results[algo]["Info"]["Problem"]["max_evals"] + 1,
                     recording_interval,
                 )
-                # Interpolate each run's metrics to the common grid
                 mean["evals"] = eval_grid
                 std["evals"] = eval_grid
                 convergence = {"name": f"{algo} (convergence pts)"}
@@ -227,7 +235,6 @@ class post_process:
                     if m not in ["seed", "evals"]:
                         interpolated_values = []
                         for r in metrics_list:
-                            # Linear interpolation to common evaluation grid
                             interp_vals = np.interp(eval_grid, r["evals"], r[m])
                             interpolated_values.append(interp_vals)
 
@@ -355,14 +362,12 @@ class post_process:
 
         metrics = [c for c in df.columns if c not in ("name", "evals")]
 
-        # Determine output directory
         if overwrite:
             output_dir = comparison_dir
         else:
             output_dir = comparison_dir / "replots"
             os.makedirs(output_dir, exist_ok=True)
 
-        # For each group, plot group + others (3 plots per metric)
         for grp in self.algo_grps:
             if grp != "common":
                 combined = self.algo_grps[grp] + self.algo_grps["common"]
