@@ -1,6 +1,18 @@
 import h5py
 import json
 
+def _json_default(o):
+    import numpy as np
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.floating,)):
+        return float(o)
+    if isinstance(o, (np.bool_,)):
+        return bool(o)
+    raise TypeError(f"Not JSON serializable: {type(o)}")
+
 class Result():
     def __init__(self, problem_info, algo_info, seed):
         self.problem_info = problem_info
@@ -46,7 +58,7 @@ class ResultProcessor():
             runs_grp = file.create_group("runs")
             for res in results:
                 seed_grp = runs_grp.create_group(f"{int(res.seed):03d}")
-                seed_grp.attrs["final_dict_json"] = json.dumps(res.final_dict)
+                seed_grp.attrs["final_dict_json"] = json.dumps(res.final_dict, default=_json_default)
                 fe_group = seed_grp.create_group("function_evals")
                 for i,evals in enumerate(res.history['evals']):
                     grp = fe_group.create_group(f"{evals:06d}")

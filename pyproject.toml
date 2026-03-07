@@ -5,18 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "drake>=1.49.0",
-    "eaik>=1.2.1",
     "h5py>=3.15.1",
-    "matplotlib-label-lines>=0.8.1",
-    "pin>=3.8.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
     "pyarrow>=23.0.0",
-    "pybind11>=3.0.1",
-    "pybullet>=3.2.7",
     "pymoo>=0.6.1.6",
-    "pyzmq>=27.1.0",
     "scikit-posthocs>=0.11.4",
     "scipy>=1.17.0",
     "seaborn>=0.13.2",
-    "sympy>=1.14.0",
+    "tqdm>=4.67.3",
 ]

@@ -4,11 +4,10 @@ from pathlib import Path
 import os
 from multiprocessing import Pool
 import __main__
-
+from opti.analysis.utils import dict_to_csv
 from opti.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
 import numpy as np
-import re
 from opti.core.population import Population
 from opti.analysis.plots import (
     multi_line_plot,
@@ -24,7 +23,8 @@ from opti.core.results import ResultProcessor
 
 class post_process:
     def __init__(self, problem, test_name, psizes, algo_grps,
-                 true_f=None, gen_rf=False, rf_size=5000):
+                 true_f=None, gen_rf=False, rf_size=5000, plot_tf=False,
+                 plot_hist=False):
         self.problem = problem
         self.problem_info = problem.get_info()
         self.test_name = test_name
@@ -33,8 +33,11 @@ class post_process:
         self.true_f = true_f
         self.gen_rf = gen_rf
         self.rf_size = rf_size
+        self.plot_tf = plot_tf
+        self.plot_hist = plot_hist
         self.test_dir = (
-            Path.home() / "OptiResults" / self.problem_info["name"] / self.test_name
+            Path.home() / "OptiResults" / self.problem_info["name"] 
+            / self.test_name /"raw_data"
         )
         if self.problem_info["n_obj"] > 1:
             self.populationHandler = MOPopulationHandler()
@@ -47,12 +50,13 @@ class post_process:
             self.control_metric = "best"
             self.recording_interval = 0.005
 
-        self.timestamp = datetime.now().timestamp()
+        self.timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.result_dir = (
             Path.home()
             / "OptiResults"
             / self.problem_info["name"]
-            / f"{self.test_name}-proc-{self.timestamp}"
+            / f"{self.test_name}"
+            /"analysis"
         )
         os.makedirs(self.result_dir, exist_ok=True)
         self.result_processor = ResultProcessor()
@@ -60,6 +64,7 @@ class post_process:
             f"\nComparing {self.test_name} test for {self.problem_info['name']} "
             f"with RF = {self.gen_rf} and RF size = {self.rf_size}"
         )
+        self.threads = 2
 
     def extract_population_paths(self, test_dir, psize, evals):
         algo_paths = [a for a in test_dir.iterdir() if a.is_dir()]
@@ -68,8 +73,22 @@ class post_process:
             result_paths.append(path / f"{psize}-{evals}")
         return result_paths
 
-    def generate_rf(self):
+    def sort_pop_list(self, pareto_list):
+        combined_pop = self.populationHandler.merge(pareto_list)
+        composite_population_raw = Population(
+            *ranking_crowding(
+                self.problem,
+                combined_pop,
+                self.rf_size,
+                ndf=True,
+                seed=1,
+            )
+        )
+        composite_population = self.populationHandler.get_refined(
+                                composite_population_raw )
+        return composite_population
 
+    def generate_rf(self, rf_path=None):
         all_result_paths = []
         for psize in self.psizes:
             result_paths = self.extract_population_paths(
@@ -79,32 +98,34 @@ class post_process:
 
         pareto_list = []
         for path in all_result_paths:
+            local_list = []
             results_obj_list = self.result_processor.from_hdf5(path / "history.h5")
             for res in results_obj_list:
-                pareto_list.append(res.population)
-
+                local_list.append(res.population)
+            pareto_list.append(local_list)
+        
         rf_path = Path(self.result_dir / "ref_front.npy")
         if rf_path.exists():
+            print(f"Using Reference Front at {rf_path}")
             self.true_f = np.load(rf_path)
         else:
-            combined_pop = self.populationHandler.merge(pareto_list)
-            composite_population_raw = Population(
-                *ranking_crowding(
-                    self.problem,
-                    combined_pop,
-                    self.rf_size,
-                    ndf=True,
-                    seed=1,
-                )
-            )
-            composite_population = self.populationHandler.get_refined(
-                composite_population_raw
-            )
-            self.true_f = composite_population.objectives
+            print(f"Generating Reference Front")
+            master_list = []
+            for llist in pareto_list:
+                master_list.append(self.sort_pop_list(llist))
+            reference_pop = self.sort_pop_list(master_list)
+            self.true_f = reference_pop.objectives
             np.save(rf_path, self.true_f)
 
+    def _metrics_worker(self,res):
+        hist = self.result_processor.get_metrics_history(res, self.metrics_calculator, TF=self.true_f)
+        final = self.result_processor.get_final_metric(res, self.metrics_calculator, TF=self.true_f)
+        final["seed"] = res.seed
+        hist["seed"] = [res.seed]
+        return hist, final
+
     def run(self, psize):
-        print(f"at Psize = {psize}")
+        print(f"Runnig psize = {psize}")
         pop_dir = Path(self.result_dir / f"{psize}")
         os.makedirs(pop_dir / "parquets", exist_ok=True)
 
@@ -128,81 +149,92 @@ class post_process:
                 self.true_f = np.load(rf_path)
 
         net_res = {}
-        for algo in all_results:
-            output = all_results[algo]["output"]
-            metrics_list = []
-            final_metrics_per_run = []
-            for res in output:
-                temp_dict = self.result_processor.get_metrics_history(
-                    res, self.metrics_calculator, TF=self.true_f
+        with Pool(processes=self.threads) as pool:
+            for algo in all_results:
+                output = all_results[algo]["output"]
+                metrics_list = []
+                final_metrics_per_run = []
+                rows = pool.map(self._metrics_worker, output)
+                metrics_list = [h for h, _ in rows]
+                final_metrics_per_run = [f for _, f in rows]
+
+                # Save CSV for this algorithm
+                algo_final_df = pd.DataFrame(final_metrics_per_run)
+                algo_final_df.to_csv(
+                    pop_dir / f"{algo}-final-metrics.csv",
+                    index=False,
+                    float_format="%.5f",
                 )
-                final_metrics = self.result_processor.get_final_metric(
-                    res, self.metrics_calculator, TF=self.true_f
+
+                pareto_dir = pop_dir / "pareto_fronts" / algo
+                os.makedirs(pareto_dir, exist_ok=True)
+
+                if self.problem_info["n_obj"] > 1 and "HV" in algo_final_df.columns:
+                    highest_hv_result = output[np.argmax(algo_final_df["HV"])]
+                    plot_data = highest_hv_result.final_dict
+                    dict_to_csv(plot_data, pareto_dir, "pareto-front")
+                    plot_data["name"] = highest_hv_result.algorithm_info["name"]
+                    plot_data["seed"] = highest_hv_result.seed
+                    n_obj = self.problem_info["n_obj"]
+                    if n_obj == 1:
+                        pass
+                    elif n_obj == 2:
+                        plot_2d(plot_data, pareto_dir)
+                    elif n_obj == 3:
+                        plot_3d(plot_data, pareto_dir)
+                    else:
+                        parallel_coordinates_plot(plot_data, pareto_dir)
+
+                metrics = metrics_list[0].keys()
+                mean = {"name": f"{algo} (Mean)"}
+                std = {"name": f"{algo} (Std)"}
+                net = {
+                    "Psize": all_results[algo]["Info"]["Problem"]["psize"],
+                    "Max-evals": all_results[algo]["Info"]["Problem"]["max_evals"],
+                }
+
+                recording_interval = int(
+                    all_results[algo]["Info"]["Problem"]["max_evals"] * self.recording_interval
                 )
+                eval_grid = np.arange(
+                    recording_interval,
+                    all_results[algo]["Info"]["Problem"]["max_evals"] + 1,
+                    recording_interval,
+                )
+                # Interpolate each run's metrics to the common grid
+                mean["evals"] = eval_grid
+                std["evals"] = eval_grid
+                convergence = {
+                    "name": f"{algo} (convergence pts)"
+                }
+                for m in metrics:
+                    if m not in ["seed", "evals"]:
+                        interpolated_values = []
+                        for r in metrics_list:
+                            # Linear interpolation to common evaluation grid
+                            interp_vals = np.interp(eval_grid, r["evals"], r[m])
+                            interpolated_values.append(interp_vals)
 
-                final_metrics["seed"] = res.seed
-                final_metrics_per_run.append(final_metrics)
-                temp_dict["seed"] = [res.seed]
-                metrics_list.append(temp_dict)
+                        values = np.array(interpolated_values, dtype=float)
+                        mean[m] = np.mean(values, axis=0)
+                        std[m] = np.std(values, axis=0)
 
-            # Save CSV for this algorithm
-            algo_final_df = pd.DataFrame(final_metrics_per_run)
-            algo_final_df.to_csv(
-                pop_dir / f"{algo}-final-metrics.csv",
-                index=False,
-                float_format="%.5f",
-            )
+                        convergence[m] = [np.nan, np.nan]
 
-            metrics = metrics_list[0].keys()
-            mean = {"name": f"{algo} (Mean)"}
-            std = {"name": f"{algo} (Std)"}
-            net = {
-                "Psize": all_results[algo]["Info"]["Problem"]["psize"],
-                "Max-evals": all_results[algo]["Info"]["Problem"]["max_evals"],
-            }
+                        net[f"{m}(mean)"] = [mean[m][-1]]
+                        net[f"{m}(std)"] = [std[m][-1]]
 
-            recording_interval = int(
-                all_results[algo]["Info"]["Problem"]["max_evals"] * self.recording_interval
-            )
-            eval_grid = np.arange(
-                recording_interval,
-                all_results[algo]["Info"]["Problem"]["max_evals"] + 1,
-                recording_interval,
-            )
-            # Interpolate each run's metrics to the common grid
-            mean["evals"] = eval_grid
-            std["evals"] = eval_grid
-            convergence = {
-                "name": f"{algo} (convergence pts)"
-            }
-            for m in metrics:
-                if m not in ["seed", "evals"]:
-                    interpolated_values = []
-                    for r in metrics_list:
-                        # Linear interpolation to common evaluation grid
-                        interp_vals = np.interp(eval_grid, r["evals"], r[m])
-                        interpolated_values.append(interp_vals)
+                all_results[algo]["mean-history"] = pd.DataFrame(mean)
+                all_results[algo]["mean-history"].to_parquet(
+                    pop_dir
+                    / "parquets"
+                    / f"{algo}-mean-history.parquet",
+                    engine="pyarrow",
+                )
+                all_results[algo]["convergence-pts"] = pd.DataFrame(convergence)
+                all_results[algo]["net-result"] = pd.DataFrame(net)
 
-                    values = np.array(interpolated_values, dtype=float)
-                    mean[m] = np.mean(values, axis=0)
-                    std[m] = np.std(values, axis=0)
-
-                    convergence[m] = [np.nan, np.nan]
-
-                    net[f"{m}(mean)"] = [mean[m][-1]]
-                    net[f"{m}(std)"] = [std[m][-1]]
-
-            all_results[algo]["mean-history"] = pd.DataFrame(mean)
-            all_results[algo]["mean-history"].to_parquet(
-                pop_dir
-                / "parquets"
-                / f"{algo}-mean-history.parquet",
-                engine="pyarrow",
-            )
-            all_results[algo]["convergence-pts"] = pd.DataFrame(convergence)
-            all_results[algo]["net-result"] = pd.DataFrame(net)
-
-            net_res[algo] = pd.DataFrame(net) 
+                net_res[algo] = pd.DataFrame(net) 
 
         net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
         net_res.to_csv(
@@ -230,11 +262,12 @@ class post_process:
 
 
     def multi_thread(self, threads=5):
+        self.threads = threads
         if self.true_f is None:
             if self.gen_rf and self.problem_info["n_obj"] > 1:
                 self.generate_rf()
-        with Pool(processes=threads) as pool:
-            pool.map(self.run, self.psizes)
+        for psize in self.psizes:
+            self.run(psize)
         return self.result_dir
 
     def regen_convergence_plots(

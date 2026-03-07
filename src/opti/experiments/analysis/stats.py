@@ -115,7 +115,7 @@ def main() -> None:
         raise FileNotFoundError(f"Invalid final-metrics directory: {final_metrics_dir}")
 
     # New output folder (instead of writing into final-metrics).
-    statistics_dir = final_metrics_dir.parent / "statistical-results"
+    statistics_dir = final_metrics_dir / "statistical-results"
     statistics_dir.mkdir(parents=True, exist_ok=True)
 
     problem_df = load_problem_data(final_metrics_dir)

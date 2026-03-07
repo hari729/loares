@@ -40,10 +40,12 @@ src/opti/core/problem.py
 src/opti/core/results.py
 src/opti/core/update.py
 src/opti/experiments/__init__.py
-src/opti/experiments/compare.py
-src/opti/experiments/compare_test.py
+src/opti/experiments/process.py
 src/opti/experiments/runner.py
 src/opti/experiments/test.py
+src/opti/experiments/analysis/__init__.py
+src/opti/experiments/analysis/compare.py
+src/opti/experiments/analysis/stats.py
 src/opti/moo/__init__.py
 src/opti/moo/bw_selection.py
 src/opti/moo/plots.py

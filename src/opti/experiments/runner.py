@@ -26,8 +26,10 @@ class ExperimentRunner:
         output_dir = (Path.home()/"OptiResults"
                                 /self.problem_info["name"]
                                 /test_name
+                                /"raw_data"
                                 /self.algorithm_info["name"]
-                                /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
+                                /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}"
+                                )
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.processor = ResultProcessor()
@@ -54,7 +56,6 @@ class ExperimentRunner:
                 f"Max Evals: {self.problem_info['max_evals']} | Runs: {len(seeds)} |")
         with Pool(processes=threads) as pool:
             output = pool.map(self.run, seeds)
-        print("Processing (Minimal)")
         self._minimal_post_process(output, seeds)
         if get:
             return output
@@ -91,6 +92,7 @@ class PymooExptRunner(ExperimentRunner):
         output_dir = (Path.home()/"OptiResults"
                                 /self.problem_info["name"]
                                 /test_name
+                                /"raw_data"
                                 /self.algorithm_info["name"]
                                 /f"{self.problem_info['psize']}-{self.problem_info['max_evals']}")
         self.output_dir = Path(output_dir)

@@ -12,7 +12,7 @@ class pymoo_to_opti_prob(optiProblem):
                 psize = 100,
                 max_evals = 10000):
 
-        super().__init__(name = pymoo_prob.__class__.__name__,
+        super().__init__(name = str(pymoo_prob.__class__.__name__),
                             function = pymoo_prob.evaluate,
                             n_vars = pymoo_prob.n_var,
                             n_obj = pymoo_prob.n_obj,
