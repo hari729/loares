@@ -21,10 +21,20 @@ from opti.algorithms.moo.base import MOPopulationHandler
 from opti.algorithms.soo.base import SOPopulationHandler
 from opti.core.results import ResultProcessor
 
+
 class post_process:
-    def __init__(self, problem, test_name, psizes, algo_grps,
-                 true_f=None, gen_rf=False, rf_size=5000, plot_tf=False,
-                 plot_hist=False):
+    def __init__(
+        self,
+        problem,
+        test_name,
+        psizes,
+        algo_grps,
+        true_f=None,
+        gen_rf=False,
+        rf_size=5000,
+        plot_tf=False,
+        plot_hist=False,
+    ):
         self.problem = problem
         self.problem_info = problem.get_info()
         self.test_name = test_name
@@ -36,8 +46,11 @@ class post_process:
         self.plot_tf = plot_tf
         self.plot_hist = plot_hist
         self.test_dir = (
-            Path.home() / "OptiResults" / self.problem_info["name"] 
-            / self.test_name /"raw_data"
+            Path.home()
+            / "OptiResults"
+            / self.problem_info["name"]
+            / self.test_name
+            / "raw_data"
         )
         if self.problem_info["n_obj"] > 1:
             self.populationHandler = MOPopulationHandler()
@@ -56,7 +69,7 @@ class post_process:
             / "OptiResults"
             / self.problem_info["name"]
             / f"{self.test_name}"
-            /"analysis"
+            / "analysis"
         )
         os.makedirs(self.result_dir, exist_ok=True)
         self.result_processor = ResultProcessor()
@@ -85,7 +98,8 @@ class post_process:
             )
         )
         composite_population = self.populationHandler.get_refined(
-                                composite_population_raw )
+            composite_population_raw
+        )
         return composite_population
 
     def generate_rf(self, rf_path=None):
@@ -103,7 +117,7 @@ class post_process:
             for res in results_obj_list:
                 local_list.append(res.population)
             pareto_list.append(local_list)
-        
+
         rf_path = Path(self.result_dir / "ref_front.npy")
         if rf_path.exists():
             print(f"Using Reference Front at {rf_path}")
@@ -117,9 +131,13 @@ class post_process:
             self.true_f = reference_pop.objectives
             np.save(rf_path, self.true_f)
 
-    def _metrics_worker(self,res):
-        hist = self.result_processor.get_metrics_history(res, self.metrics_calculator, TF=self.true_f)
-        final = self.result_processor.get_final_metric(res, self.metrics_calculator, TF=self.true_f)
+    def _metrics_worker(self, res):
+        hist = self.result_processor.get_metrics_history(
+            res, self.metrics_calculator, TF=self.true_f
+        )
+        final = self.result_processor.get_final_metric(
+            res, self.metrics_calculator, TF=self.true_f
+        )
         final["seed"] = res.seed
         hist["seed"] = [res.seed]
         return hist, final
@@ -140,8 +158,7 @@ class post_process:
                 "Info": pd.read_json(path / "Info.json"),
             }
             name = temp["Info"]["Algorithm"]["name"]
-            all_results[name] = {"Info" : temp["Info"],
-                                    "output" :results_obj_list}
+            all_results[name] = {"Info": temp["Info"], "output": results_obj_list}
 
         if self.true_f is None and self.problem_info["n_obj"] > 1:
             rf_path = Path(self.result_dir / "ref_front.npy")
@@ -194,7 +211,8 @@ class post_process:
                 }
 
                 recording_interval = int(
-                    all_results[algo]["Info"]["Problem"]["max_evals"] * self.recording_interval
+                    all_results[algo]["Info"]["Problem"]["max_evals"]
+                    * self.recording_interval
                 )
                 eval_grid = np.arange(
                     recording_interval,
@@ -204,9 +222,7 @@ class post_process:
                 # Interpolate each run's metrics to the common grid
                 mean["evals"] = eval_grid
                 std["evals"] = eval_grid
-                convergence = {
-                    "name": f"{algo} (convergence pts)"
-                }
+                convergence = {"name": f"{algo} (convergence pts)"}
                 for m in metrics:
                     if m not in ["seed", "evals"]:
                         interpolated_values = []
@@ -226,22 +242,20 @@ class post_process:
 
                 all_results[algo]["mean-history"] = pd.DataFrame(mean)
                 all_results[algo]["mean-history"].to_parquet(
-                    pop_dir
-                    / "parquets"
-                    / f"{algo}-mean-history.parquet",
+                    pop_dir / "parquets" / f"{algo}-mean-history.parquet",
                     engine="pyarrow",
                 )
                 all_results[algo]["convergence-pts"] = pd.DataFrame(convergence)
                 all_results[algo]["net-result"] = pd.DataFrame(net)
 
-                net_res[algo] = pd.DataFrame(net) 
+                net_res[algo] = pd.DataFrame(net)
 
         net_res = pd.concat(net_res, names=["Algorithm"]).reset_index(level=0)
-        net_res.to_csv(
-            f"{pop_dir}/net-results.csv", index=False, float_format="%.5f"
-        )
+        net_res.to_csv(f"{pop_dir}/net-results.csv", index=False, float_format="%.5f")
 
-        for grp in self.algo_grps: 
+        self._per_algo_accumulator.append(net_res)
+
+        for grp in self.algo_grps:
             if grp != "common":
                 for m in metrics:
                     if m not in ["seed", "evals"]:
@@ -254,21 +268,44 @@ class post_process:
                             "legend": [],
                         }
                         for alg in self.algo_grps[grp] + self.algo_grps["common"]:
-                            plot_data["ydata"].append(all_results[alg]["mean-history"][m])
-                            plot_data["xdata"].append(all_results[alg]["mean-history"]["evals"])
-                            plot_data["point"].append(all_results[alg]["convergence-pts"][m])
-                            plot_data["legend"].append(all_results[alg]["Info"]["Algorithm"]["name"])
+                            plot_data["ydata"].append(
+                                all_results[alg]["mean-history"][m]
+                            )
+                            plot_data["xdata"].append(
+                                all_results[alg]["mean-history"]["evals"]
+                            )
+                            plot_data["point"].append(
+                                all_results[alg]["convergence-pts"][m]
+                            )
+                            plot_data["legend"].append(
+                                all_results[alg]["Info"]["Algorithm"]["name"]
+                            )
                         multi_line_plot(plot_data, pop_dir, f"{m}-{grp}")
-
 
     def multi_thread(self, threads=5):
         self.threads = threads
+        self._per_algo_accumulator = []
         if self.true_f is None:
             if self.gen_rf and self.problem_info["n_obj"] > 1:
                 self.generate_rf()
         for psize in self.psizes:
             self.run(psize)
+        self._write_per_algo_csvs()
         return self.result_dir
+
+    def _write_per_algo_csvs(self):
+        if not self._per_algo_accumulator:
+            return
+        combined = pd.concat(self._per_algo_accumulator, ignore_index=True)
+        per_algo_dir = self.result_dir / "per-algo"
+        os.makedirs(per_algo_dir, exist_ok=True)
+        for algo_name, group in combined.groupby("Algorithm"):
+            group.to_csv(
+                per_algo_dir / f"{algo_name}-net-results.csv",
+                index=False,
+                float_format="%.5f",
+            )
+        print(f"Per-algorithm CSVs saved to: {per_algo_dir}")
 
     def regen_convergence_plots(
         self,
@@ -316,9 +353,7 @@ class post_process:
             algo_name = pf.name.replace("-mean-history.parquet", "")
             history_dict[algo_name] = df
 
-        metrics = [
-            c for c in df.columns if c not in ("name", "evals")
-        ]
+        metrics = [c for c in df.columns if c not in ("name", "evals")]
 
         # Determine output directory
         if overwrite:
