@@ -1,4 +1,5 @@
 from pathlib import Path
+import inspect
 import numpy as np
 from math import comb
 from multiprocessing import Pool
@@ -23,10 +24,10 @@ class ExperimentRunner:
         self.algorithm_info = self.algorithm.get_info()
         self.update_info = self.algorithm.updateRule.get_info()
         self.test_name = test_name
+        caller_frame = inspect.stack()[1]
+        caller_dir = Path(caller_frame.filename).resolve().parent
         output_dir = (
-            Path.home()
-            / "OptiResults"
-            / self.problem_info["name"]
+            caller_dir / self.problem_info["name"]
             / test_name
             / "raw_data"
             / self.algorithm_info["name"]
@@ -91,10 +92,10 @@ class PymooExptRunner(ExperimentRunner):
         self.algorithm_info = {"name": (self.algorithm.__name__).replace("_", "-")}
         self.update_info = {"name": f"pymoo defaults for {self.algorithm.__name__}"}
         self.test_name = test_name
+        caller_frame = inspect.stack()[1]
+        caller_dir = Path(caller_frame.filename).resolve().parent
         output_dir = (
-            Path.home()
-            / "OptiResults"
-            / self.problem_info["name"]
+            caller_dir / self.problem_info["name"]
             / test_name
             / "raw_data"
             / self.algorithm_info["name"]

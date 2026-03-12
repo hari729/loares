@@ -67,16 +67,16 @@ class MORankingCrowdingArchive(MORankingCrowdingAlgo):
         )
 
 
-class MO_BMR_ARCHIVE(MORankingCrowdingArchive):
+class MO_BMR_Archive(MORankingCrowdingArchive):
     def __init__(self, problemHandler):
         super().__init__(problemHandler, BMR_a)
 
 
-class MO_BWR_ARCHIVE(MORankingCrowdingArchive):
+class MO_BWR_Archive(MORankingCrowdingArchive):
     def __init__(self, problemHandler):
         super().__init__(problemHandler, BWR_a)
 
 
-class MO_BMWR_ARCHIVE(MORankingCrowdingArchive):
+class MO_BMWR_Archive(MORankingCrowdingArchive):
     def __init__(self, problemHandler):
         super().__init__(problemHandler, BMWR_a)
