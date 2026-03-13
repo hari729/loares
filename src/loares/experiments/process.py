@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
@@ -44,11 +44,18 @@ class post_process:
         self.rf_size = rf_size
         self.plot_tf = plot_tf
         self.plot_hist = plot_hist
+        # self.test_dir = (
+        #     Path.home()
+        #     / "OptiResults"
+        #     / self.problem_info["name"]
+        #     / self.test_name
+        #     / "raw_data"
+        # )
+        caller_frame = inspect.stack()[1]
+        caller_dir = Path(caller_frame.filename).resolve().parent
         self.test_dir = (
-            Path.home()
-            / "OptiResults"
-            / self.problem_info["name"]
-            / self.test_name
+            caller_dir
+            / test_name
             / "raw_data"
         )
         if self.problem_info["n_obj"] > 1:

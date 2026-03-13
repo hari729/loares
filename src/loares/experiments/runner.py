@@ -28,7 +28,6 @@ class ExperimentRunner:
         caller_dir = Path(caller_frame.filename).resolve().parent
         output_dir = (
             caller_dir
-            / self.problem_info["name"]
             / test_name
             / "raw_data"
             / self.algorithm_info["name"]
