@@ -7,4 +7,8 @@ __pycache__/
 *.pyd
 
 *.egg-info/
+
+# Test artifacts (leaked experiment output)
 tests/ZDT1/
+tests/test-run/
+tests/smoke-test/

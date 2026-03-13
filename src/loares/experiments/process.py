@@ -44,13 +44,6 @@ class post_process:
         self.rf_size = rf_size
         self.plot_tf = plot_tf
         self.plot_hist = plot_hist
-        # self.test_dir = (
-        #     Path.home()
-        #     / "OptiResults"
-        #     / self.problem_info["name"]
-        #     / self.test_name
-        #     / "raw_data"
-        # )
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
         self.test_dir = (
@@ -71,11 +64,8 @@ class post_process:
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.result_dir = (
-            Path.home()
-            / "OptiResults"
-            / self.problem_info["name"]
-            / f"{self.test_name}"
-            / "analysis"
+            caller_dir / test_name
+            / f"analysis-{self.timestamp}"
         )
         os.makedirs(self.result_dir, exist_ok=True)
         print(

@@ -58,7 +58,7 @@ def plot_2d(data, filepath, cid=0):
     plt.xlabel("f1")
     plt.ylabel("f2")
     plt.tight_layout()
-    plt.savefig(f"{filepath}/{data['seed']}-pareto-front-2D.pdf", bbox_inches="tight")
+    plt.savefig(f"{filepath}/{data['name']}-pareto-front.pdf", bbox_inches="tight")
     plt.close()
 
 
@@ -122,7 +122,7 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
         )
 
     plt.tight_layout()
-    out_path = f"{filepath}/{pareto_dict['seed']}-pareto-front-3D.pdf"
+    out_path = f"{filepath}/{pareto_dict['name']}-pareto-front.pdf"
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
@@ -150,6 +150,6 @@ def parallel_coordinates_plot(data, filepath, alpha=0.6):
 
     ax.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
-    out_path = f"{filepath}/{data['seed']}-{data['name']}-pareto-front.pdf"
+    out_path = f"{filepath}/{data['name']}-pareto-front.pdf"
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()

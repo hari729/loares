@@ -1,3 +1,4 @@
+import inspect
 import json
 import shutil
 import tempfile
@@ -18,6 +19,21 @@ def tmp_dir():
     d = tempfile.mkdtemp()
     yield Path(d)
     shutil.rmtree(d, ignore_errors=True)
+
+
+def _fake_stack(caller_dir):
+    """Return a mock inspect.stack that makes [1].filename point to caller_dir."""
+    real_stack = inspect.stack()
+    fake_frame = type(real_stack[0])(
+        real_stack[0].frame,
+        str(caller_dir / "fake_caller.py"),
+        real_stack[0].lineno,
+        real_stack[0].function,
+        real_stack[0].code_context,
+        real_stack[0].index,
+    )
+    # [0] is the callee (runner/process __init__), [1] is the "caller"
+    return [real_stack[0], fake_frame] + real_stack[2:]
 
 
 def _make_population(n=20, n_vars=3, n_obj=2):
@@ -258,24 +274,27 @@ class TestExperimentRunner:
         tf = bench.pareto_front(100)
         prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
 
-        with patch.object(Path, "home", return_value=tmp_dir):
+        with patch(
+            "loares.experiments.runner.inspect.stack",
+            return_value=_fake_stack(tmp_dir),
+        ):
             runner = ExperimentRunner(prob, MO_BMR, "test-run", TF=tf)
-            seeds = np.array([1, 2, 3])
-            runner.multi_thread(seeds, threads=2)
+        seeds = np.array([1, 2, 3])
+        runner.multi_thread(seeds, threads=2)
 
-            assert runner.output_dir.exists()
-            assert (runner.output_dir / "Info.json").exists()
+        assert runner.output_dir.exists()
+        assert (runner.output_dir / "Info.json").exists()
 
-            seed_files = sorted(runner.output_dir.glob("seed_*.h5"))
-            assert len(seed_files) == 3
+        seed_files = sorted(runner.output_dir.glob("seed_*.h5"))
+        assert len(seed_files) == 3
 
-            for sf in seed_files:
-                seed_val = ResultProcessor.read_seed(sf)
-                assert seed_val in [1, 2, 3]
+        for sf in seed_files:
+            seed_val = ResultProcessor.read_seed(sf)
+            assert seed_val in [1, 2, 3]
 
-            info = json.loads((runner.output_dir / "Info.json").read_text())
-            assert "Problem" in info
-            assert "Algorithm" in info
+        info = json.loads((runner.output_dir / "Info.json").read_text())
+        assert "Problem" in info
+        assert "Algorithm" in info
 
 
 # ── Test 4: post_process.run() smoke test ────────────────────────────────────
@@ -294,10 +313,13 @@ class TestPostProcess:
         prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
         seeds = np.array([1, 2, 3])
 
-        with patch.object(Path, "home", return_value=tmp_dir):
-            for algo_cls in [MO_BMR, MO_BWR]:
+        for algo_cls in [MO_BMR, MO_BWR]:
+            with patch(
+                "loares.experiments.runner.inspect.stack",
+                return_value=_fake_stack(tmp_dir),
+            ):
                 runner = ExperimentRunner(prob, algo_cls, "smoke-test", TF=tf)
-                runner.multi_thread(seeds, threads=2)
+            runner.multi_thread(seeds, threads=2)
 
         yield tmp_dir, prob, tf
 
@@ -310,12 +332,15 @@ class TestPostProcess:
             "common": [],
         }
 
-        with patch.object(Path, "home", return_value=tmp_dir):
+        with patch(
+            "loares.experiments.process.inspect.stack",
+            return_value=_fake_stack(tmp_dir),
+        ):
             pp = post_process(prob, "smoke-test", [20], algo_grps, true_f=tf)
-            pp._per_algo_accumulator = []
-            pp.run(20)
+        pp._per_algo_accumulator = []
+        pp.run(20)
 
-        result_dir = tmp_dir / "OptiResults" / prob.name / "smoke-test" / "analysis"
+        result_dir = pp.result_dir
         pop_dir = result_dir / "20"
         assert pop_dir.exists()
 
@@ -346,9 +371,12 @@ class TestPostProcess:
             "common": [],
         }
 
-        with patch.object(Path, "home", return_value=tmp_dir):
+        with patch(
+            "loares.experiments.process.inspect.stack",
+            return_value=_fake_stack(tmp_dir),
+        ):
             pp = post_process(prob, "smoke-test", [20], algo_grps, true_f=tf)
-            result_dir = pp.multi_thread(threads=2)
+        result_dir = pp.multi_thread(threads=2)
 
         per_algo_dir = Path(result_dir) / "per-algo"
         assert per_algo_dir.exists()
@@ -423,6 +451,24 @@ class TestAnalysis:
         pivot = build_pivot(df, "HV")
         assert pivot.shape[1] == 3
         assert pivot.shape[0] == 5
+
+    def test_stats_run_produces_friedman_and_posthoc(self, setup_analysis_data):
+        from loares.experiments.analysis.stats import run as run_statistics
+
+        pop_dir = setup_analysis_data / "200"
+        stats_dir = run_statistics(pop_dir, alpha=0.05)
+
+        assert stats_dir.exists()
+        assert (stats_dir / "friedman-results.csv").exists()
+
+        friedman = pd.read_csv(stats_dir / "friedman-results.csv")
+        assert "Metric" in friedman.columns
+        assert "Significant" in friedman.columns
+        assert len(friedman) >= 1
+
+        # Average ranks should exist for every metric tested
+        for metric in ["GD", "IGD", "SPC", "SPR", "HV"]:
+            assert (stats_dir / f"{metric}-average-ranks.csv").exists()
 
 
 # ── Test 6: pymoo_to_loares_h5 adapter ────────────────────────────────────────

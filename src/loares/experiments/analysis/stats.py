@@ -15,44 +15,6 @@ from scipy import stats
 DEFAULT_METRICS = ["GD", "IGD", "SPC", "SPR", "HV"]
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Run Friedman + Conover-Holm pipeline from Loares final-metrics files."
-        )
-    )
-    parser.add_argument(
-        "--comparison-dir",
-        type=Path,
-        default=None,
-        help=(
-            "Path to one comparison population directory (contains final-metrics/). "
-            "Example: /home/hari/OptiResults/IK-4/.../200"
-        ),
-    )
-    parser.add_argument(
-        "--final-metrics-dir",
-        type=Path,
-        default=None,
-        help="Path to final-metrics directory directly.",
-    )
-    parser.add_argument(
-        "--alpha",
-        type=float,
-        default=0.05,
-        help="Significance threshold for Friedman test.",
-    )
-    return parser.parse_args()
-
-
-def resolve_final_metrics_dir(args: argparse.Namespace) -> Path:
-    if args.final_metrics_dir is not None:
-        return args.final_metrics_dir
-    if args.comparison_dir is not None:
-        return args.comparison_dir / "final-metrics"
-    raise ValueError("Provide either --comparison-dir or --final-metrics-dir.")
-
-
 def vargha_delaney_a12(x: pd.Series, y: pd.Series) -> float:
     m, n = len(x), len(y)
     u_stat, _ = stats.mannwhitneyu(x, y, alternative="two-sided")
@@ -106,14 +68,35 @@ def build_pivot(problem_df: pd.DataFrame, metric: str) -> pd.DataFrame:
     return pivot
 
 
-def main() -> None:
-    args = parse_args()
-    final_metrics_dir = resolve_final_metrics_dir(args).resolve()
+def run(
+    final_metrics_dir: str | Path,
+    alpha: float = 0.05,
+    metrics: list[str] | None = None,
+) -> Path:
+    """Run Friedman + Conover-Holm + A12 pipeline on final-metrics CSVs.
+
+    Parameters
+    ----------
+    final_metrics_dir : str or Path
+        Directory containing ``*-final-metrics.csv`` files.
+    alpha : float
+        Significance threshold for the Friedman test (default 0.05).
+    metrics : list[str] or None
+        Metrics to analyse. ``None`` uses ``DEFAULT_METRICS``.
+
+    Returns
+    -------
+    Path
+        The ``statistical-results`` directory where outputs were saved.
+    """
+    final_metrics_dir = Path(final_metrics_dir).resolve()
 
     if not final_metrics_dir.exists() or not final_metrics_dir.is_dir():
         raise FileNotFoundError(f"Invalid final-metrics directory: {final_metrics_dir}")
 
-    # New output folder (instead of writing into final-metrics).
+    if metrics is None:
+        metrics = DEFAULT_METRICS
+
     statistics_dir = final_metrics_dir / "statistical-results"
     statistics_dir.mkdir(parents=True, exist_ok=True)
 
@@ -122,7 +105,7 @@ def main() -> None:
     friedman_rows: list[dict[str, float | str | int | bool]] = []
 
     with plt.rc_context({"figure.figsize": (12, 4)}):
-        for metric in DEFAULT_METRICS:
+        for metric in metrics:
             if metric not in problem_df.columns:
                 continue
 
@@ -146,7 +129,7 @@ def main() -> None:
                 *[pivot[col].to_numpy() for col in pivot.columns]
             )
 
-            is_significant = bool(p_value < args.alpha)
+            is_significant = bool(p_value < alpha)
             friedman_rows.append(
                 {
                     "Metric": metric,
@@ -208,6 +191,54 @@ def main() -> None:
     )
 
     print(f"Saved statistical outputs to: {statistics_dir}")
+    return statistics_dir
+
+
+# ── CLI entry point ──────────────────────────────────────────────────────────
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run Friedman + Conover-Holm pipeline from Loares final-metrics files."
+        )
+    )
+    parser.add_argument(
+        "--comparison-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Path to one comparison population directory (contains final-metrics/). "
+            "Example: /home/hari/OptiResults/IK-4/.../200"
+        ),
+    )
+    parser.add_argument(
+        "--final-metrics-dir",
+        type=Path,
+        default=None,
+        help="Path to final-metrics directory directly.",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.05,
+        help="Significance threshold for Friedman test.",
+    )
+    return parser.parse_args()
+
+
+def _resolve_final_metrics_dir(args: argparse.Namespace) -> Path:
+    if args.final_metrics_dir is not None:
+        return args.final_metrics_dir
+    if args.comparison_dir is not None:
+        return args.comparison_dir / "final-metrics"
+    raise ValueError("Provide either --comparison-dir or --final-metrics-dir.")
+
+
+def main() -> None:
+    args = _parse_args()
+    final_metrics_dir = _resolve_final_metrics_dir(args)
+    run(final_metrics_dir, alpha=args.alpha)
 
 
 if __name__ == "__main__":

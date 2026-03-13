@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 
 from loares.core.problem import Problem
@@ -8,7 +7,7 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from loares.experiments.runner import ExperimentRunner, PymooExptRunner
 from loares.experiments.process import post_process
 from loares.experiments.analysis.compare import compare_metrics
-from loares.experiments.analysis import stats as stats_mod
+from loares.experiments.analysis.stats import run as run_statistics
 
 
 def zdt1(X):
@@ -38,21 +37,6 @@ class ZDT1(Problem):
         f1 = np.linspace(0, 1, pts)
         f2 = 1 - np.sqrt(f1)
         return np.column_stack([f1, f2])
-
-
-def run_statistics_for_population(pop_dir, alpha=0.05):
-    argv_backup = sys.argv[:]
-    try:
-        sys.argv = [
-            "stats.py",
-            "--final-metrics-dir",
-            str(pop_dir),
-            "--alpha",
-            str(alpha),
-        ]
-        stats_mod.main()
-    finally:
-        sys.argv = argv_backup
 
 
 if __name__ == "__main__":
@@ -96,6 +80,6 @@ if __name__ == "__main__":
     compare_metrics(ZDT1().get_info()["name"], compare_dir)
 
     for psize in psizes:
-        run_statistics_for_population(compare_dir / str(psize), alpha=0.05)
+        run_statistics(compare_dir / str(psize), alpha=0.05)
 
     print(f"Completed ZDT1 MOO pipeline. Outputs: {compare_dir}")
