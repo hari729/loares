@@ -54,7 +54,7 @@ class ResultProcessor:
 
     @staticmethod
     def read_final_population(hdf5_path):
-        from opti.core.population import Population
+        from loares.core.population import Population
 
         with h5py.File(hdf5_path, "r") as f:
             fe = f["function_evals"]

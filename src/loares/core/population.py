@@ -1,6 +1,6 @@
 import numpy as np
 import warnings
-from opti.core.initializer import random_initialize
+from loares.core.initializer import random_initialize
 
 
 class Population:

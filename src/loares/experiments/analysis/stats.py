@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -19,7 +18,7 @@ DEFAULT_METRICS = ["GD", "IGD", "SPC", "SPR", "HV"]
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run Friedman + Conover-Holm pipeline from Opti final-metrics files."
+            "Run Friedman + Conover-Holm pipeline from Loares final-metrics files."
         )
     )
     parser.add_argument(

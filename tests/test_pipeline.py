@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from opti.core.population import Population
-from opti.core.results import ResultProcessor
+from loares.core.population import Population
+from loares.core.results import ResultProcessor
 
 
 @pytest.fixture
@@ -154,13 +154,13 @@ class TestResultProcessorRoundtrip:
 
 class TestFlowHandlerRun:
     def test_run_produces_valid_hdf5(self, tmp_dir):
-        from opti.core.adapters import pymoo_to_opti_prob
+        from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from opti.algorithms.moo.base import MO_BMR
-        from opti.core.problem import ProblemHandler
+        from loares.algorithms.moo.base import MO_BMR
+        from loares.core.problem import ProblemHandler
 
         bench = ZDT1()
-        prob = pymoo_to_opti_prob(bench, psize=20, max_evals=200)
+        prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
         ph = ProblemHandler(prob)
         algo = MO_BMR(ph)
 
@@ -187,8 +187,8 @@ class TestFlowHandlerRun:
             assert "f1" in final_dict
 
     def test_run_soo_produces_valid_hdf5(self, tmp_dir):
-        from opti.core.problem import Problem, ProblemHandler
-        from opti.algorithms.soo.base import SO_BMR
+        from loares.core.problem import Problem, ProblemHandler
+        from loares.algorithms.soo.base import SO_BMR
 
         def sphere(X):
             F = np.sum(X**2, axis=1, keepdims=True)
@@ -218,15 +218,15 @@ class TestFlowHandlerRun:
         assert final_pop.objectives.shape[1] == 1
 
     def test_stream_metrics_from_run_output(self, tmp_dir):
-        from opti.core.adapters import pymoo_to_opti_prob
+        from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from opti.algorithms.moo.base import MO_BMR
-        from opti.core.problem import ProblemHandler
-        from opti.analysis.moo.metrics import raw_performance_metrics
+        from loares.algorithms.moo.base import MO_BMR
+        from loares.core.problem import ProblemHandler
+        from loares.analysis.moo.metrics import raw_performance_metrics
 
         bench = ZDT1()
         tf = bench.pareto_front(100)
-        prob = pymoo_to_opti_prob(bench, psize=20, max_evals=200)
+        prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
         ph = ProblemHandler(prob)
         algo = MO_BMR(ph)
 
@@ -249,14 +249,14 @@ class TestFlowHandlerRun:
 
 class TestExperimentRunner:
     def test_multi_thread_produces_seed_files_and_info(self, tmp_dir):
-        from opti.core.adapters import pymoo_to_opti_prob
+        from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from opti.algorithms.moo.base import MO_BMR
-        from opti.experiments.runner import ExperimentRunner
+        from loares.algorithms.moo.base import MO_BMR
+        from loares.experiments.runner import ExperimentRunner
 
         bench = ZDT1()
         tf = bench.pareto_front(100)
-        prob = pymoo_to_opti_prob(bench, psize=20, max_evals=200)
+        prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
 
         with patch.object(Path, "home", return_value=tmp_dir):
             runner = ExperimentRunner(prob, MO_BMR, "test-run", TF=tf)
@@ -284,14 +284,14 @@ class TestExperimentRunner:
 class TestPostProcess:
     @pytest.fixture
     def setup_raw_data(self, tmp_dir):
-        from opti.core.adapters import pymoo_to_opti_prob
+        from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from opti.algorithms.moo.base import MO_BMR, MO_BWR
-        from opti.experiments.runner import ExperimentRunner
+        from loares.algorithms.moo.base import MO_BMR, MO_BWR
+        from loares.experiments.runner import ExperimentRunner
 
         bench = ZDT1()
         tf = bench.pareto_front(100)
-        prob = pymoo_to_opti_prob(bench, psize=20, max_evals=200)
+        prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
         seeds = np.array([1, 2, 3])
 
         with patch.object(Path, "home", return_value=tmp_dir):
@@ -303,7 +303,7 @@ class TestPostProcess:
 
     def test_run_produces_expected_outputs(self, setup_raw_data):
         tmp_dir, prob, tf = setup_raw_data
-        from opti.experiments.process import post_process
+        from loares.experiments.process import post_process
 
         algo_grps = {
             "base": ["MO-BMR", "MO-BWR"],
@@ -339,7 +339,7 @@ class TestPostProcess:
 
     def test_multi_thread_writes_per_algo_csvs(self, setup_raw_data):
         tmp_dir, prob, tf = setup_raw_data
-        from opti.experiments.process import post_process
+        from loares.experiments.process import post_process
 
         algo_grps = {
             "base": ["MO-BMR", "MO-BWR"],
@@ -401,7 +401,7 @@ class TestAnalysis:
         yield tmp_dir
 
     def test_compare_metrics_produces_summary_csv(self, setup_analysis_data):
-        from opti.experiments.analysis.compare import compare_metrics
+        from loares.experiments.analysis.compare import compare_metrics
 
         compare_metrics("TestProblem", setup_analysis_data)
 
@@ -413,7 +413,7 @@ class TestAnalysis:
         assert len(df) == 1
 
     def test_stats_load_problem_data(self, setup_analysis_data):
-        from opti.experiments.analysis.stats import load_problem_data, build_pivot
+        from loares.experiments.analysis.stats import load_problem_data, build_pivot
 
         pop_dir = setup_analysis_data / "200"
         df = load_problem_data(pop_dir)
@@ -425,13 +425,13 @@ class TestAnalysis:
         assert pivot.shape[0] == 5
 
 
-# ── Test 6: pymoo_to_opti_h5 adapter ────────────────────────────────────────
+# ── Test 6: pymoo_to_loares_h5 adapter ────────────────────────────────────────
 
 
 class TestPymooAdapter:
-    def test_pymoo_to_opti_h5_writes_valid_file(self, tmp_dir):
-        from opti.core.adapters import pymoo_to_opti_prob, pymoo_to_opti_h5
-        from opti.algorithms.moo.base import MOPopulationHandler
+    def test_pymoo_to_loares_h5_writes_valid_file(self, tmp_dir):
+        from loares.core.adapters import pymoo_to_loares_prob, pymoo_to_loares_h5
+        from loares.algorithms.moo.base import MOPopulationHandler
         from pymoo.problems.multi import ZDT1
         from pymoo.algorithms.moo.nsga2 import NSGA2
         from pymoo.optimize import minimize
@@ -441,10 +441,10 @@ class TestPymooAdapter:
         algorithm = NSGA2(pop_size=20)
         res = minimize(bench, algorithm, ("n_eval", 200), seed=1, save_history=True)
 
-        prob = pymoo_to_opti_prob(bench, psize=20, max_evals=200)
+        prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
 
         hdf5_path = tmp_dir / "seed_001.h5"
-        pymoo_to_opti_h5(
+        pymoo_to_loares_h5(
             prob.get_info(),
             {"name": "NSGA2"},
             1,

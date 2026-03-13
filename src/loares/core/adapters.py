@@ -1,11 +1,11 @@
 import numpy as np
-from opti.core.problem import Problem as optiProblem
-from opti.core.population import Population
-from opti.core.results import ResultProcessor
+from loares.core.problem import Problem as loaresProblem
+from loares.core.population import Population
+from loares.core.results import ResultProcessor
 from pymoo.core.problem import Problem as pymooProblem
 
 
-class pymoo_to_opti_prob(optiProblem):
+class pymoo_to_loares_prob(loaresProblem):
     def __init__(self, pymoo_prob, psize=100, max_evals=10000):
 
         super().__init__(
@@ -33,22 +33,22 @@ class pymoo_to_opti_prob(optiProblem):
         return F, np.full((solutions.shape[0], 1), -1)
 
 
-class opti_to_pymoo_prob(pymooProblem):
-    def __init__(self, opti_prob):
-        self.custom_eval = opti_prob.evaluate
+class loares_to_pymoo_prob(pymooProblem):
+    def __init__(self, loares_prob):
+        self.custom_eval = loares_prob.evaluate
         super().__init__(
-            n_var=opti_prob.n_vars,
-            n_obj=opti_prob.n_obj,
-            n_constr=opti_prob.n_constr,
-            xl=opti_prob.bounds[:, 0],
-            xu=opti_prob.bounds[:, 1],
+            n_var=loares_prob.n_vars,
+            n_obj=loares_prob.n_obj,
+            n_constr=loares_prob.n_constr,
+            xl=loares_prob.bounds[:, 0],
+            xu=loares_prob.bounds[:, 1],
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
         out["F"], out["G"] = self.custom_eval(x)
 
 
-def pymoo_to_opti_h5(
+def pymoo_to_loares_h5(
     problem_info, algorithm_info, seed, pymooResult, populationHandler, hdf5_path
 ):
     h5 = ResultProcessor.open(hdf5_path, problem_info, algorithm_info, seed)

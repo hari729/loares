@@ -1,6 +1,6 @@
 import numpy as np
-from opti.algorithms.moo.base import BMR, BWR, BMWR, MORankingCrowdingAlgo
-from opti.analysis.moo.metrics import performance_metrics
+from loares.algorithms.moo.base import BMR, BWR, BMWR, MORankingCrowdingAlgo
+from loares.analysis.moo.metrics import performance_metrics
 
 
 class MORankingCrowdingSAMP(MORankingCrowdingAlgo):

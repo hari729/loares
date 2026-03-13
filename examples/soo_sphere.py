@@ -2,10 +2,10 @@ import os
 import sys
 import numpy as np
 
-from opti.core.problem import Problem
-from opti.algorithms.soo import SO_BMR, SO_BWR, SO_BMWR
-from opti.experiments.runner import ExperimentRunner
-from opti.experiments.process import post_process
+from loares.core.problem import Problem
+from loares.algorithms.soo import SO_BMR, SO_BWR, SO_BMWR
+from loares.experiments.runner import ExperimentRunner
+from loares.experiments.process import post_process
 
 
 def sphere(X):

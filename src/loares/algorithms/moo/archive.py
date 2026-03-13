@@ -1,12 +1,12 @@
 import numpy as np
 
-from opti.algorithms.moo.base import MORankingCrowdingAlgo
-from opti.base.bmr import bmr
-from opti.base.bwr import bwr
-from opti.base.bmwr import bmwr
-from opti.base.mutation import random_reinit
-from opti.core.update import UpdateRule
-from opti.algorithms.moo.selection import archive_bw_selection as bw_selection_a
+from loares.algorithms.moo.base import MORankingCrowdingAlgo
+from loares.base.bmr import bmr
+from loares.base.bwr import bwr
+from loares.base.bmwr import bmwr
+from loares.base.mutation import random_reinit
+from loares.core.update import UpdateRule
+from loares.algorithms.moo.selection import archive_bw_selection as bw_selection_a
 
 # def bw_selection_a(population, archive):
 #     best = archive.solutions[0,:]

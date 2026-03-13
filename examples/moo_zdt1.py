@@ -2,13 +2,13 @@ import os
 import sys
 import numpy as np
 
-from opti.core.problem import Problem
-from opti.algorithms.moo import MO_BMR, MO_BWR, MO_BMWR
+from loares.core.problem import Problem
+from loares.algorithms.moo import MO_BMR, MO_BWR, MO_BMWR
 from pymoo.algorithms.moo.nsga2 import NSGA2
-from opti.experiments.runner import ExperimentRunner, PymooExptRunner
-from opti.experiments.process import post_process
-from opti.experiments.analysis.compare import compare_metrics
-from opti.experiments.analysis import stats as stats_mod
+from loares.experiments.runner import ExperimentRunner, PymooExptRunner
+from loares.experiments.process import post_process
+from loares.experiments.analysis.compare import compare_metrics
+from loares.experiments.analysis import stats as stats_mod
 
 
 def zdt1(X):

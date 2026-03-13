@@ -3,13 +3,13 @@ import inspect
 import numpy as np
 from math import comb
 from multiprocessing import Pool
-from opti.algorithms.moo.base import MOPopulationHandler
-from opti.algorithms.soo.base import SOPopulationHandler
-from opti.core.problem import ProblemHandler
-from opti.analysis.moo.metrics import raw_performance_metrics
-from opti.analysis.soo.metrics import bw_fitness
-from opti.analysis.utils import dict_to_json
-from opti.core.adapters import opti_to_pymoo_prob, pymoo_to_opti_h5
+from loares.algorithms.moo.base import MOPopulationHandler
+from loares.algorithms.soo.base import SOPopulationHandler
+from loares.core.problem import ProblemHandler
+from loares.analysis.moo.metrics import raw_performance_metrics
+from loares.analysis.soo.metrics import bw_fitness
+from loares.analysis.utils import dict_to_json
+from loares.core.adapters import loares_to_pymoo_prob, pymoo_to_loares_h5
 from pymoo.optimize import minimize
 from pymoo.util.ref_dirs import get_reference_directions
 
@@ -27,7 +27,8 @@ class ExperimentRunner:
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
         output_dir = (
-            caller_dir / self.problem_info["name"]
+            caller_dir
+            / self.problem_info["name"]
             / test_name
             / "raw_data"
             / self.algorithm_info["name"]
@@ -86,7 +87,7 @@ def get_das_dennis_partitions(n_obj, target_psize):
 class PymooExptRunner(ExperimentRunner):
     def __init__(self, problem, algorithm, test_name, TF=None):
         self.problem = problem
-        self.pymoo_problem = opti_to_pymoo_prob(self.problem)
+        self.pymoo_problem = loares_to_pymoo_prob(self.problem)
         self.algorithm = algorithm
         self.problem_info = problem.get_info()
         self.algorithm_info = {"name": (self.algorithm.__name__).replace("_", "-")}
@@ -95,7 +96,8 @@ class PymooExptRunner(ExperimentRunner):
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
         output_dir = (
-            caller_dir / self.problem_info["name"]
+            caller_dir
+            / self.problem_info["name"]
             / test_name
             / "raw_data"
             / self.algorithm_info["name"]
@@ -133,7 +135,7 @@ class PymooExptRunner(ExperimentRunner):
             save_history=True,
         )
         hdf5_path = self.output_dir / f"seed_{int(seed):03d}.h5"
-        pymoo_to_opti_h5(
+        pymoo_to_loares_h5(
             self.problem_info,
             self.algorithm_info,
             seed,

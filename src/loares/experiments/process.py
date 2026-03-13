@@ -3,22 +3,22 @@ from datetime import datetime
 from pathlib import Path
 import os
 from multiprocessing import Pool
-from opti.analysis.utils import dict_to_csv
-from opti.algorithms.moo.sorting import ranking_crowding
+from loares.analysis.utils import dict_to_csv
+from loares.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
 import numpy as np
-from opti.core.population import Population
-from opti.analysis.plots import (
+from loares.core.population import Population
+from loares.analysis.plots import (
     multi_line_plot,
     plot_2d,
     plot_3d,
     parallel_coordinates_plot,
 )
-from opti.analysis.moo.metrics import raw_performance_metrics
-from opti.analysis.soo.metrics import bw_fitness
-from opti.algorithms.moo.base import MOPopulationHandler
-from opti.algorithms.soo.base import SOPopulationHandler
-from opti.core.results import ResultProcessor
+from loares.analysis.moo.metrics import raw_performance_metrics
+from loares.analysis.soo.metrics import bw_fitness
+from loares.algorithms.moo.base import MOPopulationHandler
+from loares.algorithms.soo.base import SOPopulationHandler
+from loares.core.results import ResultProcessor
 
 
 class post_process:

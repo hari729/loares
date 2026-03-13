@@ -1,15 +1,15 @@
-from opti.core.population import PopulationHandler
-from opti.core.flow import FlowHandler
+from loares.core.population import PopulationHandler
+from loares.core.flow import FlowHandler
 
-from opti.algorithms.moo.mods import local_search
-from opti.algorithms.moo.sorting import ranking_crowding
-from opti.algorithms.moo.selection import random_bw_selection as bw_selection
+from loares.algorithms.moo.mods import local_search
+from loares.algorithms.moo.sorting import ranking_crowding
+from loares.algorithms.moo.selection import random_bw_selection as bw_selection
 
-from opti.base.bmr import bmr
-from opti.base.bwr import bwr
-from opti.base.bmwr import bmwr
-from opti.base.mutation import random_reinit
-from opti.core.update import UpdateRule
+from loares.base.bmr import bmr
+from loares.base.bwr import bwr
+from loares.base.bmwr import bmwr
+from loares.base.mutation import random_reinit
+from loares.core.update import UpdateRule
 
 BMR = UpdateRule(bw_selection, bmr, random_reinit)
 BWR = UpdateRule(bw_selection, bwr, random_reinit)

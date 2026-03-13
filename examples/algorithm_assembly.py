@@ -1,22 +1,22 @@
 import numpy as np
 
-from opti.core.problem import Problem, ProblemHandler
-from opti.core.update import UpdateRule
-from opti.core.population import PopulationHandler
-from opti.core.flow import FlowHandler
-from opti.core.initializer import lhs_initialize
+from loares.core.problem import Problem, ProblemHandler
+from loares.core.update import UpdateRule
+from loares.core.population import PopulationHandler
+from loares.core.flow import FlowHandler
+from loares.core.initializer import lhs_initialize
 
-from opti.base.bmr import bmr
-from opti.base.bwr import bwr
-from opti.base.bmwr import bmwr
-from opti.base.mutation import random_reinit
+from loares.base.bmr import bmr
+from loares.base.bwr import bwr
+from loares.base.bmwr import bmwr
+from loares.base.mutation import random_reinit
 
-from opti.algorithms.soo.selection import bw_selection
-from opti.algorithms.soo.sorting import bw_sorting
+from loares.algorithms.soo.selection import bw_selection
+from loares.algorithms.soo.sorting import bw_sorting
 
-from opti.algorithms.moo.selection import random_bw_selection
-from opti.algorithms.moo.sorting import ranking_crowding
-from opti.algorithms.moo.mods import local_search
+from loares.algorithms.moo.selection import random_bw_selection
+from loares.algorithms.moo.sorting import ranking_crowding
+from loares.algorithms.moo.mods import local_search
 
 
 def sphere(X):

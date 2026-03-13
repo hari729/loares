@@ -1,5 +1,5 @@
 import numpy as np
-from opti.core.results import ResultProcessor
+from loares.core.results import ResultProcessor
 
 
 class FlowHandler:
