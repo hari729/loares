@@ -6,6 +6,7 @@ from pymoo.indicators.igd import IGD
 from pymoo.indicators.spacing import SpacingIndicator
 from pymoo.util.normalization import normalize
 
+
 def calculate_spread(pf, true_pf):
     if pf.shape[0] <= 1:
         return np.nan
@@ -36,8 +37,8 @@ def performance_metrics(problem, pareto_population):
         fmax = truefront.max(axis=0)
         fmin = truefront.min(axis=0)
 
-        obj_norm = normalize(objective_values,fmin,fmax)
-        tf_norm = normalize(truefront,fmin,fmax)
+        obj_norm = normalize(objective_values, fmin, fmax)
+        tf_norm = normalize(truefront, fmin, fmax)
 
         gd = GD(tf_norm)
         igd = IGD(tf_norm)
@@ -47,31 +48,32 @@ def performance_metrics(problem, pareto_population):
         metrics["GD"] = gd(obj_norm)
         metrics["IGD"] = igd(obj_norm)
 
-        if objective_values.shape[0]>1:
+        if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
-            metrics["SPR"] = calculate_spread(obj_norm,tf_norm)
+            metrics["SPR"] = calculate_spread(obj_norm, tf_norm)
         else:
             metrics["SPC"] = np.nan
             metrics["SPR"] = np.nan
-        
+
         metrics["HV"] = hv(obj_norm)
-    
+
     else:
         fmax = objective_values.max(axis=0)
         fmin = objective_values.min(axis=0)
 
-        obj_norm = normalize(objective_values,fmin,fmax)
+        obj_norm = normalize(objective_values, fmin, fmax)
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 
-        if objective_values.shape[0]>1:
+        if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
         else:
             metrics["SPC"] = np.nan
-        
+
         metrics["HV"] = hv(obj_norm)
 
     return metrics
+
 
 def raw_performance_metrics(objective_values, truefront):
 
@@ -80,18 +82,18 @@ def raw_performance_metrics(objective_values, truefront):
 
     if truefront is not None:
         if objective_values.shape[0] == 0:
-            metrics['HV'] = np.nan
-            metrics['SPC'] = np.nan
-            metrics['GD'] = np.nan
-            metrics['IGD'] = np.nan
-            metrics['SPR'] = np.nan
+            metrics["HV"] = np.nan
+            metrics["SPC"] = np.nan
+            metrics["GD"] = np.nan
+            metrics["IGD"] = np.nan
+            metrics["SPR"] = np.nan
             return metrics
 
         fmax = truefront.max(axis=0)
         fmin = truefront.min(axis=0)
 
-        obj_norm = normalize(objective_values,fmin,fmax)
-        tf_norm = normalize(truefront,fmin,fmax)
+        obj_norm = normalize(objective_values, fmin, fmax)
+        tf_norm = normalize(truefront, fmin, fmax)
 
         gd = GD(tf_norm)
         igd = IGD(tf_norm)
@@ -101,33 +103,33 @@ def raw_performance_metrics(objective_values, truefront):
         metrics["GD"] = gd(obj_norm)
         metrics["IGD"] = igd(obj_norm)
 
-        if objective_values.shape[0]>1:
+        if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
-            metrics["SPR"] = calculate_spread(obj_norm,tf_norm)
+            metrics["SPR"] = calculate_spread(obj_norm, tf_norm)
         else:
             metrics["SPC"] = np.nan
             metrics["SPR"] = np.nan
-        
+
         metrics["HV"] = hv(obj_norm)
-    
+
     else:
         if objective_values.shape[0] == 0:
-            metrics['HV'] = np.nan
-            metrics['SPC'] = np.nan
+            metrics["HV"] = np.nan
+            metrics["SPC"] = np.nan
             return metrics
 
         fmax = objective_values.max(axis=0)
         fmin = objective_values.min(axis=0)
 
-        obj_norm = normalize(objective_values,fmin,fmax)
+        obj_norm = normalize(objective_values, fmin, fmax)
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 
-        if objective_values.shape[0]>1:
+        if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
         else:
             metrics["SPC"] = np.nan
-        
+
         metrics["HV"] = hv(obj_norm)
 
     return metrics

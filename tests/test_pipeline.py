@@ -238,7 +238,7 @@ class TestFlowHandlerRun:
         from pymoo.problems.multi import ZDT1
         from loares.algorithms.moo.base import MO_BMR
         from loares.core.problem import ProblemHandler
-        from loares.analysis.moo.metrics import raw_performance_metrics
+        from loares.metrics.moo import raw_performance_metrics
 
         bench = ZDT1()
         tf = bench.pareto_front(100)

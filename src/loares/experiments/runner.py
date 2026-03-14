@@ -6,9 +6,9 @@ from multiprocessing import Pool
 from loares.algorithms.moo.base import MOPopulationHandler
 from loares.algorithms.soo.base import SOPopulationHandler
 from loares.core.problem import ProblemHandler
-from loares.analysis.moo.metrics import raw_performance_metrics
-from loares.analysis.soo.metrics import bw_fitness
-from loares.analysis.utils import dict_to_json
+from loares.metrics.moo import raw_performance_metrics
+from loares.metrics.soo import bw_fitness
+from loares.experiments.utils import dict_to_json
 from loares.core.adapters import loares_to_pymoo_prob, pymoo_to_loares_h5
 from pymoo.optimize import minimize
 from pymoo.util.ref_dirs import get_reference_directions

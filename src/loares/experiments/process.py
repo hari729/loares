@@ -3,19 +3,19 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
-from loares.analysis.utils import dict_to_csv
+from loares.experiments.utils import dict_to_csv
 from loares.algorithms.moo.sorting import ranking_crowding
 import pandas as pd
 import numpy as np
 from loares.core.population import Population
-from loares.analysis.plots import (
+from loares.experiments.plots import (
     multi_line_plot,
     plot_2d,
     plot_3d,
     parallel_coordinates_plot,
 )
-from loares.analysis.moo.metrics import raw_performance_metrics
-from loares.analysis.soo.metrics import bw_fitness
+from loares.metrics.moo import raw_performance_metrics
+from loares.metrics.soo import bw_fitness
 from loares.algorithms.moo.base import MOPopulationHandler
 from loares.algorithms.soo.base import SOPopulationHandler
 from loares.core.results import ResultProcessor
@@ -46,11 +46,7 @@ class post_process:
         self.plot_hist = plot_hist
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
-        self.test_dir = (
-            caller_dir
-            / test_name
-            / "raw_data"
-        )
+        self.test_dir = caller_dir / test_name / "raw_data"
         if self.problem_info["n_obj"] > 1:
             self.populationHandler = MOPopulationHandler()
             self.metrics_calculator = raw_performance_metrics
@@ -63,10 +59,7 @@ class post_process:
             self.recording_interval = 0.005
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        self.result_dir = (
-            caller_dir / test_name
-            / f"analysis-{self.timestamp}"
-        )
+        self.result_dir = caller_dir / test_name / f"analysis-{self.timestamp}"
         os.makedirs(self.result_dir, exist_ok=True)
         print(
             f"\nComparing {self.test_name} test for {self.problem_info['name']} "
