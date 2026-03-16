@@ -3,6 +3,7 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
+import multiprocessing
 from loares.experiments.utils import dict_to_csv
 from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
 import pandas as pd
@@ -110,7 +111,7 @@ class post_process:
                 local_list.append(ResultProcessor.read_final_population(sf))
             pareto_list.append(local_list)
 
-        rf_path = Path(self.result_dir / "ref_front.npy")
+        rf_path = Path(self.result_dir.parent / "ref_front.npy")
         if rf_path.exists():
             print(f"Using Reference Front at {rf_path}")
             self.true_f = np.load(rf_path)
@@ -179,7 +180,9 @@ class post_process:
                 self.true_f = np.load(rf_path)
 
         net_res = {}
-        with Pool(processes=self.threads) as pool:
+        # with Pool(processes=self.threads) as pool:
+        ctx = multiprocessing.get_context("spawn")
+        with ctx.Pool(processes=self.threads) as pool:
             for algo in all_results:
                 seed_files = all_results[algo]["seed_files"]
                 rows = pool.map(self._metrics_worker, seed_files)

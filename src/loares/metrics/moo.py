@@ -75,6 +75,49 @@ def performance_metrics(problem, pareto_population):
     return metrics
 
 
+# ── cdist-based GD/IGD (not yet wired in) ────────────────────────────────
+
+from scipy.spatial.distance import cdist as _cdist
+
+
+def gd_cdist(F, PF):
+    """Generational Distance using scipy cdist.
+
+    Parameters
+    ----------
+    F : np.ndarray, shape (N, M)
+        Objective values of the approximation set.
+    PF : np.ndarray, shape (P, M)
+        Objective values of the reference Pareto front.
+
+    Returns
+    -------
+    float
+        Mean minimum Euclidean distance from each point in F to PF.
+    """
+    D = _cdist(F, PF, metric="euclidean")
+    return float(np.mean(np.min(D, axis=1)))
+
+
+def igd_cdist(F, PF):
+    """Inverted Generational Distance using scipy cdist.
+
+    Parameters
+    ----------
+    F : np.ndarray, shape (N, M)
+        Objective values of the approximation set.
+    PF : np.ndarray, shape (P, M)
+        Objective values of the reference Pareto front.
+
+    Returns
+    -------
+    float
+        Mean minimum Euclidean distance from each point in PF to F.
+    """
+    D = _cdist(PF, F, metric="euclidean")
+    return float(np.mean(np.min(D, axis=1)))
+
+
 def raw_performance_metrics(objective_values, truefront):
 
     ref_point = np.ones(objective_values.shape[1]) + 1e-5
@@ -95,13 +138,15 @@ def raw_performance_metrics(objective_values, truefront):
         obj_norm = normalize(objective_values, fmin, fmax)
         tf_norm = normalize(truefront, fmin, fmax)
 
-        gd = GD(tf_norm)
-        igd = IGD(tf_norm)
+        # gd = GD(tf_norm)
+        # igd = IGD(tf_norm)
         spacing = SpacingIndicator()
         hv = HV(ref_point=ref_point)
 
-        metrics["GD"] = gd(obj_norm)
-        metrics["IGD"] = igd(obj_norm)
+        # metrics["GD"] = gd(obj_norm)
+        # metrics["IGD"] = igd(obj_norm)
+        metrics["GD"] = gd_cdist(obj_norm, tf_norm)
+        metrics["IGD"] = igd_cdist(obj_norm, tf_norm)
 
         if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
