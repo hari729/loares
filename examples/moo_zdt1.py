@@ -30,7 +30,7 @@ class ZDT1(Problem):
             psize=psize,
             max_evals=max_evals,
             bounds=np.column_stack([np.zeros(n_vars), np.ones(n_vars)]),
-            minmax=np.array([[1, 1]]),
+            minmax=["min", "min"],
         )
 
     def get_true_front(self, pts=500):

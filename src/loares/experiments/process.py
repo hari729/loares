@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 from multiprocessing import Pool
 from loares.experiments.utils import dict_to_csv
-from loares.algorithms.moo.sorting import ranking_crowding
+from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
 import pandas as pd
 import numpy as np
 from loares.core.population import Population
@@ -82,7 +82,7 @@ class post_process:
     def sort_pop_list(self, pareto_list):
         combined_pop = self.populationHandler.merge(pareto_list)
         composite_population_raw = Population(
-            *ranking_crowding(
+            *nds_fps(
                 self.problem,
                 combined_pop,
                 self.rf_size,
@@ -116,10 +116,25 @@ class post_process:
             self.true_f = np.load(rf_path)
         else:
             print(f"Generating Reference Front")
-            master_list = []
-            for llist in pareto_list:
-                master_list.append(self.sort_pop_list(llist))
-            reference_pop = self.sort_pop_list(master_list)
+            # master_list = []
+            # for llist in pareto_list:
+            #     master_list.append(self.sort_pop_list(llist))
+            # reference_pop = self.sort_pop_list(master_list)
+            # self.true_f = reference_pop.objectives
+            # np.save(rf_path, self.true_f)
+            best_pops = []
+            for path in all_result_paths:
+                best_hv = -np.inf
+                best_pop = None
+                for sf in self._get_seed_files(path):
+                    pop = ResultProcessor.read_final_population(sf)
+                    metrics = self.metrics_calculator(pop.objectives, None)
+                    if metrics["HV"] > best_hv:
+                        best_hv = metrics["HV"]
+                        best_pop = pop
+                if best_pop is not None:
+                    best_pops.append(best_pop)
+            reference_pop = self.sort_pop_list(best_pops)
             self.true_f = reference_pop.objectives
             np.save(rf_path, self.true_f)
 
@@ -185,9 +200,16 @@ class post_process:
                     best_idx = np.argmax(algo_final_df["HV"])
                     best_seed_file = seed_files[best_idx]
                     plot_data = ResultProcessor.read_final_dict(best_seed_file)
-                    dict_to_csv(plot_data, pareto_dir, "pareto-front")
+                    minmax_flat = self.problem.minmax.flatten()
+                    for j in range(self.problem.n_obj):
+                        key = f"f{j + 1}"
+                        if key in plot_data:
+                            plot_data[key] = np.array(plot_data[key]) * minmax_flat[j]
                     _, algo_info, best_seed = ResultProcessor.read_metadata(
                         best_seed_file
+                    )
+                    dict_to_csv(
+                        plot_data, pareto_dir, f"{algo_info['name']}-pareto-front"
                     )
                     plot_data["name"] = algo_info["name"]
                     plot_data["seed"] = best_seed

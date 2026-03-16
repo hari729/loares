@@ -24,7 +24,7 @@ class Sphere(Problem):
             psize=psize,
             max_evals=max_evals,
             bounds=np.column_stack([np.full(n_vars, -5.12), np.full(n_vars, 5.12)]),
-            minmax=np.array([[1]]),
+            minmax=["min"],
         )
 
 

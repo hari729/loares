@@ -45,7 +45,7 @@ soo_problem = Problem(
     psize=50,
     max_evals=5000,
     bounds=np.column_stack([np.full(10, -5.12), np.full(10, 5.12)]),
-    minmax=np.array([[1]]),
+    minmax=["min"],
 )
 
 # 2. Wrap in a ProblemHandler (tracks evals, recording intervals)
@@ -80,7 +80,7 @@ moo_problem = Problem(
     psize=100,
     max_evals=10000,
     bounds=np.column_stack([np.zeros(30), np.ones(30)]),
-    minmax=np.array([[1, 1]]),
+    minmax=["min", "min"],
 )
 
 # 2. Wrap in a ProblemHandler

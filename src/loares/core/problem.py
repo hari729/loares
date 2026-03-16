@@ -33,7 +33,11 @@ class Problem:
         self.psize = psize
         self.max_evals = max_evals
         self.bounds = bounds
-        self.minmax = minmax
+        tmm = np.ones((1,self.n_obj))
+        if minmax is not None:
+            self.minmax = np.array([[-1 if m == "max" else 1 for m in minmax]])
+        else:
+            self.minmax = tmm
 
         if variable_modifier is None:
             self.variable_modifier = no_modifier
@@ -64,11 +68,6 @@ class Problem:
         }
         return dictionary
 
-    def objective_correction(self, population):
-        population.objectives *= self.minmax
-        return population
-
-
 class ProblemHandler:
     def __init__(self, problem):
         self.problem = problem
@@ -92,7 +91,7 @@ class ProblemHandler:
         self.evals += solutions.shape[0]
         solutions = self.problem.variable_modifier(solutions)
         objectives, constraints = self.problem.evaluate(solutions)
-        return Population(solutions, objectives, constraints)
+        return Population(solutions, objectives*self.problem.minmax, constraints)
 
     def interval_status(self):
         if (

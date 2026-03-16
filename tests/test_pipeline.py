@@ -220,7 +220,7 @@ class TestFlowHandlerRun:
             psize=10,
             max_evals=200,
             bounds=np.column_stack([np.full(5, -5), np.full(5, 5)]),
-            minmax=np.ones((1, 1)),
+            minmax=["min"],
         )
         ph = ProblemHandler(prob)
         algo = SO_BMR(ph)
@@ -516,3 +516,299 @@ class TestPymooAdapter:
         final_pop = ResultProcessor.read_final_population(hdf5_path)
         assert final_pop.solutions.shape[1] == 30
         assert final_pop.objectives.shape[1] == 2
+
+
+# ── Test 7: Reference front generation (NDS + FPS) ──────────────────────────
+
+
+class TestReferenceFront:
+    def _make_mixed_population(self, n=50, n_vars=5, n_obj=2):
+        X = np.random.rand(n, n_vars)
+        f1 = np.random.rand(n)
+        f2 = 1 - f1 + np.random.rand(n) * 0.3
+        F = np.column_stack([f1, f2])
+        G = np.full((n, 1), -1.0)
+        return Population(X, F, G)
+
+    def _make_dummy_problem(self, n_vars=5, n_obj=2, n_constr=1):
+        from loares.core.problem import Problem
+
+        return Problem(n_vars=n_vars, n_obj=n_obj, n_constr=n_constr)
+
+    def test_nds_fps_returns_only_non_dominated(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
+
+        np.random.seed(42)
+        pop = self._make_mixed_population(n=100, n_obj=2)
+        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=50, seed=1)
+
+        expected_ndf_idx = find_non_dominated(pop.objectives)
+        ndf_objectives = pop.objectives[expected_ndf_idx]
+
+        for i in range(po.shape[0]):
+            match = np.any(np.all(np.isclose(po[i], ndf_objectives), axis=1))
+            assert match, f"Returned point {po[i]} is not on the non-dominated front"
+
+    def test_nds_fps_respects_limit(self):
+        from loares.algorithms.moo.sorting import nds_fps
+
+        np.random.seed(42)
+        pop = self._make_mixed_population(n=200, n_obj=2)
+        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+        limit = 15
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
+
+        assert ps.shape[0] <= limit
+        assert po.shape[0] <= limit
+        assert pc.shape[0] <= limit
+        assert pm.shape[0] <= limit
+
+    def test_nds_fps_returns_all_when_front_smaller_than_limit(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
+
+        np.random.seed(42)
+        pop = self._make_mixed_population(n=50, n_obj=2)
+        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+
+        ndf_size = len(find_non_dominated(pop.objectives))
+        limit = ndf_size + 100
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
+
+        assert ps.shape[0] == ndf_size
+
+    def test_nds_fps_metadata_shape(self):
+        from loares.algorithms.moo.sorting import nds_fps
+
+        np.random.seed(42)
+        pop = self._make_mixed_population(n=100, n_obj=2)
+        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=30, seed=1)
+
+        assert pm.ndim == 2
+        assert pm.shape[0] == ps.shape[0]
+        assert pm.shape[1] == 1
+        assert np.all(pm == 0)
+
+    def test_fps_preserves_extreme_points(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+
+        np.random.seed(42)
+        points = np.random.rand(200, 2)
+
+        selected = farthest_point_sampling(points, n_samples=20)
+        selected_points = points[selected]
+
+        for j in range(points.shape[1]):
+            assert np.isclose(selected_points[:, j].min(), points[:, j].min())
+            assert np.isclose(selected_points[:, j].max(), points[:, j].max())
+
+    def test_fps_spread_better_than_random(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from scipy.spatial.distance import cdist
+
+        np.random.seed(42)
+        points = np.random.rand(500, 2)
+        n_samples = 30
+
+        fps_idx = farthest_point_sampling(points, n_samples)
+        fps_points = points[fps_idx]
+        fps_dists = cdist(fps_points, fps_points)
+        np.fill_diagonal(fps_dists, np.inf)
+        fps_min_spacing = fps_dists.min(axis=1).mean()
+
+        random_spacings = []
+        for trial in range(20):
+            rng = np.random.RandomState(trial)
+            rand_idx = rng.choice(len(points), n_samples, replace=False)
+            rand_points = points[rand_idx]
+            rand_dists = cdist(rand_points, rand_points)
+            np.fill_diagonal(rand_dists, np.inf)
+            random_spacings.append(rand_dists.min(axis=1).mean())
+
+        assert fps_min_spacing > np.mean(random_spacings)
+
+    def test_nds_fps_output_shapes_consistent(self):
+        from loares.algorithms.moo.sorting import nds_fps
+
+        np.random.seed(42)
+        n_vars = 5
+        n_obj = 3
+        pop = self._make_mixed_population(n=100, n_vars=n_vars, n_obj=n_obj)
+        pop.objectives = np.column_stack([pop.objectives, np.random.rand(100)])
+        prob = self._make_dummy_problem(n_vars=n_vars, n_obj=3, n_constr=1)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=20, seed=1)
+
+        assert ps.shape[1] == n_vars
+        assert po.shape[1] == 3
+        assert pc.shape[1] == 1
+        assert ps.shape[0] == po.shape[0] == pc.shape[0] == pm.shape[0]
+
+
+# ── Test 8: FPS selection quality (deeper validation) ────────────────────────
+
+
+class TestFPSQuality:
+    def test_fps_no_duplicate_indices(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+
+        np.random.seed(7)
+        points = np.random.rand(300, 2)
+        selected = farthest_point_sampling(points, n_samples=50)
+        assert len(selected) == len(set(selected))
+
+    def test_fps_no_duplicate_indices_3d(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+
+        np.random.seed(7)
+        points = np.random.rand(500, 3)
+        selected = farthest_point_sampling(points, n_samples=80)
+        assert len(selected) == len(set(selected))
+
+    def test_fps_deterministic(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+
+        np.random.seed(0)
+        points = np.random.rand(200, 2)
+        s1 = farthest_point_sampling(points, n_samples=30)
+        s2 = farthest_point_sampling(points, n_samples=30)
+        assert s1 == s2
+
+    def test_fps_boundary_coverage_3d(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+
+        np.random.seed(99)
+        points = np.random.rand(400, 3)
+        selected = farthest_point_sampling(points, n_samples=30)
+        selected_pts = points[selected]
+
+        for j in range(3):
+            assert np.isclose(selected_pts[:, j].min(), points[:, j].min())
+            assert np.isclose(selected_pts[:, j].max(), points[:, j].max())
+
+    def test_fps_spacing_uniformity(self):
+        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from scipy.spatial.distance import cdist
+
+        np.random.seed(42)
+        points = np.random.rand(1000, 2)
+        selected = farthest_point_sampling(points, n_samples=50)
+        sel_pts = points[selected]
+
+        dists = cdist(sel_pts, sel_pts)
+        np.fill_diagonal(dists, np.inf)
+        nn_dists = dists.min(axis=1)
+
+        cv = nn_dists.std() / nn_dists.mean()
+        assert cv < 0.6, (
+            f"Nearest-neighbor distance CV = {cv:.3f}, expected < 0.6 for uniform spread"
+        )
+
+    def test_nds_fps_no_duplicate_points(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from loares.core.problem import Problem
+
+        np.random.seed(42)
+        n = 200
+        X = np.random.rand(n, 5)
+        f1 = np.random.rand(n)
+        f2 = 1 - f1 + np.random.rand(n) * 0.3
+        F = np.column_stack([f1, f2])
+        G = np.full((n, 1), -1.0)
+        pop = Population(X, F, G)
+        prob = Problem(n_vars=5, n_obj=2, n_constr=1)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=30, seed=1)
+
+        unique_rows = np.unique(po, axis=0)
+        assert unique_rows.shape[0] == po.shape[0], (
+            "nds_fps returned duplicate objective rows"
+        )
+
+    def test_nds_fps_on_known_zdt1_front(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from loares.core.problem import Problem
+        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
+
+        np.random.seed(42)
+        n = 500
+        X = np.random.rand(n, 30)
+        f1 = np.sort(np.random.rand(n))
+        f2_pareto = 1 - np.sqrt(f1)
+        noise = np.random.rand(n) * 0.5
+        f2 = f2_pareto + noise
+        F = np.column_stack([f1, f2])
+        G = np.full((n, 1), -1.0)
+        pop = Population(X, F, G)
+        prob = Problem(n_vars=30, n_obj=2, n_constr=1)
+
+        ndf_idx = find_non_dominated(F)
+        ndf_size = len(ndf_idx)
+        limit = min(50, ndf_size)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
+
+        for i in range(po.shape[0]):
+            match = np.any(np.all(np.isclose(po[i], F[ndf_idx]), axis=1))
+            assert match, f"Point {po[i]} not on non-dominated front"
+
+        assert po.shape[0] == limit
+
+        assert np.isclose(po[:, 0].min(), F[ndf_idx, 0].min(), atol=1e-6)
+        assert np.isclose(po[:, 0].max(), F[ndf_idx, 0].max(), atol=1e-6)
+
+    def test_nds_fps_solutions_match_objectives(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from loares.core.problem import Problem
+
+        np.random.seed(42)
+        n = 150
+        X = np.random.rand(n, 5)
+        f1 = np.random.rand(n)
+        f2 = 1 - f1 + np.random.rand(n) * 0.3
+        F = np.column_stack([f1, f2])
+        G = np.random.rand(n, 1) - 0.5
+        pop = Population(X, F, G)
+        prob = Problem(n_vars=5, n_obj=2, n_constr=1)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=25, seed=1)
+
+        for i in range(ps.shape[0]):
+            matches = np.where(
+                np.all(np.isclose(X, ps[i]), axis=1)
+                & np.all(np.isclose(F, po[i]), axis=1)
+                & np.all(np.isclose(G, pc[i]), axis=1)
+            )[0]
+            assert len(matches) >= 1, f"Row {i}: solution/objective/constraint mismatch"
+
+    def test_nds_fps_large_scale(self):
+        from loares.algorithms.moo.sorting import nds_fps
+        from loares.core.problem import Problem
+        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
+
+        np.random.seed(42)
+        n = 5000
+        X = np.random.rand(n, 10)
+        f1 = np.random.rand(n)
+        f2 = 1 - f1 + np.random.rand(n) * 0.1
+        F = np.column_stack([f1, f2])
+        G = np.full((n, 1), -1.0)
+        pop = Population(X, F, G)
+        prob = Problem(n_vars=10, n_obj=2, n_constr=1)
+
+        ndf_size = len(find_non_dominated(F))
+        limit = 200
+        expected = min(limit, ndf_size)
+
+        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
+
+        assert po.shape[0] == expected
+        unique_rows = np.unique(po, axis=0)
+        assert unique_rows.shape[0] == expected

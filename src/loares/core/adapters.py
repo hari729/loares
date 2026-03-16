@@ -17,7 +17,7 @@ class pymoo_to_loares_prob(loaresProblem):
             psize=psize,
             max_evals=max_evals,
             bounds=np.vstack(pymoo_prob.bounds()).T,
-            minmax=np.ones([1, pymoo_prob.n_obj]),
+            minmax=["min"] * pymoo_prob.n_obj,
         )
 
         if self.n_constr == 0:
