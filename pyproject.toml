@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "loares"
-version = "0.9b.1"
+dynamic = ["version"]
 description = "Library for Optmisation Algorithm Research"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,4 +24,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "setuptools>=82.0.1",
+    "setuptools-scm>=9.2.2",
 ]
+
+[tool.setuptools_scm]
