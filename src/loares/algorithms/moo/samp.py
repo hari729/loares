@@ -38,7 +38,8 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
                 )
             temp_population = self.problemHandler.evaluate(temp_X)
             self.sub_populations[i] = self.populationHandler.update(
-                [self.sub_populations[i], temp_population], self.problemHandler
+                [self.sub_populations[i], temp_population], self.problemHandler,
+                limit=self.sub_populations[i].solutions.shape[0]
             )
         if self.n > 1:
             self.population = self.populationHandler.merge(self.sub_populations)

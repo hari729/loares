@@ -3,7 +3,6 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
-import multiprocessing
 from loares.experiments.utils import dict_to_csv
 from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
 import pandas as pd
@@ -180,9 +179,7 @@ class post_process:
                 self.true_f = np.load(rf_path)
 
         net_res = {}
-        # with Pool(processes=self.threads) as pool:
-        ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(processes=self.threads) as pool:
+        with Pool(processes=self.threads) as pool:
             for algo in all_results:
                 seed_files = all_results[algo]["seed_files"]
                 rows = pool.map(self._metrics_worker, seed_files)

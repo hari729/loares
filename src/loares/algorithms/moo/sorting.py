@@ -56,13 +56,18 @@ nds = NonDominatedSorting()
 
 def nds_cd(population, limit=None, ndf=False):
     limit = len(population.objectives) if limit is None else limit
-    fronts = nds.do(population.objectives, n_stop_if_ranked=limit)
     N = len(population.solutions)
     ranks = np.full(N, np.inf)
     cd = np.zeros(N)
-    for i in range(len(fronts)):
-        cd[fronts[i]] = calc_crowding_distance(population.objectives[fronts[i]])
-        ranks[fronts[i]] = i
+    if ndf:
+        idx = nds.do(population.objectives, only_non_dominated_front=True)
+        cd[idx] = calc_crowding_distance(population.objectives[idx])
+        ranks[idx] = 0
+    else:
+        fronts = nds.do(population.objectives, n_stop_if_ranked=limit)
+        for i in range(len(fronts)):
+            cd[fronts[i]] = calc_crowding_distance(population.objectives[fronts[i]])
+            ranks[fronts[i]] = i
     sorted_idx = np.lexsort((-cd, ranks))
     selected = sorted_idx[:limit]
     pm = np.column_stack([ranks[selected], cd[selected]])

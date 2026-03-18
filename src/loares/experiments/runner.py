@@ -3,7 +3,6 @@ import inspect
 import numpy as np
 from math import comb
 from multiprocessing import Pool
-import multiprocessing
 from loares.algorithms.moo.base import MOPopulationHandler
 from loares.algorithms.soo.base import SOPopulationHandler
 from loares.core.problem import ProblemHandler
@@ -61,9 +60,7 @@ class ExperimentRunner:
             f"| Population Size: {self.problem_info['psize']} | "
             + f"Max Evals: {self.problem_info['max_evals']} | Runs: {len(seeds)} |"
         )
-        # with Pool(processes=threads) as pool:
-        ctx = multiprocessing.get_context("spawn")
-        with ctx.Pool(processes=threads) as pool:
+        with Pool(processes=threads) as pool:
             pool.map(self.run, seeds)
         self._minimal_post_process(seeds)
         print(f"Results saved to {self.output_dir}")
