@@ -43,6 +43,9 @@ class PopulationHandler:
             )
         )
 
+    def get_empty_pop(self, nX, nO, nG):
+        return Population(np.empty((0,nX)), np.empty((0,nO)), np.empty((0,nG)))
+
     def raw_update(self, population, X, F, G, M):
         population.solutions = X
         population.objectives = F

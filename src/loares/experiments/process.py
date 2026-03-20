@@ -3,6 +3,7 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
+from tqdm import tqdm
 from loares.experiments.utils import dict_to_csv
 from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
 import pandas as pd
@@ -30,7 +31,7 @@ class post_process:
         algo_grps,
         true_f=None,
         gen_rf=False,
-        rf_size=5000,
+        rf_size=1000,
         plot_tf=False,
         plot_hist=False,
     ):
@@ -103,38 +104,19 @@ class post_process:
             )
             all_result_paths.extend(result_paths)
 
-        pareto_list = []
-        for path in all_result_paths:
-            local_list = []
-            for sf in self._get_seed_files(path):
-                local_list.append(ResultProcessor.read_final_population(sf))
-            pareto_list.append(local_list)
-
         rf_path = Path(self.result_dir.parent / "ref_front.npy")
         if rf_path.exists():
             print(f"Using Reference Front at {rf_path}")
             self.true_f = np.load(rf_path)
         else:
             print(f"Generating Reference Front")
-            # master_list = []
-            # for llist in pareto_list:
-            #     master_list.append(self.sort_pop_list(llist))
-            # reference_pop = self.sort_pop_list(master_list)
-            # self.true_f = reference_pop.objectives
-            # np.save(rf_path, self.true_f)
-            best_pops = []
-            for path in all_result_paths:
-                best_hv = -np.inf
-                best_pop = None
+            reference_pop = self.populationHandler.get_empty_pop(self.problem_info["n_vars"],
+                                                                 self.problem_info["n_obj"],
+                                                                 self.problem_info["n_constr"])
+            for path in tqdm(all_result_paths):
                 for sf in self._get_seed_files(path):
                     pop = ResultProcessor.read_final_population(sf)
-                    metrics = self.metrics_calculator(pop.objectives, None)
-                    if metrics["HV"] > best_hv:
-                        best_hv = metrics["HV"]
-                        best_pop = pop
-                if best_pop is not None:
-                    best_pops.append(best_pop)
-            reference_pop = self.sort_pop_list(best_pops)
+                    reference_pop = self.sort_pop_list([reference_pop,pop])
             self.true_f = reference_pop.objectives
             np.save(rf_path, self.true_f)
 
