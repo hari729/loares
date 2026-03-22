@@ -17,12 +17,12 @@ def local_search(problem, population, PopulationHandler, factor=0.05):
     base_population,_,_,_ = PopulationHandler.get_raw_pareto(population)
     bounds = problem.bounds
 
-    n_search = 6 * base_population.shape[0] // 100
+    n_search = int(np.sqrt(base_population.shape[0]))
 
     # Determine how many solutions to actually process 
     num_to_process = min(n_search, base_population.shape[0])
-    # Select the 'best' solutions from the top of the base population
-    base_solutions = base_population[:num_to_process]
+    selected = np.random.choice(base_population.shape[0], num_to_process, replace=False)
+    base_solutions = base_population[selected]
     
     variables = bounds.shape[0]
 
