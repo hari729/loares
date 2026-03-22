@@ -3,7 +3,9 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
+from matplotlib.pyplot import plot_date
 from tqdm import tqdm
+from loares import algorithms
 from loares.experiments.utils import dict_to_csv
 from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
 import pandas as pd
@@ -21,6 +23,15 @@ from loares.algorithms.moo.base import MOPopulationHandler
 from loares.algorithms.soo.base import SOPopulationHandler
 from loares.core.results import ResultProcessor
 
+def score_sort(data, n_obj):
+    f_key = [f"f{i+1}" for i in range(n_obj)]
+    objectives = np.column_stack([data[k] for k in f_key])
+    mins = objectives.min(axis=0)
+    score = (mins / (objectives + 1e-10)).sum(axis=1)
+    order = np.argsort(-score)
+    for key in data:
+        data[key] = np.array(data[key])[order]
+    return data
 
 class post_process:
     def __init__(
@@ -182,6 +193,7 @@ class post_process:
                     best_idx = np.argmax(algo_final_df["HV"])
                     best_seed_file = seed_files[best_idx]
                     plot_data = ResultProcessor.read_final_dict(best_seed_file)
+                    plot_data = score_sort(plot_data, self.problem_info["n_obj"])
                     minmax_flat = self.problem.minmax.flatten()
                     for j in range(self.problem.n_obj):
                         key = f"f{j + 1}"
