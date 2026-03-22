@@ -1,4 +1,7 @@
 import numpy as np
+from scipy.spatial import KDTree
+from scipy.stats import norm
+from pymoo.util.normalization import normalize
 
 def random_bw_selection(population):
     pool_size = population.solutions.shape[0]
@@ -31,3 +34,17 @@ def archive_bw_selection(population, archive):
     selected_b = np.random.randint(0, M_b, pool_size)
     selected_w = np.random.randint(0, M_w, pool_size)
     return {"best": population_b[selected_b], "worst": population_w[selected_w]}
+
+
+
+def get_nn_dist(X, k=5):
+
+    normalized_values = normalize(X,np.min(X, axis=0), np.max(X, axis=0))
+    tree = KDTree(normalized_values)
+
+    # k+1 because first neighbor is itself
+    dist, idx = tree.query(normalized_values, k=k+1)
+
+    # remove self (first column)
+    return idx[:, 1:], dist[:, 1:]
+

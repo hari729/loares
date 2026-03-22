@@ -5,7 +5,7 @@ from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.operators.survival.rank_and_crowding.metrics import calc_crowding_distance
 from pymoo.core.population import Population as PymooPopulation
 from pymoo.core.problem import Problem
-
+from pymoo.util.normalization import normalize
 
 def ranking_crowding(problem, population, limit, seed, ndf=False, all=False):
 
@@ -81,17 +81,18 @@ def nds_cd(population, limit=None, ndf=False):
 def farthest_point_sampling(points, n_samples):
     n_obj = points.shape[1]
     selected = []
+    npoints = normalize(points, np.min(points,axis=0), np.max(points, axis=0))
     for j in range(n_obj):
-        selected.append(np.argmin(points[:, j]))
-        selected.append(np.argmax(points[:, j]))
+        selected.append(np.argmin(npoints[:, j]))
+        selected.append(np.argmax(npoints[:, j]))
     selected = list(dict.fromkeys(selected))  # deduplicate, preserve order
 
-    min_dist = cdist(points, points[selected]).min(axis=1)
+    min_dist = cdist(npoints, npoints[selected]).min(axis=1)
 
     for _ in range(n_samples - len(selected)):
         idx = np.argmax(min_dist)
         selected.append(idx)
-        new_dist = cdist(points, points[idx : idx + 1]).flatten()
+        new_dist = cdist(npoints, npoints[idx : idx + 1]).flatten()
         min_dist = np.minimum(min_dist, new_dist)
     return selected
 
