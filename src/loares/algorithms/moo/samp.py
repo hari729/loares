@@ -10,7 +10,7 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
 
     def initialize(self, seed, hdf5_path):
         super().initialize(seed, hdf5_path)
-        self.sub_populations = self.populationHandler.split(self.population, self.n)
+        self.sub_populations = self.populationHandler.random_split(self.population, self.n)
         self.indicator = performance_metrics(
             self.problemHandler.problem,
             self.populationHandler.get_refined(self.population),
@@ -54,24 +54,25 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
             self.populationHandler.get_refined(self.population),
         )["HV"]
 
-        if new_indicator > self.indicator:
-            new_n = min(
-                self.n + 1, max(2, int(0.1 * self.problemHandler.problem.psize))
-            )
-        elif self.n > 1:
-            new_n = self.n - 1
-        else:
-            new_n = self.n
-
-        self.indicator = new_indicator
-
-        if new_n != self.n:
-            self.n = new_n
-            self.sub_populations = self.populationHandler.split(self.population, self.n)
-            for j in range(self.n):
-                self.sub_populations[j] = self.populationHandler.get_sorted(
-                    self.sub_populations[j], self.problemHandler
+        if self.problemHandler.interval_status():
+            if new_indicator > self.indicator:
+                new_n = min(
+                    self.n + 1, max(2, int(0.1 * self.problemHandler.problem.psize))
                 )
+            elif self.n > 1:
+                new_n = self.n - 1
+            else:
+                new_n = self.n
+
+            self.indicator = new_indicator
+
+            if new_n != self.n:
+                self.n = new_n
+                self.sub_populations = self.populationHandler.random_split(self.population, self.n)
+                for j in range(self.n):
+                    self.sub_populations[j] = self.populationHandler.get_sorted(
+                        self.sub_populations[j], self.problemHandler
+                    )
 
 
 class MO_BMR_SAMP(MORankingCrowdingSAMP):
