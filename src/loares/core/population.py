@@ -2,7 +2,6 @@ import numpy as np
 import warnings
 from loares.core.initializer import random_initialize
 
-
 class Population:
     def __init__(self, X, F, G, M=None):
         self.solutions = X
@@ -59,7 +58,7 @@ class PopulationHandler:
         temp_population = sum(population_list[1:], population_list[0])
         return temp_population
 
-    def split(self, population, n_sub_pops):
+    def random_split(self, population, n_sub_pops):
         if n_sub_pops > self.get_size(population):
             warnings.warn(
                 "No. of sub populations exceed population size, value is automatically reduced.",
@@ -69,6 +68,43 @@ class PopulationHandler:
         idx = np.arange(self.get_size(population))
         np.random.shuffle(idx)
         parts = np.array_split(idx, n_sub_pops)
+        return [
+            Population(
+                population.solutions[i],
+                population.objectives[i],
+                population.constraints[i],
+            )
+            for i in parts
+        ]
+
+    def NN_split(self, population, n_sub_pops):
+
+        from loares.algorithms.moo.selection import get_nn_dist
+        if n_sub_pops > self.get_size(population):
+            warnings.warn(
+                "No. of sub populations exceed population size, value is automatically reduced.",
+                Warning,
+            )
+            n_sub_pops = self.get_size(population)
+        n = self.get_size(population)
+        idx, _ = get_nn_dist(population.objectives, k=min(5, n - 1))
+        visited = np.zeros(n, dtype=bool)
+        order = []
+        current = np.random.randint(n)
+        for _ in range(n):
+            order.append(current)
+            visited[current] = True
+            found = False
+            for neighbor in idx[current]:
+                if not visited[neighbor]:
+                    current = neighbor
+                    found = True
+                    break
+            if not found:
+                remaining = np.where(~visited)[0]
+                if len(remaining) > 0:
+                    current = remaining[0]
+        parts = np.array_split(order, n_sub_pops)
         return [
             Population(
                 population.solutions[i],
