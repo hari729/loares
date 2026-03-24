@@ -27,7 +27,10 @@ def score_sort(data, n_obj):
     f_key = [f"f{i+1}" for i in range(n_obj)]
     objectives = np.column_stack([data[k] for k in f_key])
     mins = objectives.min(axis=0)
-    score = (mins / (objectives + 1e-10)).sum(axis=1)
+    maxs = objectives.max(axis=0)
+    ranges = maxs - mins
+    ranges[ranges == 0] = 1.0
+    score = ((maxs - objectives) / ranges).sum(axis=1)
     order = np.argsort(-score)
     for key in data:
         data[key] = np.array(data[key])[order]
