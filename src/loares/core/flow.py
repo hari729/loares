@@ -1,7 +1,6 @@
 import numpy as np
 from loares.core.results import ResultProcessor
 
-
 class FlowHandler:
     def __init__(self, ProblemHandler, UpdateRule, PopulationHandler, Mods):
         self.problemHandler = ProblemHandler

@@ -36,6 +36,8 @@ class pymoo_to_loares_prob(loaresProblem):
 class loares_to_pymoo_prob(pymooProblem):
     def __init__(self, loares_prob):
         self.custom_eval = loares_prob.evaluate
+        self.minmax = loares_prob.minmax
+        self.variable_modifier = loares_prob.variable_modifier
         super().__init__(
             n_var=loares_prob.n_vars,
             n_obj=loares_prob.n_obj,
@@ -45,8 +47,9 @@ class loares_to_pymoo_prob(pymooProblem):
         )
 
     def _evaluate(self, x, out, *args, **kwargs):
+        x = self.variable_modifier(x)
         out["F"], out["G"] = self.custom_eval(x)
-
+        out["F"] = out["F"]*self.minmax
 
 def pymoo_to_loares_h5(
     problem_info, algorithm_info, seed, pymooResult, populationHandler, hdf5_path
