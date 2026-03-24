@@ -42,8 +42,15 @@ class ResultProcessor:
         handle.close()
 
     @staticmethod
+    def _open_h5(hdf5_path):
+        try:
+            return h5py.File(hdf5_path, "r")
+        except Exception as e:
+            raise type(e)(f"Failed to load '{hdf5_path}': {e}") from e
+
+    @staticmethod
     def stream_metrics(hdf5_path, metrics_fn, TF=None):
-        with h5py.File(hdf5_path, "r") as f:
+        with ResultProcessor._open_h5(hdf5_path) as f:
             fe = f["function_evals"]
             for ek in sorted(fe.keys(), key=lambda k: int(k)):
                 grp = fe[ek]
@@ -56,7 +63,7 @@ class ResultProcessor:
     def read_final_population(hdf5_path):
         from loares.core.population import Population
 
-        with h5py.File(hdf5_path, "r") as f:
+        with ResultProcessor._open_h5(hdf5_path) as f:
             fe = f["function_evals"]
             last_key = sorted(fe.keys(), key=lambda k: int(k))[-1]
             grp = fe[last_key]
@@ -64,17 +71,17 @@ class ResultProcessor:
 
     @staticmethod
     def read_final_dict(hdf5_path):
-        with h5py.File(hdf5_path, "r") as f:
+        with ResultProcessor._open_h5(hdf5_path) as f:
             return json.loads(f.attrs["final_dict_json"])
 
     @staticmethod
     def read_seed(hdf5_path):
-        with h5py.File(hdf5_path, "r") as f:
+        with ResultProcessor._open_h5(hdf5_path) as f:
             return int(f["metadata"].attrs["seed"])
 
     @staticmethod
     def read_metadata(hdf5_path):
-        with h5py.File(hdf5_path, "r") as f:
+        with ResultProcessor._open_h5(hdf5_path) as f:
             meta = f["metadata"]
             problem_info = json.loads(meta.attrs["problem_info_json"])
             algo_info = json.loads(meta.attrs["algorithm_info_json"])
