@@ -131,7 +131,6 @@ def parallel_coordinates_plot(data, filepath, alpha=0.6):
     keys = sorted(
         [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
     )
-    # keys = list(data.keys())
     values = np.array([data[f] for f in keys]).T  # shape: (n_points, n_dims)
 
     # Normalize each dimension to [0,1]
@@ -149,6 +148,118 @@ def parallel_coordinates_plot(data, filepath, alpha=0.6):
     ax.set_ylabel("Normalized value")
 
     ax.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    out_path = f"{filepath}/{data['name']}-pareto-front.pdf"
+    plt.savefig(out_path, bbox_inches="tight")
+    plt.close()
+
+
+def parallel_coordinates_plot_v2(
+    data, filepath, alpha=0.6, axis_mins=None, axis_maxs=None
+):
+    keys = sorted(
+        [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
+    )
+    values = np.array([data[f] for f in keys]).T  # shape: (n_points, n_dims)
+
+    if values.size == 0:
+        return
+
+    n_dims = len(keys)
+    data_mins = np.nanmin(values, axis=0)
+    data_maxs = np.nanmax(values, axis=0)
+
+    def _resolve_bounds(custom, keys_, fallback):
+        if custom is None:
+            return fallback.astype(float)
+        if isinstance(custom, dict):
+            return np.array([float(custom[k]) for k in keys_], dtype=float)
+        arr = np.asarray(custom, dtype=float)
+        if arr.shape[0] != len(keys_):
+            raise ValueError("Custom axis bounds must match number of objective axes")
+        return arr
+
+    mins = _resolve_bounds(axis_mins, keys, data_mins)
+    maxs = _resolve_bounds(axis_maxs, keys, data_maxs)
+    spans = maxs - mins
+    if np.any(spans < 0.0):
+        raise ValueError("Each custom axis min must be <= corresponding axis max")
+    safe_spans = np.where(spans == 0.0, 1.0, spans)
+
+    # Independent-axis scaling for each objective, then mapped to a shared render range.
+    host_min, host_max = mins[0], maxs[0]
+    host_span = host_max - host_min
+    if host_span == 0.0:
+        host_span = 1.0
+
+    z = (values - mins) / safe_spans
+    y = z * host_span + host_min
+
+    const_idx = np.where(spans == 0.0)[0]
+    if const_idx.size:
+        y[:, const_idx] = host_min + 0.5 * host_span
+
+    def _fmt(v):
+        if not np.isfinite(v):
+            return str(v)
+        av = abs(v)
+        if av != 0 and (av < 1e-3 or av >= 1e4):
+            return f"{v:.2e}"
+        return f"{v:.6g}"
+
+    fig_width = max(10, 0.95 * n_dims)
+    fig, ax = plt.subplots(figsize=(fig_width, 4.6))
+
+    x = np.arange(n_dims)
+    for row in y:
+        ax.plot(x, row, alpha=alpha, linewidth=1.0)
+
+    for xi in x:
+        ax.axvline(x=float(xi), linestyle="-", color="0.55", linewidth=0.8, zorder=0)
+
+    y_pad = 0.16 * host_span
+    y_lo = host_min - y_pad
+    y_hi = host_max + y_pad
+    ax.set_ylim(y_lo, y_hi)
+    ax.set_xlim(-0.25, n_dims - 1 + 0.25)
+
+    label_fontsize = 11
+    for i, xi in enumerate(x):
+        xif = float(xi)
+        ax.text(
+            xif,
+            host_max + 0.05 * host_span,
+            _fmt(maxs[i]),
+            ha="center",
+            va="bottom",
+            fontsize=label_fontsize,
+            bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.6, "alpha": 0.85},
+            clip_on=False,
+        )
+        ax.text(
+            xif,
+            host_min - 0.05 * host_span,
+            _fmt(mins[i]),
+            ha="center",
+            va="top",
+            fontsize=label_fontsize,
+            bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.6, "alpha": 0.85},
+            clip_on=False,
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(keys, rotation=15)
+    ax.set_ylabel("")
+    ax.set_yticks(np.linspace(host_min, host_max, 6))
+    ax.set_yticklabels([])
+    ax.grid(which="both", linestyle="--", alpha=0.6)
+
+    # Keep classic boxed frame like the original plot style.
+    ax.spines["left"].set_visible(True)
+    ax.spines["right"].set_visible(True)
+    ax.spines["top"].set_visible(True)
+    ax.spines["bottom"].set_visible(True)
+
     plt.tight_layout()
     out_path = f"{filepath}/{data['name']}-pareto-front.pdf"
     plt.savefig(out_path, bbox_inches="tight")

@@ -3,6 +3,7 @@ import inspect
 from pathlib import Path
 import os
 from multiprocessing import Pool
+from matplotlib import axis
 from matplotlib.pyplot import plot_date
 from tqdm import tqdm
 from loares import algorithms
@@ -15,7 +16,7 @@ from loares.experiments.plots import (
     multi_line_plot,
     plot_2d,
     plot_3d,
-    parallel_coordinates_plot,
+    parallel_coordinates_plot_v2,
 )
 from loares.metrics.moo import raw_performance_metrics
 from loares.metrics.soo import bw_fitness
@@ -218,7 +219,12 @@ class post_process:
                     elif n_obj == 3:
                         plot_3d(plot_data, pareto_dir)
                     else:
-                        parallel_coordinates_plot(plot_data, pareto_dir)
+                        ref_actual = self.true_f * minmax_flat
+                        axis_mins = np.floor(np.min(ref_actual, axis=0) * scale) / scale
+                        axis_maxs = np.ceil(np.max(ref_actual, axis=0) * scale) / scale
+                        parallel_coordinates_plot_v2(plot_data, pareto_dir,
+                                                  axis_mins = axis_mins,
+                                                  axis_maxs = axis_maxs)
 
                 metrics = metrics_list[0].keys()
                 mean = {"name": f"{algo} (Mean)"}
