@@ -8,7 +8,7 @@ from matplotlib.pyplot import plot_date
 from tqdm import tqdm
 from loares import algorithms
 from loares.experiments.utils import dict_to_csv
-from loares.algorithms.moo.sorting import ranking_crowding, nds_fps
+from loares.operators.sorting import ranking_crowding, nds_fps
 import pandas as pd
 import numpy as np
 from loares.core.population import Population
@@ -20,8 +20,8 @@ from loares.experiments.plots import (
 )
 from loares.metrics.moo import raw_performance_metrics
 from loares.metrics.soo import bw_fitness
-from loares.algorithms.moo.base import MOPopulationHandler
-from loares.algorithms.soo.base import SOPopulationHandler
+from loares.core.population import PopulationHandler
+from loares.operators.sorting import bw_sorting
 from loares.core.results import ResultProcessor
 
 def score_sort(data, n_obj):
@@ -64,12 +64,12 @@ class post_process:
         caller_dir = Path(caller_frame.filename).resolve().parent
         self.test_dir = caller_dir / test_name / "raw_data"
         if self.problem_info["n_obj"] > 1:
-            self.populationHandler = MOPopulationHandler()
+            self.populationHandler = PopulationHandler(ranking_crowding)
             self.metrics_calculator = raw_performance_metrics
             self.control_metric = "HV"
             self.recording_interval = 0.05
         else:
-            self.populationHandler = SOPopulationHandler()
+            self.populationHandler = PopulationHandler(bw_sorting)
             self.metrics_calculator = bw_fitness
             self.control_metric = "best"
             self.recording_interval = 0.005

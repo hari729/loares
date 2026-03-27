@@ -79,7 +79,7 @@ class PopulationHandler:
 
     def NN_split(self, population, n_sub_pops):
 
-        from loares.algorithms.moo.selection import get_nn_dist
+        from loares.operators.selection import get_nn_dist
         if n_sub_pops > self.get_size(population):
             warnings.warn(
                 "No. of sub populations exceed population size, value is automatically reduced.",

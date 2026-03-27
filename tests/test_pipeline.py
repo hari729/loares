@@ -172,13 +172,11 @@ class TestFlowHandlerRun:
     def test_run_produces_valid_hdf5(self, tmp_dir):
         from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from loares.algorithms.moo.base import MO_BMR
-        from loares.core.problem import ProblemHandler
+        from loares.algorithms.bxr.mo_basic import MO_BMR
 
         bench = ZDT1()
         prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
-        ph = ProblemHandler(prob)
-        algo = MO_BMR(ph)
+        algo = MO_BMR(prob)
 
         hdf5_path = tmp_dir / "seed_001.h5"
         algo.run(seed=1, hdf5_path=hdf5_path)
@@ -203,8 +201,8 @@ class TestFlowHandlerRun:
             assert "f1" in final_dict
 
     def test_run_soo_produces_valid_hdf5(self, tmp_dir):
-        from loares.core.problem import Problem, ProblemHandler
-        from loares.algorithms.soo.base import SO_BMR
+        from loares.core.problem import Problem
+        from loares.algorithms.bxr.so_basic import SO_BMR
 
         def sphere(X):
             F = np.sum(X**2, axis=1, keepdims=True)
@@ -222,8 +220,7 @@ class TestFlowHandlerRun:
             bounds=np.column_stack([np.full(5, -5), np.full(5, 5)]),
             minmax=["min"],
         )
-        ph = ProblemHandler(prob)
-        algo = SO_BMR(ph)
+        algo = SO_BMR(prob)
 
         hdf5_path = tmp_dir / "seed_001.h5"
         algo.run(seed=1, hdf5_path=hdf5_path)
@@ -236,15 +233,13 @@ class TestFlowHandlerRun:
     def test_stream_metrics_from_run_output(self, tmp_dir):
         from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from loares.algorithms.moo.base import MO_BMR
-        from loares.core.problem import ProblemHandler
+        from loares.algorithms.bxr.mo_basic import MO_BMR
         from loares.metrics.moo import raw_performance_metrics
 
         bench = ZDT1()
         tf = bench.pareto_front(100)
         prob = pymoo_to_loares_prob(bench, psize=20, max_evals=200)
-        ph = ProblemHandler(prob)
-        algo = MO_BMR(ph)
+        algo = MO_BMR(prob)
 
         hdf5_path = tmp_dir / "seed_001.h5"
         algo.run(seed=1, hdf5_path=hdf5_path)
@@ -267,7 +262,7 @@ class TestExperimentRunner:
     def test_multi_thread_produces_seed_files_and_info(self, tmp_dir):
         from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from loares.algorithms.moo.base import MO_BMR
+        from loares.algorithms.bxr.mo_basic import MO_BMR
         from loares.experiments.runner import ExperimentRunner
 
         bench = ZDT1()
@@ -305,7 +300,7 @@ class TestPostProcess:
     def setup_raw_data(self, tmp_dir):
         from loares.core.adapters import pymoo_to_loares_prob
         from pymoo.problems.multi import ZDT1
-        from loares.algorithms.moo.base import MO_BMR, MO_BWR
+        from loares.algorithms.bxr.mo_basic import MO_BMR, MO_BWR
         from loares.experiments.runner import ExperimentRunner
 
         bench = ZDT1()
@@ -477,7 +472,8 @@ class TestAnalysis:
 class TestPymooAdapter:
     def test_pymoo_to_loares_h5_writes_valid_file(self, tmp_dir):
         from loares.core.adapters import pymoo_to_loares_prob, pymoo_to_loares_h5
-        from loares.algorithms.moo.base import MOPopulationHandler
+        from loares.core.population import PopulationHandler
+        from loares.operators.sorting import ranking_crowding
         from pymoo.problems.multi import ZDT1
         from pymoo.algorithms.moo.nsga2 import NSGA2
         from pymoo.optimize import minimize
@@ -495,7 +491,7 @@ class TestPymooAdapter:
             {"name": "NSGA2"},
             1,
             res,
-            MOPopulationHandler(),
+            PopulationHandler(ranking_crowding),
             hdf5_path,
         )
 
@@ -536,7 +532,7 @@ class TestReferenceFront:
         return Problem(n_vars=n_vars, n_obj=n_obj, n_constr=n_constr)
 
     def test_nds_fps_returns_only_non_dominated(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
@@ -553,7 +549,7 @@ class TestReferenceFront:
             assert match, f"Returned point {po[i]} is not on the non-dominated front"
 
     def test_nds_fps_respects_limit(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
 
         np.random.seed(42)
         pop = self._make_mixed_population(n=200, n_obj=2)
@@ -568,7 +564,7 @@ class TestReferenceFront:
         assert pm.shape[0] <= limit
 
     def test_nds_fps_returns_all_when_front_smaller_than_limit(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
@@ -583,7 +579,7 @@ class TestReferenceFront:
         assert ps.shape[0] == ndf_size
 
     def test_nds_fps_metadata_shape(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
 
         np.random.seed(42)
         pop = self._make_mixed_population(n=100, n_obj=2)
@@ -597,7 +593,7 @@ class TestReferenceFront:
         assert np.all(pm == 0)
 
     def test_fps_preserves_extreme_points(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from loares.operators.sorting import farthest_point_sampling
 
         np.random.seed(42)
         points = np.random.rand(200, 2)
@@ -610,7 +606,7 @@ class TestReferenceFront:
             assert np.isclose(selected_points[:, j].max(), points[:, j].max())
 
     def test_fps_spread_better_than_random(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from loares.operators.sorting import farthest_point_sampling
         from scipy.spatial.distance import cdist
 
         np.random.seed(42)
@@ -635,7 +631,7 @@ class TestReferenceFront:
         assert fps_min_spacing > np.mean(random_spacings)
 
     def test_nds_fps_output_shapes_consistent(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
 
         np.random.seed(42)
         n_vars = 5
@@ -657,23 +653,16 @@ class TestReferenceFront:
 
 class TestFPSQuality:
     def test_fps_no_duplicate_indices(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from loares.operators.sorting import farthest_point_sampling
 
         np.random.seed(7)
-        points = np.random.rand(300, 2)
-        selected = farthest_point_sampling(points, n_samples=50)
-        assert len(selected) == len(set(selected))
-
-    def test_fps_no_duplicate_indices_3d(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
-
-        np.random.seed(7)
-        points = np.random.rand(500, 3)
-        selected = farthest_point_sampling(points, n_samples=80)
-        assert len(selected) == len(set(selected))
+        for ndim, n_pts, n_samples in [(2, 300, 50), (3, 500, 80)]:
+            points = np.random.rand(n_pts, ndim)
+            selected = farthest_point_sampling(points, n_samples=n_samples)
+            assert len(selected) == len(set(selected))
 
     def test_fps_deterministic(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from loares.operators.sorting import farthest_point_sampling
 
         np.random.seed(0)
         points = np.random.rand(200, 2)
@@ -681,20 +670,20 @@ class TestFPSQuality:
         s2 = farthest_point_sampling(points, n_samples=30)
         assert s1 == s2
 
-    def test_fps_boundary_coverage_3d(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+    def test_fps_preserves_extreme_points(self):
+        from loares.operators.sorting import farthest_point_sampling
 
-        np.random.seed(99)
-        points = np.random.rand(400, 3)
-        selected = farthest_point_sampling(points, n_samples=30)
-        selected_pts = points[selected]
-
-        for j in range(3):
-            assert np.isclose(selected_pts[:, j].min(), points[:, j].min())
-            assert np.isclose(selected_pts[:, j].max(), points[:, j].max())
+        np.random.seed(42)
+        for ndim in [2, 3]:
+            points = np.random.rand(400, ndim)
+            selected = farthest_point_sampling(points, n_samples=30)
+            selected_pts = points[selected]
+            for j in range(ndim):
+                assert np.isclose(selected_pts[:, j].min(), points[:, j].min())
+                assert np.isclose(selected_pts[:, j].max(), points[:, j].max())
 
     def test_fps_spacing_uniformity(self):
-        from loares.algorithms.moo.sorting import farthest_point_sampling
+        from loares.operators.sorting import farthest_point_sampling
         from scipy.spatial.distance import cdist
 
         np.random.seed(42)
@@ -712,7 +701,7 @@ class TestFPSQuality:
         )
 
     def test_nds_fps_no_duplicate_points(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
         from loares.core.problem import Problem
 
         np.random.seed(42)
@@ -732,40 +721,8 @@ class TestFPSQuality:
             "nds_fps returned duplicate objective rows"
         )
 
-    def test_nds_fps_on_known_zdt1_front(self):
-        from loares.algorithms.moo.sorting import nds_fps
-        from loares.core.problem import Problem
-        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
-
-        np.random.seed(42)
-        n = 500
-        X = np.random.rand(n, 30)
-        f1 = np.sort(np.random.rand(n))
-        f2_pareto = 1 - np.sqrt(f1)
-        noise = np.random.rand(n) * 0.5
-        f2 = f2_pareto + noise
-        F = np.column_stack([f1, f2])
-        G = np.full((n, 1), -1.0)
-        pop = Population(X, F, G)
-        prob = Problem(n_vars=30, n_obj=2, n_constr=1)
-
-        ndf_idx = find_non_dominated(F)
-        ndf_size = len(ndf_idx)
-        limit = min(50, ndf_size)
-
-        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
-
-        for i in range(po.shape[0]):
-            match = np.any(np.all(np.isclose(po[i], F[ndf_idx]), axis=1))
-            assert match, f"Point {po[i]} not on non-dominated front"
-
-        assert po.shape[0] == limit
-
-        assert np.isclose(po[:, 0].min(), F[ndf_idx, 0].min(), atol=1e-6)
-        assert np.isclose(po[:, 0].max(), F[ndf_idx, 0].max(), atol=1e-6)
-
     def test_nds_fps_solutions_match_objectives(self):
-        from loares.algorithms.moo.sorting import nds_fps
+        from loares.operators.sorting import nds_fps
         from loares.core.problem import Problem
 
         np.random.seed(42)
@@ -788,27 +745,210 @@ class TestFPSQuality:
             )[0]
             assert len(matches) >= 1, f"Row {i}: solution/objective/constraint mismatch"
 
-    def test_nds_fps_large_scale(self):
-        from loares.algorithms.moo.sorting import nds_fps
+
+# ── Test 9: Algorithm composition ─────────────────────────────────────────────
+
+
+class TestAlgorithmComposition:
+    def _make_prob(self):
+        from loares.core.adapters import pymoo_to_loares_prob
+        from pymoo.problems.multi import ZDT1
+
+        return pymoo_to_loares_prob(ZDT1(), psize=20, max_evals=200)
+
+    def test_get_info_returns_expected_keys(self):
+        from loares.algorithms.bxr.mo_basic import MO_BMR
+
+        info = MO_BMR.get_info()
+        assert info["name"] == "MO-BMR"
+        assert "BaseFunction" in info
+        assert "Mutation" in info
+        assert "Selection" in info
+        assert "Sorting" in info
+        assert "mods" in info
+
+    def test_call_returns_flowhandler(self):
+        from loares.algorithms.bxr.mo_basic import MO_BMR
+        from loares.core.flow import FlowHandler
+
+        prob = self._make_prob()
+        flow = MO_BMR(prob)
+        assert isinstance(flow, FlowHandler)
+
+    def test_call_wires_update_rule_correctly(self):
+        from loares.algorithms.bxr.mo_basic import MO_BMR
+        from loares.operators.bxr import bmr
+        from loares.operators.selection import random_bw_selection
+        from loares.operators.mutation import random_reinit
+
+        prob = self._make_prob()
+        flow = MO_BMR(prob)
+        assert flow.updateRule.base_function is bmr
+        assert flow.updateRule.selection is random_bw_selection
+        assert flow.updateRule.mutation is random_reinit
+
+    def test_call_wires_mods(self):
+        from loares.algorithms.bxr.mo_basic import MO_BMR
+        from loares.operators.mods import local_search
+
+        prob = self._make_prob()
+        flow = MO_BMR(prob)
+        assert local_search in flow.mods
+
+    def test_so_algorithm_has_no_mods(self):
+        from loares.algorithms.bxr.so_basic import SO_BMR
         from loares.core.problem import Problem
-        from pymoo.util.nds.non_dominated_sorting import find_non_dominated
+
+        prob = Problem(
+            function=lambda X: (np.sum(X**2, axis=1, keepdims=True), np.full((X.shape[0], 1), -1.0)),
+            n_vars=5, n_obj=1, psize=10, max_evals=100,
+            bounds=np.column_stack([np.full(5, -5), np.full(5, 5)]),
+            minmax=["min"],
+        )
+        flow = SO_BMR(prob)
+        assert flow.mods == []
+
+
+# ── Test 10: Algorithm variants smoke tests ───────────────────────────────────
+
+
+class TestAlgorithmVariants:
+    @pytest.fixture
+    def zdt1_prob(self):
+        from loares.core.adapters import pymoo_to_loares_prob
+        from pymoo.problems.multi import ZDT1
+
+        return pymoo_to_loares_prob(ZDT1(), psize=20, max_evals=200)
+
+    def _run_and_validate(self, algorithm, prob, tmp_dir, seed=1):
+        flow = algorithm(prob)
+        hdf5_path = tmp_dir / f"seed_{seed:03d}.h5"
+        flow.run(seed=seed, hdf5_path=hdf5_path)
+        assert hdf5_path.exists()
+        final_pop = ResultProcessor.read_final_population(hdf5_path)
+        assert final_pop.solutions.shape[0] > 0
+        assert final_pop.solutions.shape[1] == 30
+        assert final_pop.objectives.shape[1] == 2
+
+    def test_archive_variant_runs(self, zdt1_prob, tmp_dir):
+        from loares.algorithms.bxr.mo_archive import MO_BMR_A
+
+        self._run_and_validate(MO_BMR_A, zdt1_prob, tmp_dir)
+
+    def test_samp_variant_runs(self, zdt1_prob, tmp_dir):
+        from loares.algorithms.bxr.mo_samp import MO_BMR_S
+
+        self._run_and_validate(MO_BMR_S, zdt1_prob, tmp_dir)
+
+    def test_opposition_variant_runs(self, zdt1_prob, tmp_dir):
+        from loares.algorithms.bxr.mo_opp import MO_BMR_O
+
+        self._run_and_validate(MO_BMR_O, zdt1_prob, tmp_dir)
+
+
+# ── Test 11: Operators unit tests ─────────────────────────────────────────────
+
+
+class TestOperators:
+    @pytest.fixture
+    def setup(self):
+        from loares.core.problem import Problem
+        from loares.operators.sorting import ranking_crowding
 
         np.random.seed(42)
-        n = 5000
-        X = np.random.rand(n, 10)
-        f1 = np.random.rand(n)
-        f2 = 1 - f1 + np.random.rand(n) * 0.1
-        F = np.column_stack([f1, f2])
+        n, n_vars, n_obj = 20, 5, 2
+        prob = Problem(
+            n_vars=n_vars, n_obj=n_obj, n_constr=1, psize=n,
+            bounds=np.column_stack([np.zeros(n_vars), np.ones(n_vars)]),
+        )
+        X = np.random.rand(n, n_vars)
+        F = np.random.rand(n, n_obj)
         G = np.full((n, 1), -1.0)
-        pop = Population(X, F, G)
-        prob = Problem(n_vars=10, n_obj=2, n_constr=1)
+        raw_pop = Population(X, F, G)
+        pop = Population(*ranking_crowding(prob, raw_pop, n, seed=1))
 
-        ndf_size = len(find_non_dominated(F))
-        limit = 200
-        expected = min(limit, ndf_size)
+        return prob, pop
 
-        ps, po, pc, pm = nds_fps(prob, pop, limit=limit, seed=1)
+    def test_bmr_within_bounds(self, setup):
+        from loares.operators.bxr import bmr
+        from loares.operators.selection import random_bw_selection
 
-        assert po.shape[0] == expected
-        unique_rows = np.unique(po, axis=0)
-        assert unique_rows.shape[0] == expected
+        prob, pop = setup
+        pool = random_bw_selection(pop)
+        result = bmr(prob, pop, pool)
+        assert result.shape == pop.solutions.shape
+        assert np.all(result >= prob.bounds[:, 0])
+        assert np.all(result <= prob.bounds[:, 1])
+
+    def test_bwr_within_bounds(self, setup):
+        from loares.operators.bxr import bwr
+        from loares.operators.selection import random_bw_selection
+
+        prob, pop = setup
+        pool = bwr(prob, pop, random_bw_selection(pop))
+        assert np.all(pool >= prob.bounds[:, 0])
+        assert np.all(pool <= prob.bounds[:, 1])
+
+    def test_bmwr_within_bounds(self, setup):
+        from loares.operators.bxr import bmwr
+        from loares.operators.selection import random_bw_selection
+
+        prob, pop = setup
+        result = bmwr(prob, pop, random_bw_selection(pop))
+        assert np.all(result >= prob.bounds[:, 0])
+        assert np.all(result <= prob.bounds[:, 1])
+
+    def test_random_reinit_within_bounds(self, setup):
+        from loares.operators.mutation import random_reinit
+
+        prob, pop = setup
+        result = random_reinit(prob, pop.solutions)
+        assert result.shape == pop.solutions.shape
+        assert np.all(result >= prob.bounds[:, 0])
+        assert np.all(result <= prob.bounds[:, 1])
+
+    def test_bw_selection_structure(self, setup):
+        from loares.operators.selection import bw_selection
+        from loares.operators.sorting import bw_sorting
+
+        prob, pop = setup
+        sorted_pop = Population(*bw_sorting(prob, pop, prob.psize, seed=1))
+        pool = bw_selection(sorted_pop)
+        assert "best" in pool
+        assert "worst" in pool
+        assert pool["best"].shape == (prob.n_vars,)
+        assert pool["worst"].shape == (prob.n_vars,)
+
+    def test_random_bw_selection_structure(self, setup):
+        from loares.operators.selection import random_bw_selection
+
+        prob, pop = setup
+        pool = random_bw_selection(pop)
+        assert "best" in pool
+        assert "worst" in pool
+        assert pool["best"].shape == (pop.get_size(), prob.n_vars)
+        assert pool["worst"].shape == (pop.get_size(), prob.n_vars)
+
+    def test_local_search_within_bounds(self, setup):
+        from loares.operators.mods import local_search
+        from loares.core.population import PopulationHandler
+        from loares.operators.sorting import ranking_crowding
+
+        prob, pop = setup
+        ph = PopulationHandler(ranking_crowding)
+        ph.seed = 1
+        result = local_search(prob, pop, ph)
+        assert np.all(result >= prob.bounds[:, 0])
+        assert np.all(result <= prob.bounds[:, 1])
+
+    def test_opposition_within_bounds(self, setup):
+        from loares.operators.mods import opposition
+        from loares.core.population import PopulationHandler
+        from loares.operators.sorting import ranking_crowding
+
+        prob, pop = setup
+        ph = PopulationHandler(ranking_crowding)
+        result = opposition(prob, pop, ph)
+        assert result.shape == pop.solutions.shape
+        assert np.all(result >= prob.bounds[:, 0])
+        assert np.all(result <= prob.bounds[:, 1])

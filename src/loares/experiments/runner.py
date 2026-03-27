@@ -3,9 +3,8 @@ import inspect
 import numpy as np
 from math import comb
 from multiprocessing import Pool
-from loares.algorithms.moo.base import MOPopulationHandler
-from loares.algorithms.soo.base import SOPopulationHandler
-from loares.core.problem import ProblemHandler
+from loares.core.population import PopulationHandler
+from loares.operators.sorting import ranking_crowding, bw_sorting
 from loares.metrics.moo import raw_performance_metrics
 from loares.metrics.soo import bw_fitness
 from loares.experiments.utils import dict_to_json
@@ -17,12 +16,9 @@ from pymoo.util.ref_dirs import get_reference_directions
 class ExperimentRunner:
     def __init__(self, problem, algorithm, test_name, TF=None):
         self.problem = problem
-        self.problemHandler = ProblemHandler(self.problem)
-        self.algorithm_class = algorithm
-        self.algorithm = algorithm(self.problemHandler)
+        self.algorithm = algorithm
         self.problem_info = problem.get_info()
-        self.algorithm_info = self.algorithm.get_info()
-        self.update_info = self.algorithm.updateRule.get_info()
+        self.algorithm_info = algorithm.get_info()
         self.test_name = test_name
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
@@ -37,20 +33,19 @@ class ExperimentRunner:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.TF = TF
         if self.problem_info["n_obj"] > 1:
-            self.populationHandler = MOPopulationHandler()
+            self.populationHandler = PopulationHandler(ranking_crowding)
             self.metrics_calculator = raw_performance_metrics
             self.control_metric = "HV"
         else:
-            self.populationHandler = SOPopulationHandler()
+            self.populationHandler = PopulationHandler(bw_sorting)
             self.metrics_calculator = bw_fitness
             self.control_metric = "best"
 
     def run(self, seed):
         np.random.seed(seed)
-        self.problemHandler = ProblemHandler(self.problem)
-        self.algorithm = self.algorithm_class(self.problemHandler)
+        flow = self.algorithm(self.problem)
         hdf5_path = self.output_dir / f"seed_{int(seed):03d}.h5"
-        self.algorithm.run(seed, hdf5_path)
+        flow.run(seed, hdf5_path)
 
     def multi_thread(self, seeds, threads=5, get=False):
         print(
@@ -69,7 +64,6 @@ class ExperimentRunner:
         info_dict = {
             "Problem": self.problem_info,
             "Algorithm": self.algorithm_info,
-            "UpdateRule": self.update_info,
             "seeds": str(seeds.tolist()),
         }
         dict_to_json(info_dict, self.output_dir, "Info")
@@ -84,13 +78,12 @@ def get_das_dennis_partitions(n_obj, target_psize):
 
 
 class PymooExptRunner(ExperimentRunner):
-    def __init__(self, problem, algorithm, test_name, TF=None):
+    def __init__(self, problem, pymoo_algorithm, test_name, TF=None):
         self.problem = problem
         self.pymoo_problem = loares_to_pymoo_prob(self.problem)
-        self.algorithm = algorithm
+        self.pymoo_algorithm = pymoo_algorithm
         self.problem_info = problem.get_info()
-        self.algorithm_info = {"name": (self.algorithm.__name__).replace("_", "-")}
-        self.update_info = {"name": f"pymoo defaults for {self.algorithm.__name__}"}
+        self.algorithm_info = {"name": (self.pymoo_algorithm.__name__).replace("_", "-")}
         self.test_name = test_name
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
@@ -105,11 +98,11 @@ class PymooExptRunner(ExperimentRunner):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.TF = TF
         if self.problem_info["n_obj"] > 1:
-            self.populationHandler = MOPopulationHandler()
+            self.populationHandler = PopulationHandler(ranking_crowding)
             self.metrics_calculator = raw_performance_metrics
             self.control_metric = "HV"
         else:
-            self.populationHandler = SOPopulationHandler()
+            self.populationHandler = PopulationHandler(bw_sorting)
             self.metrics_calculator = bw_fitness
             self.control_metric = "best"
 
@@ -121,9 +114,9 @@ class PymooExptRunner(ExperimentRunner):
             ref_dirs = get_reference_directions(
                 "das-dennis", self.problem.n_obj, n_partitions=n_partitions
             )
-            algorithm = self.algorithm(ref_dirs=ref_dirs, pop_size=len(ref_dirs))
+            algorithm = self.pymoo_algorithm(ref_dirs=ref_dirs, pop_size=len(ref_dirs))
         else:
-            algorithm = self.algorithm(pop_size=self.problem.psize)
+            algorithm = self.pymoo_algorithm(pop_size=self.problem.psize)
 
         res = minimize(
             self.pymoo_problem,
