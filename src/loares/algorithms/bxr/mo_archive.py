@@ -19,9 +19,6 @@ class MOArchiveFlow(FlowHandler):
             self.updateRule.selection(self.basepopulation, self.population)
         )
         temp_X = self.updateRule.mutation(self.problemHandler.problem, new_gen)
-        # temp_X = self.updateRule.next_gen_a(
-        #     self.problemHandler.problem, self.basepopulation, self.population
-        # )
         for mod in self.mods:
             temp_X = np.vstack(
                 [

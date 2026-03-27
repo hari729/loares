@@ -79,8 +79,11 @@ class MOSAMP(FlowHandler):
                         self.sub_populations[j], self.problemHandler
                     )
 
-MO_BMR_S = Algorithm("MO-BMR-SAMP", bmr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
-MO_BWR_S = Algorithm("MO-BWR-SAMP", bwr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
-MO_BMWR_S = Algorithm("MO-BMWR-SAMP", bmwr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
+MO_BMR_S = Algorithm("MO-BMR-SAMP", bmr, random_bw_selection, random_reinit, ranking_crowding, [local_search],
+                     flowhandler=MOSAMP)
+MO_BWR_S = Algorithm("MO-BWR-SAMP", bwr, random_bw_selection, random_reinit, ranking_crowding, [local_search],
+                     flowhandler=MOSAMP)
+MO_BMWR_S = Algorithm("MO-BMWR-SAMP", bmwr, random_bw_selection, random_reinit, ranking_crowding, [local_search],
+                     flowhandler=MOSAMP)
 
 
