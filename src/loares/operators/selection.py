@@ -3,6 +3,11 @@ from scipy.spatial import KDTree
 from scipy.stats import norm
 from pymoo.util.normalization import normalize
 
+def bw_selection(population):
+    best = population.solutions[0, :]
+    worst = population.solutions[-1, :]
+    return {"best": best, "worst": worst}
+
 def random_bw_selection(population):
     pool_size = population.solutions.shape[0]
     if np.any(population.metadata[:, 0] != 0):
@@ -34,8 +39,6 @@ def archive_bw_selection(population, archive):
     selected_b = np.random.randint(0, M_b, pool_size)
     selected_w = np.random.randint(0, M_w, pool_size)
     return {"best": population_b[selected_b], "worst": population_w[selected_w]}
-
-
 
 def get_nn_dist(X, k=5):
 

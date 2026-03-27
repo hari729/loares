@@ -1,12 +1,17 @@
 import numpy as np
-from loares.algorithms.moo.base import BMR, BWR, BMWR, MORankingCrowdingAlgo
+from loares.core.algorithm import Algorithm
+from loares.core.flow import FlowHandler
+from loares.operators.sorting import ranking_crowding
+from loares.operators.bxr import *
+from loares.operators.selection import random_bw_selection
+from loares.operators.mutation import random_reinit
+from loares.operators.mods import local_search
 from loares.metrics.moo import performance_metrics
 
-
-class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
-    def __init__(self, ProblemHandler, UpdateRule):
+class MOSAMP(FlowHandler):
+    def __init__(self, ProblemHandler, UpdateRule, PopulationHandler, Mods):
         self.n = 2
-        super().__init__(ProblemHandler, UpdateRule)
+        super().__init__(ProblemHandler, UpdateRule, PopulationHandler, Mods)
 
     def initialize(self, seed, hdf5_path):
         super().initialize(seed, hdf5_path)
@@ -74,17 +79,8 @@ class MORankingCrowdingSAMP(MORankingCrowdingAlgo):
                         self.sub_populations[j], self.problemHandler
                     )
 
-
-class MO_BMR_SAMP(MORankingCrowdingSAMP):
-    def __init__(self, ProblemHandler):
-        super().__init__(ProblemHandler, BMR)
-
-
-class MO_BWR_SAMP(MORankingCrowdingSAMP):
-    def __init__(self, ProblemHandler):
-        super().__init__(ProblemHandler, BWR)
+MO_BMR_S = Algorithm("MO-BMR-SAMP", bmr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
+MO_BWR_S = Algorithm("MO-BWR-SAMP", bwr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
+MO_BMWR_S = Algorithm("MO-BMWR-SAMP", bmwr, random_bw_selection, random_reinit, ranking_crowding, [local_search])
 
 
-class MO_BMWR_SAMP(MORankingCrowdingSAMP):
-    def __init__(self, ProblemHandler):
-        super().__init__(ProblemHandler, BMWR)
