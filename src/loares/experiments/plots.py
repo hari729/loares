@@ -55,8 +55,8 @@ def plot_2d(data, filepath, cid=0):
     )
     plt.legend(labels=legend, loc="best", fontsize=8)
     plt.grid(which="both", linestyle="--", alpha=0.7)
-    plt.xlabel("f1")
-    plt.ylabel("f2")
+    plt.xlabel(r"$f_1$")
+    plt.ylabel(r"$f_2$")
     plt.tight_layout()
     plt.savefig(f"{filepath}/{data['name']}-pareto-front.pdf", bbox_inches="tight")
     plt.close()
@@ -84,9 +84,9 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
     )
 
     # Axis labels
-    ax.set_xlabel("f1", labelpad=10)
-    ax.set_ylabel("f2", labelpad=12)
-    ax.text2D(0.03, 0.8, "f3", transform=ax.transAxes, fontsize=12)
+    ax.set_xlabel(r"$f_1$", labelpad=10)
+    ax.set_ylabel(r"$f_2$", labelpad=12)
+    ax.text2D(0.03, 0.8, r"$f_3$", transform=ax.transAxes, fontsize=12)
 
     # Grid styling (matches your previous function)
     grid_style = {"linestyle": "--", "color": (0.8, 0.8, 0.8, 0.5)}
@@ -126,35 +126,7 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
-
-def parallel_coordinates_plot(data, filepath, alpha=0.6):
-    keys = sorted(
-        [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
-    )
-    values = np.array([data[f] for f in keys]).T  # shape: (n_points, n_dims)
-
-    # Normalize each dimension to [0,1]
-    mins = values.min(axis=0)
-    maxs = values.max(axis=0)
-    norm = (values - mins) / (maxs - mins + 1e-12)
-
-    fig, ax = plt.subplots(figsize=(10, 4))
-
-    for row in norm:
-        ax.plot(range(len(keys)), row, alpha=alpha)
-
-    ax.set_xticks(range(len(keys)))
-    ax.set_xticklabels(keys, rotation=15)
-    ax.set_ylabel("Normalized value")
-
-    ax.grid(True, linestyle="--", alpha=0.6)
-    plt.tight_layout()
-    out_path = f"{filepath}/{data['name']}-pareto-front.pdf"
-    plt.savefig(out_path, bbox_inches="tight")
-    plt.close()
-
-
-def parallel_coordinates_plot_v2(
+def parallel_coordinates_plot(
     data, filepath, alpha=0.6, axis_mins=None, axis_maxs=None
 ):
     keys = sorted(
@@ -248,7 +220,8 @@ def parallel_coordinates_plot_v2(
         )
 
     ax.set_xticks(x)
-    ax.set_xticklabels(keys, rotation=15)
+    formatted_keys = [rf"$f_{{{k[1:]}}}$" for k in keys]
+    ax.set_xticklabels(formatted_keys, rotation=0)
     ax.set_ylabel("")
     ax.set_yticks(np.linspace(host_min, host_max, 6))
     ax.set_yticklabels([])

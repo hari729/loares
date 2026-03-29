@@ -16,7 +16,7 @@ from loares.experiments.plots import (
     multi_line_plot,
     plot_2d,
     plot_3d,
-    parallel_coordinates_plot_v2,
+    parallel_coordinates_plot,
 )
 from loares.metrics.moo import raw_performance_metrics
 from loares.metrics.soo import bw_fitness
@@ -222,7 +222,7 @@ class post_process:
                         ref_actual = self.true_f * minmax_flat
                         axis_mins = np.floor(np.min(ref_actual, axis=0) * scale) / scale
                         axis_maxs = np.ceil(np.max(ref_actual, axis=0) * scale) / scale
-                        parallel_coordinates_plot_v2(plot_data, pareto_dir,
+                        parallel_coordinates_plot(plot_data, pareto_dir,
                                                   axis_mins = axis_mins,
                                                   axis_maxs = axis_maxs)
 
