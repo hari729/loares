@@ -40,16 +40,17 @@ def multi_line_plot(
     plt.close()
 
 
-def plot_2d(data, filepath, cid=0):
+def plot_2d(data, filepath, cid=0, mid=0):
     color = sns.color_palette("tab10")[cid]
+    markers = ["o", "X", "s", "P", "v", "^", "D", "p", "*"]
     legend = [data["name"]]
     plt.figure()
     plt.plot(
         data["f1"],
         data["f2"],
         linestyle="",
-        marker="o",
-        markeredgecolor="white",
+        marker=markers[mid],
+        markeredgecolor="black",
         markeredgewidth=0.5,
         markerfacecolor=color,
     )
@@ -78,7 +79,7 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
         alpha=0.9,
         color=sns.color_palette("tab10")[cid],
         marker=markers[mid],
-        edgecolors="white",
+        edgecolors="black",
         linewidths=0.4,
         label=pareto_dict.get("name", None),
     )
