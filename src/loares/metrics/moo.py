@@ -150,10 +150,8 @@ def raw_performance_metrics(objective_values, truefront):
 
         if objective_values.shape[0] > 1:
             metrics["SPC"] = spacing(obj_norm)
-            metrics["SPR"] = calculate_spread(obj_norm, tf_norm)
         else:
             metrics["SPC"] = np.nan
-            metrics["SPR"] = np.nan
 
         metrics["HV"] = hv(obj_norm)
 
