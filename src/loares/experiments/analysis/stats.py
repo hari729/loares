@@ -75,8 +75,7 @@ def run(
 ) -> Path:
     """Run Friedman + Conover-Holm + A12 pipeline on final-metrics CSVs.
 
-    Parameters
-    ----------
+    Parameters ----------
     final_metrics_dir : str or Path
         Directory containing ``*-final-metrics.csv`` files.
     alpha : float
@@ -104,7 +103,7 @@ def run(
 
     friedman_rows: list[dict[str, float | str | int | bool]] = []
 
-    with plt.rc_context({"figure.figsize": (12, 4)}):
+    with plt.rc_context({"figure.figsize": (12, 4),"axes.grid": False}):
         for metric in metrics:
             if metric not in problem_df.columns:
                 continue
@@ -175,6 +174,7 @@ def run(
             # Average-rank diagram with non-significant cliques from Holm matrix.
             fig, ax = plt.subplots(figsize=(max(10, int(0.8 * n_algorithms)), 4))
             sp.critical_difference_diagram(avg_ranks, posthoc, ax=ax)
+            ax.grid(False)
             ax.set_title(f"Average Ranks with Holm Cliques ({metric})")
             fig.tight_layout()
             fig.savefig(
