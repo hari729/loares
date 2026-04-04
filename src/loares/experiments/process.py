@@ -49,6 +49,7 @@ class post_process:
         rf_size=1000,
         plot_tf=False,
         plot_hist=False,
+        pcid=1,
     ):
         self.problem = problem
         self.problem_info = problem.get_info()
@@ -60,6 +61,7 @@ class post_process:
         self.rf_size = rf_size
         self.plot_tf = plot_tf
         self.plot_hist = plot_hist
+        self.pcid = pcid
         caller_frame = inspect.stack()[1]
         caller_dir = Path(caller_frame.filename).resolve().parent
         self.test_dir = caller_dir / test_name / "raw_data"
@@ -209,16 +211,17 @@ class post_process:
                     dict_to_csv(
                         plot_data, pareto_dir, f"{algo_info['name']}-pareto-front"
                     )
-                    plot_data["name"] = algo_info["name"]
+                    plot_data["name"] = all_results[algo]["Info"]["Algorithm"]["name"]
                     plot_data["seed"] = best_seed
                     n_obj = self.problem_info["n_obj"]
                     if n_obj == 1:
                         pass
                     elif n_obj == 2:
-                        plot_2d(plot_data, pareto_dir)
+                        plot_2d(plot_data, pareto_dir, cid=self.pcid)
                     elif n_obj == 3:
-                        plot_3d(plot_data, pareto_dir)
+                        plot_3d(plot_data, pareto_dir, cid = self.pcid)
                     else:
+                        scale = 1000
                         ref_actual = self.true_f * minmax_flat
                         axis_mins = np.floor(np.min(ref_actual, axis=0) * scale) / scale
                         axis_maxs = np.ceil(np.max(ref_actual, axis=0) * scale) / scale

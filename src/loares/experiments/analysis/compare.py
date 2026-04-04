@@ -4,11 +4,15 @@ import pandas as pd
 
 # Define which metrics to minimize vs maximize (for mean values)
 # Only HV(mean) is higher is better, all others are lower is better
-MINIMIZE_MEAN_METRICS = ["GD(mean)", "IGD(mean)", "SPC(mean)", "SPR(mean)"]
+MINIMIZE_MEAN_METRICS = ["GD(mean)", "IGD(mean)", "SPC(mean)",
+                         # "SPR(mean)"
+                         ]
 MAXIMIZE_MEAN_METRICS = ["HV(mean)"]
 
 # All std metrics - lower is better (more consistent)
-STD_METRICS = ["GD(std)", "IGD(std)", "SPC(std)", "SPR(std)", "HV(std)"]
+STD_METRICS = ["GD(std)", "IGD(std)", "SPC(std)", 
+               # "SPR(std)",
+               "HV(std)"]
 STD_METRICS = []
 
 
@@ -114,10 +118,10 @@ def process_comparison_folder(comparison_folder: Path) -> pd.DataFrame:
             "SPC(mean)_value",
             "SPC(std)",
             "SPC(std)_value",
-            "SPR(mean)",
-            "SPR(mean)_value",
-            "SPR(std)",
-            "SPR(std)_value",
+            # "SPR(mean)",
+            # "SPR(mean)_value",
+            # "SPR(std)",
+            # "SPR(std)_value",
             "HV(mean)",
             "HV(mean)_value",
             "HV(std)",

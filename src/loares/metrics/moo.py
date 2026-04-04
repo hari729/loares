@@ -120,7 +120,8 @@ def igd_cdist(F, PF):
 
 def raw_performance_metrics(objective_values, truefront):
 
-    ref_point = np.ones(objective_values.shape[1]) + 1e-5
+    # ref_point = np.ones(objective_values.shape[1]) + 1e-5
+    ref_point = np.ones(objective_values.shape[1]) + 0.1
     metrics = {}
 
     if truefront is not None:
@@ -129,7 +130,6 @@ def raw_performance_metrics(objective_values, truefront):
             metrics["SPC"] = np.nan
             metrics["GD"] = np.nan
             metrics["IGD"] = np.nan
-            metrics["SPR"] = np.nan
             return metrics
 
         fmax = truefront.max(axis=0)

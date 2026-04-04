@@ -78,9 +78,12 @@ def get_das_dennis_partitions(n_obj, target_psize):
 
 
 class PymooExptRunner(ExperimentRunner):
-    def __init__(self, problem, pymoo_algorithm, test_name, TF=None):
+    def __init__(self, problem, pymoo_algorithm, test_name, TF=None, pymoo_problem = None):
         self.problem = problem
-        self.pymoo_problem = loares_to_pymoo_prob(self.problem)
+        if pymoo_problem is None:
+            self.pymoo_problem = loares_to_pymoo_prob(self.problem)
+        else:
+            self.pymoo_problem = pymoo_problem
         self.pymoo_algorithm = pymoo_algorithm
         self.problem_info = problem.get_info()
         self.algorithm_info = {"name": (self.pymoo_algorithm.__name__).replace("_", "-")}

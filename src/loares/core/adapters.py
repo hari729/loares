@@ -51,17 +51,42 @@ class loares_to_pymoo_prob(pymooProblem):
         out["F"], out["G"] = self.custom_eval(x)
         out["F"] = out["F"]*self.minmax
 
+# def pymoo_to_loares_h5(
+#     problem_info, algorithm_info, seed, pymooResult, populationHandler, hdf5_path
+# ):
+#     h5 = ResultProcessor.open(hdf5_path, problem_info, algorithm_info, seed)
+#     pop = None
+#     for algo in pymooResult.history:
+#         feasible = np.all(algo.opt.get("G") <= 0, axis=1)
+#         pop = Population(
+#             algo.opt.get("X")[feasible],
+#             algo.opt.get("F")[feasible],
+#             algo.opt.get("G")[feasible],
+#         )
+#         ResultProcessor.write_snapshot(h5, pop, algo.evaluator.n_eval)
+#     if pop is not None:
+#         ResultProcessor.write_final(h5, populationHandler.get_dict(pop))
+#     ResultProcessor.close(h5)
+
 def pymoo_to_loares_h5(
     problem_info, algorithm_info, seed, pymooResult, populationHandler, hdf5_path
 ):
     h5 = ResultProcessor.open(hdf5_path, problem_info, algorithm_info, seed)
     pop = None
     for algo in pymooResult.history:
-        feasible = np.all(algo.opt.get("G") <= 0, axis=1)
+        # Prefer archive if it exists, fall back to opt
+        source = algo.archive if algo.archive is not None and len(algo.archive) > 0 else algo.opt
+
+        G = source.get("G")
+        if G is not None and G.shape[1] > 0:
+            feasible = np.all(G <= 0, axis=1)
+        else:
+            feasible = np.ones(len(source), dtype=bool)
+
         pop = Population(
-            algo.opt.get("X")[feasible],
-            algo.opt.get("F")[feasible],
-            algo.opt.get("G")[feasible],
+            source.get("X")[feasible],
+            source.get("F")[feasible],
+            source.get("G")[feasible] if G is not None else np.full((feasible.sum(), 1), -1),
         )
         ResultProcessor.write_snapshot(h5, pop, algo.evaluator.n_eval)
     if pop is not None:
