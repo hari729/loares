@@ -3,5 +3,8 @@ Library for Optimisation Algorithm Research
 
 https://pypi.org/project/loares/
 
-Major changes are planned, so the APIs will change in future.
+Major changes are planned: using pymoo as algorithm engine instead of the current custom implementation, the experimental pipeline and easy algirthm composition will stay as the main focus.
+
+so the APIs will change in future.
+
 Some parts of this library is written by AI.
