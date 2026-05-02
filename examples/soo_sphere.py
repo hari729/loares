@@ -1,31 +1,16 @@
+"""
+Single-objective optimization example on Sphere.
+
+Compares BXR variants (SO-BMR, SO-BWR, SO-BMWR).
+"""
+
 import os
-import sys
 import numpy as np
 
-from loares.core.problem import Problem
-from loares.algorithms.soo import SO_BMR, SO_BWR, SO_BMWR
-from loares.experiments.runner import ExperimentRunner
-from loares.experiments.process import post_process
+from pymoo.problems.single import Sphere
 
-
-def sphere(X):
-    F = np.sum(X**2, axis=1, keepdims=True)
-    G = np.zeros((X.shape[0], 1))
-    return F, G
-
-
-class Sphere(Problem):
-    def __init__(self, n_vars=10, psize=50, max_evals=5000):
-        super().__init__(
-            function=sphere,
-            n_vars=n_vars,
-            n_obj=1,
-            n_constr=0,
-            psize=psize,
-            max_evals=max_evals,
-            bounds=np.column_stack([np.full(n_vars, -5.12), np.full(n_vars, 5.12)]),
-            minmax=["min"],
-        )
+from loares.algorithms.bxr.soo import SO_BMR, SO_BWR, SO_BMWR
+from loares.experiments.pymoo_runner import ExperimentRunner, AlgoFactory
 
 
 if __name__ == "__main__":
@@ -33,29 +18,19 @@ if __name__ == "__main__":
     threads = min(8, os.cpu_count() or 8)
     seeds = np.arange(1, runs + 1, 1)
     ps = 50
-    psizes = [ps]
+    max_evals = 5000
     test_name = f"sphere-example-r{runs}-p{ps}"
 
-    custom_algos = [SO_BMR, SO_BWR, SO_BMWR]
+    problem = Sphere(n_var=10)
 
-    algo_grps = {
-        "BMR": ["SO-BMR"],
-        "BWR": ["SO-BWR"],
-        "BMWR": ["SO-BMWR"],
-        "common": [],
-    }
+    algorithms = [
+        AlgoFactory(SO_BMR, pop_size=ps),
+        AlgoFactory(SO_BWR, pop_size=ps),
+        AlgoFactory(SO_BMWR, pop_size=ps),
+    ]
 
-    for algo in custom_algos:
-        for psize in psizes:
-            runner = ExperimentRunner(Sphere(psize=psize), algo, test_name)
-            runner.multi_thread(seeds, threads=threads)
+    for factory in algorithms:
+        runner = ExperimentRunner(problem, factory, max_evals, test_name)
+        runner.multi_run(seeds, threads=threads)
 
-    processor = post_process(
-        Sphere(),
-        test_name,
-        psizes,
-        algo_grps=algo_grps,
-    )
-    compare_dir = processor.multi_thread(threads=threads)
-
-    print(f"Completed Sphere SOO pipeline. Outputs: {compare_dir}")
+    print(f"\nCompleted Sphere SOO experiment. Output: {test_name}/raw_data/")
