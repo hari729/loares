@@ -115,15 +115,15 @@ class MO_BMWR(MORankingCrowding):
 
 class MO_BMR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__("MO-BMR-OPP", BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BMR-Opposition", BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 class MO_BWR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__("MO-BWR-OPP", BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BWR-Opposition", BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 class MO_BMWR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__("MO-BMWR-OPP", BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BMWR-Opposition", BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 
 
@@ -158,7 +158,7 @@ class MO_BMR_Archive_py(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__("MO-BMR-ARCHIVE", BMR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BMR-Archive", BMR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
 
 class MO_BWR_Archive(MORankingCrowding):
@@ -167,7 +167,7 @@ class MO_BWR_Archive(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__("MO-BWR-ARCHIVE", BWR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BWR-Archive", BWR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
 
 class MO_BMWR_Archive(MORankingCrowding):
@@ -176,7 +176,7 @@ class MO_BMWR_Archive(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__("MO-BMWR-ARCHIVE", BMWR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BMWR-Archive", BMWR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
 
 
