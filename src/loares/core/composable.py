@@ -1,24 +1,17 @@
 """
-ModularAlgorithm — a composable evolutionary algorithm framework built on pymoo.
-
-This provides two classes:
+Composable evolutionary algorithm framework built on pymoo.
 
 RecombinationVariant(InfillCriterion)
     Wraps pool_selection + recombination + mutation into pymoo's infill contract.
-    Sits inside InfillCriterion.do()'s retry loop, so repair and dedup apply
-    automatically after each batch.
 
 ModularAlgorithm(Algorithm)
-    The main loop orchestrator. Composes:
-        - Any InfillCriterion (RecombinationVariant, Mating, DE Variant, etc.)
-        - A list of Mods (additive infill sources)
-        - Any Survival
-        - Repair applied to all outputs (core + mods)
+    Single-population composable algorithm. Composes InfillCriterion + Mods +
+    Survival + Repair into pymoo's infill-advance lifecycle.
 
-    This sits alongside GeneticAlgorithm as a peer inheriting from Algorithm,
-    not as a replacement. GeneticAlgorithm hardcodes Selection → Crossover →
-    Mutation. ModularAlgorithm is agnostic — it delegates to whatever
-    InfillCriterion it receives and adds the mods concept on top.
+SubPopAlgorithm(ModularAlgorithm)
+    Extends ModularAlgorithm with sub-population partitioning. Each generation:
+    split → independent infill per sub-pop → merge → evaluate → per-subpop
+    survival → global survival → adapt → re-split. Requires a SubPopPolicy.
 """
 
 import numpy as np
@@ -178,7 +171,6 @@ class ModularAlgorithm(Algorithm):
                  repair=None,
                  eliminate_duplicates=None,
                  advance_after_initial_infill=True,
-                 sub_pop_policy=None,
                  **kwargs):
 
         super().__init__(**kwargs)
@@ -189,9 +181,6 @@ class ModularAlgorithm(Algorithm):
         self.survival = survival
         self.mods = mods if mods is not None else []
         self.advance_after_initial_infill = advance_after_initial_infill
-        self.sub_pop_policy = sub_pop_policy
-        self._sub_pops = None
-        self._pending_subpop_off = None
 
         # Repair for initialization and mod outputs
         self.repair = repair if repair is not None else NoRepair()
@@ -242,19 +231,6 @@ class ModularAlgorithm(Algorithm):
                 random_state=self.random_state,
             )
 
-        if self.sub_pop_policy is not None:
-            self.sub_pop_policy.setup(self)
-            self._sub_pops = self.sub_pop_policy.split(
-                self.pop, self.sub_pop_policy.n, self.random_state
-            )
-            for i, sp in enumerate(self._sub_pops):
-                self._sub_pops[i] = self.survival.do(
-                    self.problem, sp,
-                    n_survive=len(sp),
-                    algorithm=self,
-                    random_state=self.random_state,
-                )
-
     def _infill(self):
         """
         Generate offspring: core InfillCriterion + mods.
@@ -264,13 +240,7 @@ class ModularAlgorithm(Algorithm):
 
         Mods generate additional candidates independently.
         Repair is applied to everything at the end.
-
-        When sub_pop_policy is active, offspring are generated
-        independently for each sub-population.
         """
-        if self.sub_pop_policy is not None and self._sub_pops is not None:
-            return self._infill_subpop()
-
         # Core offspring
         off = self.infill_criterion.do(
             self.problem, self.pop, self.n_offsprings,
@@ -295,7 +265,74 @@ class ModularAlgorithm(Algorithm):
 
         return off
 
-    def _infill_subpop(self):
+    def _advance(self, infills=None, **kwargs):
+        """Merge current population with evaluated offspring, apply survival."""
+        pop = self.pop
+
+        if infills is not None:
+            pop = Population.merge(self.pop, infills)
+
+        self.pop = self.survival.do(
+            self.problem, pop,
+            n_survive=self.pop_size,
+            algorithm=self,
+            random_state=self.random_state,
+        )
+
+    def _set_optimum(self):
+        """
+        Set the current optimum from the population.
+
+        For multi-objective: non-dominated front (rank 0).
+        For single-objective: best by filter_optimum.
+        """
+        if self.problem.n_obj > 1:
+            rank = self.pop.get("rank")
+            if rank is not None and np.any(rank == 0):
+                self.opt = self.pop[rank == 0]
+            else:
+                self.opt = filter_optimum(self.pop, least_infeasible=True)
+        else:
+            self.opt = filter_optimum(self.pop, least_infeasible=True)
+
+
+class SubPopAlgorithm(ModularAlgorithm):
+    """
+    ModularAlgorithm with sub-population partitioning.
+
+    Each generation: split pop → independent infill per sub-pop →
+    merge offspring → evaluate → per-subpop survival → global survival →
+    adapt → re-split.
+
+    Parameters
+    ----------
+    sub_pop_policy : SubPopPolicy
+        Controls when to adapt sub-population count and how to split.
+    **kwargs
+        All ModularAlgorithm parameters (name, pop_size, sampling, etc.)
+    """
+
+    def __init__(self, sub_pop_policy, **kwargs):
+        super().__init__(**kwargs)
+        self.sub_pop_policy = sub_pop_policy
+        self._sub_pops = None
+        self._pending_subpop_off = None
+
+    def _initialize_advance(self, infills=None, **kwargs):
+        super()._initialize_advance(infills=infills, **kwargs)
+        self.sub_pop_policy.setup(self)
+        self._sub_pops = self.sub_pop_policy.split(
+            self.pop, self.sub_pop_policy.n, self.random_state
+        )
+        for i, sp in enumerate(self._sub_pops):
+            self._sub_pops[i] = self.survival.do(
+                self.problem, sp,
+                n_survive=len(sp),
+                algorithm=self,
+                random_state=self.random_state,
+            )
+
+    def _infill(self):
         """Generate offspring independently for each sub-population."""
         all_off = []
         for sub_pop in self._sub_pops:
@@ -327,29 +364,7 @@ class ModularAlgorithm(Algorithm):
         return combined
 
     def _advance(self, infills=None, **kwargs):
-        """
-        Merge current population with evaluated offspring, apply survival.
-
-        When sub_pop_policy is active, survival runs per sub-population
-        first, then globally on the merged result.
-        """
-        if self.sub_pop_policy is not None and self._sub_pops is not None:
-            return self._advance_subpop()
-
-        pop = self.pop
-
-        if infills is not None:
-            pop = Population.merge(self.pop, infills)
-
-        self.pop = self.survival.do(
-            self.problem, pop,
-            n_survive=self.pop_size,
-            algorithm=self,
-            random_state=self.random_state,
-        )
-
-    def _advance_subpop(self):
-        """Per-subpop survival, merge, adapt, re-split."""
+        """Per-subpop survival, merge, global survival, adapt, re-split."""
         new_sub_pops = []
         for sub_pop, off in self._pending_subpop_off:
             merged = Population.merge(sub_pop, off)
@@ -386,19 +401,3 @@ class ModularAlgorithm(Algorithm):
             )
 
         self._pending_subpop_off = None
-
-    def _set_optimum(self):
-        """
-        Set the current optimum from the population.
-
-        For multi-objective: non-dominated front (rank 0).
-        For single-objective: best by filter_optimum.
-        """
-        if self.problem.n_obj > 1:
-            rank = self.pop.get("rank")
-            if rank is not None and np.any(rank == 0):
-                self.opt = self.pop[rank == 0]
-            else:
-                self.opt = filter_optimum(self.pop, least_infeasible=True)
-        else:
-            self.opt = filter_optimum(self.pop, least_infeasible=True)

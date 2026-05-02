@@ -15,7 +15,7 @@ from pymoo.termination.default import DefaultMultiObjectiveTermination
 from pymoo.util.display.multi import MultiObjectiveOutput
 from pymoo.util.archive import MultiObjectiveArchive, SurvivalTruncation
 
-from loares.core.composable import ModularAlgorithm, RecombinationVariant
+from loares.core.composable import ModularAlgorithm, SubPopAlgorithm, RecombinationVariant
 from loares.core.recombination import BMR, BWR, BMWR
 from loares.core.pool_selection import BestWorstSelection, ArchiveBestWorstSelection
 from loares.core.mutation import RandomReinit
@@ -180,21 +180,43 @@ class MO_BMWR_Archive(MORankingCrowding):
                          archive=archive, **kwargs)
 
 
-# ── SAMP variants (adaptive sub-populations) ──
+# ── Sub-population variants ──
 
 from loares.core.sub_pop import HVAdaptiveSplit
 
-class MO_BMR_S_py(MORankingCrowding):
+class MORankingCrowdingSP(SubPopAlgorithm):
+    """Base for sub-population BXR variants."""
+
+    def __init__(self, name, infill, pop_size, mods, sub_pop_policy, **kwargs):
+        super().__init__(
+            sub_pop_policy=sub_pop_policy,
+            name=name,
+            pop_size=pop_size,
+            sampling=FloatRandomSampling(),
+            infill=infill,
+            survival=RankAndCrowding(),
+            mods=mods,
+            repair=ToBoundOutOfBoundsRepair(),
+            advance_after_initial_infill=True,
+            output=MultiObjectiveOutput(),
+            **kwargs,
+        )
+        self.termination = DefaultMultiObjectiveTermination()
+
+
+# ── SAMP variants (adaptive sub-populations) ──
+
+class MO_BMR_S_py(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BMR-SAMP", BMR_DInfill, pop_size, [LocalSearchMod()],
-                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)
+                         HVAdaptiveSplit(), **kwargs)
 
-class MO_BWR_S_py(MORankingCrowding):
+class MO_BWR_S_py(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BWR-SAMP", BWR_DInfill, pop_size, [LocalSearchMod()],
-                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)
+                         HVAdaptiveSplit(), **kwargs)
 
-class MO_BMWR_S_py(MORankingCrowding):
+class MO_BMWR_S_py(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BMWR-SAMP", BMWR_DInfill, pop_size, [LocalSearchMod()],
-                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)
+                         HVAdaptiveSplit(), **kwargs)
