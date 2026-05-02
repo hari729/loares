@@ -22,7 +22,7 @@ from loares.core.mutation import RandomReinit
 from loares.core.mods import LocalSearchMod, OppositionMod, EdgeBoostMod
 
 
-def _build_mo(recombination_cls, pop_size, mods, mutation, sampling, survival,
+def _build_mo(name, recombination_cls, pop_size, mods, mutation, sampling, survival,
               pool_selection, repair, output, termination, **kwargs):
     """Internal builder for MO algorithm variants."""
 
@@ -44,6 +44,7 @@ def _build_mo(recombination_cls, pop_size, mods, mutation, sampling, survival,
         termination = DefaultMultiObjectiveTermination()
 
     algo = ModularAlgorithm(
+        name=name,
         pop_size=pop_size,
         sampling=sampling,
         infill=RecombinationVariant(
@@ -64,9 +65,10 @@ def _build_mo(recombination_cls, pop_size, mods, mutation, sampling, survival,
 
 class MORankingCrowding(ModularAlgorithm):
     """Base for BXR family: BW selection + RankAndCrowding survival."""
-    
-    def __init__(self, infill, pop_size, mods, **kwargs):
+
+    def __init__(self, name, infill, pop_size, mods, **kwargs):
         super().__init__(
+            name=name,
             pop_size=pop_size,
             sampling=FloatRandomSampling(),
             infill=infill,
@@ -101,27 +103,27 @@ BMWR_DInfill = RecombinationVariant(
 
 class MO_BMR_py(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
+        super().__init__("MO-BMR", BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
 
 class MO_BWR(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
+        super().__init__("MO-BWR", BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
 
 class MO_BMWR(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
+        super().__init__("MO-BMWR", BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
 
 class MO_BMR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BMR-OPP", BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 class MO_BWR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BWR-OPP", BWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 class MO_BMWR_Opposition(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
-        super().__init__(BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
+        super().__init__("MO-BMWR-OPP", BMWR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod(), OppositionMod()], **kwargs)
 
 
 
@@ -156,7 +158,7 @@ class MO_BMR_Archive_py(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__(BMR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BMR-ARCHIVE", BMR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
 
 class MO_BWR_Archive(MORankingCrowding):
@@ -165,7 +167,7 @@ class MO_BWR_Archive(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__(BWR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BWR-ARCHIVE", BWR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
 
 class MO_BMWR_Archive(MORankingCrowding):
@@ -174,5 +176,25 @@ class MO_BMWR_Archive(MORankingCrowding):
             max_size=pop_size * 2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
-        super().__init__(BMWR_ArchiveInfill, pop_size, [LocalSearchMod()],
+        super().__init__("MO-BMWR-ARCHIVE", BMWR_ArchiveInfill, pop_size, [LocalSearchMod()],
                          archive=archive, **kwargs)
+
+
+# ── SAMP variants (adaptive sub-populations) ──
+
+from loares.core.sub_pop import HVAdaptiveSplit
+
+class MO_BMR_S_py(MORankingCrowding):
+    def __init__(self, pop_size=100, **kwargs):
+        super().__init__("MO-BMR-SAMP", BMR_DInfill, pop_size, [LocalSearchMod()],
+                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)
+
+class MO_BWR_S_py(MORankingCrowding):
+    def __init__(self, pop_size=100, **kwargs):
+        super().__init__("MO-BWR-SAMP", BWR_DInfill, pop_size, [LocalSearchMod()],
+                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)
+
+class MO_BMWR_S_py(MORankingCrowding):
+    def __init__(self, pop_size=100, **kwargs):
+        super().__init__("MO-BMWR-SAMP", BMWR_DInfill, pop_size, [LocalSearchMod()],
+                         sub_pop_policy=HVAdaptiveSplit(), **kwargs)

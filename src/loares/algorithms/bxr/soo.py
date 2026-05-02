@@ -8,13 +8,13 @@ from pymoo.operators.repair.to_bound import ToBoundOutOfBoundsRepair
 from pymoo.termination.default import DefaultSingleObjectiveTermination
 from pymoo.util.display.single import SingleObjectiveOutput
 
-from loares.algorithms.composable import ModularAlgorithm, RecombinationVariant
-from loares.operators.recombination import BMR, BWR, BMWR
-from loares.operators.pool_selection import BestWorstSelection
-from loares.operators.mutation import RandomReinit
+from loares.core.composable import ModularAlgorithm, RecombinationVariant
+from loares.core.recombination import BMR, BWR, BMWR
+from loares.core.pool_selection import BestWorstSelection
+from loares.core.mutation import RandomReinit
 
 
-def _build_so(recombination_cls, pop_size, mods, mutation, sampling, survival,
+def _build_so(name, recombination_cls, pop_size, mods, mutation, sampling, survival,
               pool_selection, repair, output, termination, **kwargs):
     """Internal builder for SO algorithm variants."""
 
@@ -36,6 +36,7 @@ def _build_so(recombination_cls, pop_size, mods, mutation, sampling, survival,
         termination = DefaultSingleObjectiveTermination()
 
     algo = ModularAlgorithm(
+        name=name,
         pop_size=pop_size,
         sampling=sampling,
         infill=RecombinationVariant(
@@ -59,7 +60,7 @@ def SO_BMR(pop_size=100, mods=None, mutation=None, sampling=None,
            survival=None, pool_selection=None, repair=None,
            output=None, termination=None, **kwargs):
     """Single-objective BMR algorithm."""
-    return _build_so(BMR, pop_size, mods, mutation, sampling, survival,
+    return _build_so("SO-BMR", BMR, pop_size, mods, mutation, sampling, survival,
                      pool_selection, repair, output, termination, **kwargs)
 
 
@@ -67,7 +68,7 @@ def SO_BWR(pop_size=100, mods=None, mutation=None, sampling=None,
            survival=None, pool_selection=None, repair=None,
            output=None, termination=None, **kwargs):
     """Single-objective BWR algorithm."""
-    return _build_so(BWR, pop_size, mods, mutation, sampling, survival,
+    return _build_so("SO-BWR", BWR, pop_size, mods, mutation, sampling, survival,
                      pool_selection, repair, output, termination, **kwargs)
 
 
@@ -75,5 +76,5 @@ def SO_BMWR(pop_size=100, mods=None, mutation=None, sampling=None,
             survival=None, pool_selection=None, repair=None,
             output=None, termination=None, **kwargs):
     """Single-objective BMWR algorithm."""
-    return _build_so(BMWR, pop_size, mods, mutation, sampling, survival,
+    return _build_so("SO-BMWR", BMWR, pop_size, mods, mutation, sampling, survival,
                      pool_selection, repair, output, termination, **kwargs)

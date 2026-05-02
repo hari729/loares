@@ -120,7 +120,7 @@ class ArchiveBestWorstSelection(PoolSelection):
         rank = pop.get("rank")
 
         # Best from archive if available
-        archive_pop = getattr(algorithm, "archive_pop", None)
+        archive_pop = getattr(algorithm, "archive", None)
         if archive_pop is not None and len(archive_pop) > 0:
             best_X = archive_pop.get("X")
         elif rank is not None and np.any(rank == 0):
