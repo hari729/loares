@@ -120,6 +120,7 @@ class ExperimentRunner:
             "bounds": bounds,
             "psize": self.pop_size,
             "max_evals": self.max_evals,
+            "minmax": getattr(p, "minmax", np.ones(p.n_obj)).tolist(),
         }
 
     def run(self, seed):
