@@ -26,8 +26,10 @@ from pymoo.indicators.igd import IGD
 from pymoo.indicators.spacing import SpacingIndicator
 from pymoo.util.normalization import normalize
 
-from loares.operators.sorting import nds_fps
-from loares.core.population import Population
+from pymoo.core.population import Population as PymooPopulation
+from pymoo.core.problem import Problem as PymooProblem
+
+from loares.operators.sorting import NDSFarthestPointSurvival
 from loares.experiments.utils import dict_to_csv
 from loares.experiments.plots import (
     multi_line_plot,
@@ -144,11 +146,14 @@ class SOOMetrics:
 # ── Reference front generation ──
 
 
-def _generate_reference_front(seed_files, rf_size, n_vars, n_obj, n_constr):
-    """Merge final populations from all seeds, apply NDS + FPS."""
-    from loares.core.problem import Problem as LoaresProblem
+def _generate_reference_front(seed_files, rf_size, n_vars, n_obj, n_constr, survival):
+    """Merge final populations from all seeds, apply survival operator, return non-dominated."""
 
-    dummy_prob = LoaresProblem(n_vars=n_vars, n_obj=n_obj, n_constr=max(n_constr, 1))
+    class _DummyProblem(PymooProblem):
+        def __init__(self, n_var, n_obj, n_ieq_constr):
+            super().__init__(n_var=n_var, n_obj=n_obj, n_ieq_constr=n_ieq_constr)
+        def _evaluate(self, x, out, *args, **kwargs):
+            pass
 
     all_X, all_F, all_G = [], [], []
     for sf in tqdm(seed_files, desc="Loading populations"):
@@ -159,15 +164,17 @@ def _generate_reference_front(seed_files, rf_size, n_vars, n_obj, n_constr):
         all_F.append(F)
         all_G.append(G)
 
-    X = np.vstack(all_X)
-    F = np.vstack(all_F)
-    G = np.vstack(all_G)
+    pop = PymooPopulation.new(
+        "X", np.vstack(all_X),
+        "F", np.vstack(all_F),
+        "G", np.vstack(all_G),
+    )
 
-    combined = Population(X, F, G)
-    ps, po, pc, pm = nds_fps(dummy_prob, combined, rf_size, ndf=True, seed=1)
+    dummy = _DummyProblem(n_var=n_vars, n_obj=n_obj, n_ieq_constr=max(n_constr, 1))
+    survivors = survival.do(dummy, pop, n_survive=rf_size)
 
-    mask = pm[:, 0] == 0
-    return po[mask]
+    ndf = survivors[survivors.get("rank") == 0]
+    return ndf.get("F")
 
 
 # ── Score sort for Pareto display ──
@@ -210,6 +217,9 @@ class PostProcess:
         Generate reference front from all seed populations.
     rf_size : int
         Max points in generated reference front.
+    rf_survival : pymoo Survival or None
+        Survival operator for reference front generation. Defaults to
+        NDSFarthestPointSurvival. Any pymoo Survival works (e.g. RankAndCrowding).
     plot_convergence : bool
         Generate convergence plots per metric per algo group.
     plot_pareto : bool
@@ -225,6 +235,7 @@ class PostProcess:
         true_front=None,
         gen_rf=False,
         rf_size=1000,
+        rf_survival=None,
         plot_convergence=True,
         plot_pareto=True,
         pcid=1,
@@ -234,6 +245,7 @@ class PostProcess:
         self.true_f = true_front
         self.gen_rf = gen_rf
         self.rf_size = rf_size
+        self.rf_survival = rf_survival or NDSFarthestPointSurvival()
         self.plot_convergence = plot_convergence
         self.plot_pareto = plot_pareto
         self.pcid = pcid
@@ -345,6 +357,7 @@ class PostProcess:
             self.problem_info["n_vars"],
             self.problem_info["n_obj"],
             self.problem_info.get("n_constr", 0),
+            self.rf_survival,
         )
         np.save(rf_path, self.true_f)
         print(f"Reference front saved: {rf_path} ({len(self.true_f)} points)")

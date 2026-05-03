@@ -33,7 +33,8 @@ from loares.algorithms.bxr.moo import (
     MO_BMR_S_py,
 )
 from loares.algorithms.bxr.soo import SO_BMR, SO_BWR, SO_BMWR
-from loares.core.population import Population
+from pymoo.core.population import Population as PymooPopulation
+from pymoo.core.problem import Problem as PymooProblem
 
 
 @pytest.fixture
@@ -454,76 +455,91 @@ class TestAlgorithmVariants:
 # ── Reference front generation (NDS + FPS) ──────────────────────────────────
 
 
-class TestReferenceFront:
-    def _make_mixed_population(self, n=50, n_vars=5, n_obj=2):
+class TestNDSFarthestPointSurvival:
+    def _make_pop(self, n=50, n_vars=5, n_obj=2):
         X = np.random.rand(n, n_vars)
         f1 = np.random.rand(n)
         f2 = 1 - f1 + np.random.rand(n) * 0.3
         F = np.column_stack([f1, f2])
         G = np.full((n, 1), -1.0)
-        return Population(X, F, G)
+        return PymooPopulation.new("X", X, "F", F, "G", G)
 
-    def _make_dummy_problem(self, n_vars=5, n_obj=2, n_constr=1):
-        from loares.core.problem import Problem
+    def _make_problem(self, n_vars=5, n_obj=2, n_constr=1):
+        class _Dummy(PymooProblem):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+            def _evaluate(self, x, out, *args, **kwargs):
+                pass
+        return _Dummy(n_var=n_vars, n_obj=n_obj, n_ieq_constr=n_constr)
 
-        return Problem(n_vars=n_vars, n_obj=n_obj, n_constr=n_constr)
-
-    def test_nds_fps_returns_only_non_dominated(self):
-        from loares.operators.sorting import nds_fps
+    def test_returns_only_non_dominated_when_n_survive_large(self):
+        from loares.operators.sorting import NDSFarthestPointSurvival
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
-        pop = self._make_mixed_population(n=100, n_obj=2)
-        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+        pop = self._make_pop(n=100, n_obj=2)
+        prob = self._make_problem(n_vars=5, n_obj=2)
+        F = pop.get("F")
 
-        ps, po, pc, pm = nds_fps(prob, pop, limit=50, seed=1)
+        ndf_size = len(find_non_dominated(F))
+        survival = NDSFarthestPointSurvival()
+        survivors = survival.do(prob, pop, n_survive=ndf_size + 100)
 
-        expected_ndf_idx = find_non_dominated(pop.objectives)
-        ndf_objectives = pop.objectives[expected_ndf_idx]
+        ndf = survivors[survivors.get("rank") == 0]
+        ndf_F = ndf.get("F")
+        expected_F = F[find_non_dominated(F)]
 
-        for i in range(po.shape[0]):
-            match = np.any(np.all(np.isclose(po[i], ndf_objectives), axis=1))
-            assert match, f"Returned point {po[i]} is not on the non-dominated front"
+        for i in range(ndf_F.shape[0]):
+            match = np.any(np.all(np.isclose(ndf_F[i], expected_F), axis=1))
+            assert match, f"Point {ndf_F[i]} is not on the non-dominated front"
 
-    def test_nds_fps_respects_limit(self):
-        from loares.operators.sorting import nds_fps
+    def test_respects_n_survive(self):
+        from loares.operators.sorting import NDSFarthestPointSurvival
 
         np.random.seed(42)
-        pop = self._make_mixed_population(n=200, n_obj=2)
-        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+        pop = self._make_pop(n=200, n_obj=2)
+        prob = self._make_problem(n_vars=5, n_obj=2)
 
-        ps, po, pc, pm = nds_fps(prob, pop, limit=15, seed=1)
-        assert ps.shape[0] <= 15
-        assert po.shape[0] <= 15
+        survival = NDSFarthestPointSurvival()
+        survivors = survival.do(prob, pop, n_survive=15)
+        assert len(survivors) == 15
 
-    def test_nds_fps_returns_all_when_front_smaller_than_limit(self):
-        from loares.operators.sorting import nds_fps
+    def test_fills_from_multiple_fronts(self):
+        from loares.operators.sorting import NDSFarthestPointSurvival
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
-        pop = self._make_mixed_population(n=50, n_obj=2)
-        prob = self._make_dummy_problem(n_vars=5, n_obj=2)
+        pop = self._make_pop(n=100, n_obj=2)
+        prob = self._make_problem(n_vars=5, n_obj=2)
+        F = pop.get("F")
 
-        ndf_size = len(find_non_dominated(pop.objectives))
-        ps, po, pc, pm = nds_fps(prob, pop, limit=ndf_size + 100, seed=1)
-        assert ps.shape[0] == ndf_size
+        ndf_size = len(find_non_dominated(F))
+        n_survive = ndf_size + 10
 
-    def test_nds_fps_output_shapes_consistent(self):
-        from loares.operators.sorting import nds_fps
+        survival = NDSFarthestPointSurvival()
+        survivors = survival.do(prob, pop, n_survive=n_survive)
+        assert len(survivors) == n_survive
+
+        ranks = survivors.get("rank")
+        assert 0 in ranks
+        assert np.max(ranks) >= 1
+
+    def test_output_shapes_consistent(self):
+        from loares.operators.sorting import NDSFarthestPointSurvival
 
         np.random.seed(42)
         n_vars, n_obj = 5, 3
         X = np.random.rand(100, n_vars)
         F = np.random.rand(100, n_obj)
         G = np.full((100, 1), -1.0)
-        pop = Population(X, F, G)
-        prob = self._make_dummy_problem(n_vars=n_vars, n_obj=3, n_constr=1)
+        pop = PymooPopulation.new("X", X, "F", F, "G", G)
+        prob = self._make_problem(n_vars=n_vars, n_obj=3, n_constr=1)
 
-        ps, po, pc, pm = nds_fps(prob, pop, limit=20, seed=1)
-        assert ps.shape[1] == n_vars
-        assert po.shape[1] == 3
-        assert pc.shape[1] == 1
-        assert ps.shape[0] == po.shape[0] == pc.shape[0] == pm.shape[0]
+        survival = NDSFarthestPointSurvival()
+        survivors = survival.do(prob, pop, n_survive=20)
+        assert survivors.get("X").shape[1] == n_vars
+        assert survivors.get("F").shape[1] == 3
+        assert len(survivors) == 20
 
 
 # ── FPS selection quality ────────────────────────────────────────────────────

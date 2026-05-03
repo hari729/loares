@@ -1,104 +1,19 @@
 import numpy as np
 from scipy.spatial.distance import cdist
-from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
+
+from pymoo.core.survival import Survival
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
-from pymoo.operators.survival.rank_and_crowding.metrics import calc_crowding_distance
-from pymoo.core.population import Population as PymooPopulation
-from pymoo.core.problem import Problem
 from pymoo.util.normalization import normalize
-
-def bw_sorting(problem, population, limit, seed, ndf=False, all=False):
-    if limit is None:
-        limit = problem.psize
-    violation_count = np.atleast_2d((population.constraints > 0).sum(axis=1)).T
-    sorted_idx = np.lexsort((population.objectives[:, 0], violation_count[:, 0]))[
-        :limit
-    ]
-    sols = population.solutions[sorted_idx]
-    objs = population.objectives[sorted_idx]
-    constr = population.constraints[sorted_idx]
-    metadata = violation_count[sorted_idx]
-    return sols, objs, constr, metadata
-
-def ranking_crowding(problem, population, limit, seed, ndf=False, all=False):
-
-    class DummyProblem(Problem):
-        def __init__(self, n_var, n_obj, n_constr):
-            super().__init__(n_var=n_var, n_obj=n_obj, n_constr=n_constr)
-
-        def _evaluate(self, x, out, *args, **kwargs):
-            pass
-
-    pop = PymooPopulation.new(
-        "X",
-        population.solutions,
-        "F",
-        population.objectives,
-        "G",
-        population.constraints,
-    )
-
-    dummy_problem = DummyProblem(
-        n_var=problem.n_vars, n_obj=problem.n_obj, n_constr=problem.n_constr
-    )
-
-    survival = RankAndCrowdingSurvival()
-    if all:
-        survivors = survival.do(dummy_problem, pop, seed=seed)
-    else:
-        survivors = survival.do(dummy_problem, pop, n_survive=limit, seed=seed)
-
-    target_pop = survivors
-    if ndf:
-        target_pop = survivors[survivors.get("rank") == 0]
-
-    p_array = target_pop.get("X")
-    o_array = target_pop.get("F")
-    c_array = target_pop.get("G")
-    metadata = np.column_stack([target_pop.get("rank"), target_pop.get("crowding")])
-
-    if np.all([x is None for x in np.ravel(metadata)]):
-        metadata = target_pop.get("CV")
-        metadata = metadata - np.min(metadata)
-        metadata = metadata.reshape(-1, 1)
-
-    return p_array, o_array, c_array, metadata
-
-
-nds = NonDominatedSorting()
-
-def nds_cd(population, limit=None, ndf=False):
-    limit = len(population.objectives) if limit is None else limit
-    N = len(population.solutions)
-    ranks = np.full(N, np.inf)
-    cd = np.zeros(N)
-    if ndf:
-        idx = nds.do(population.objectives, only_non_dominated_front=True)
-        cd[idx] = calc_crowding_distance(population.objectives[idx])
-        ranks[idx] = 0
-    else:
-        fronts = nds.do(population.objectives, n_stop_if_ranked=limit)
-        for i in range(len(fronts)):
-            cd[fronts[i]] = calc_crowding_distance(population.objectives[fronts[i]])
-            ranks[fronts[i]] = i
-    sorted_idx = np.lexsort((-cd, ranks))
-    selected = sorted_idx[:limit]
-    pm = np.column_stack([ranks[selected], cd[selected]])
-    ps = population.solutions[selected]
-    po = population.objectives[selected]
-    pc = population.constraints[selected]
-
-    return ps, po, pc, pm
 
 
 def farthest_point_sampling(points, n_samples):
     n_obj = points.shape[1]
     selected = []
-    npoints = normalize(points, np.min(points,axis=0), np.max(points, axis=0))
+    npoints = normalize(points, np.min(points, axis=0), np.max(points, axis=0))
     for j in range(n_obj):
         selected.append(np.argmin(npoints[:, j]))
         selected.append(np.argmax(npoints[:, j]))
-    selected = list(dict.fromkeys(selected))  # deduplicate, preserve order
+    selected = list(dict.fromkeys(selected))
 
     min_dist = cdist(npoints, npoints[selected]).min(axis=1)
 
@@ -110,15 +25,43 @@ def farthest_point_sampling(points, n_samples):
     return selected
 
 
-def nds_fps(prob, population, limit, seed, ndf=False, all=False):
-    selected_idx = nds.do(population.objectives, only_non_dominated_front=True)
-    if limit < len(selected_idx):
-        selected = farthest_point_sampling(population.objectives[selected_idx], limit)
-    else:
-        selected = np.arange(len(selected_idx))
-    ps = population.solutions[selected_idx][selected]
-    po = population.objectives[selected_idx][selected]
-    pc = population.constraints[selected_idx][selected]
-    pm = np.zeros((len(selected), 1))
+class NDSFarthestPointSurvival(Survival):
+    """
+    Non-dominated sorting + farthest point sampling survival.
 
-    return ps, po, pc, pm
+    Adds fronts (rank 0, 1, 2, ...) until n_survive is reached.
+    On the splitting front, uses FPS to select the remaining slots
+    for maximum spread. Same pattern as RankAndCrowding but with
+    FPS replacing crowding distance for the splitting decision.
+    """
+
+    def __init__(self):
+        super().__init__(filter_infeasible=True)
+        self._nds = NonDominatedSorting()
+
+    def _do(self, problem, pop, *args, n_survive=None, **kwargs):
+        F = pop.get("F").astype(float, copy=False)
+
+        if n_survive is None:
+            n_survive = len(pop)
+
+        fronts = self._nds.do(F, n_stop_if_ranked=n_survive)
+
+        survivors = []
+        for k, front in enumerate(fronts):
+            remaining = n_survive - len(survivors)
+
+            if len(front) <= remaining:
+                for i in front:
+                    pop[i].set("rank", k)
+                survivors.extend(front)
+            else:
+                front_F = F[front]
+                fps_idx = farthest_point_sampling(front_F, remaining)
+                selected = front[fps_idx]
+                for i in selected:
+                    pop[i].set("rank", k)
+                survivors.extend(selected)
+                break
+
+        return pop[survivors]
