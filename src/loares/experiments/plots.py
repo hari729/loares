@@ -1,3 +1,5 @@
+"""Plotting functions for convergence histories, Pareto fronts, and parallel coordinates."""
+
 import matplotlib
 
 matplotlib.use("Agg")

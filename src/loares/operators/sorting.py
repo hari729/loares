@@ -1,3 +1,5 @@
+"""Survival operators and selection utilities for population thinning."""
+
 import numpy as np
 from scipy.spatial.distance import cdist
 

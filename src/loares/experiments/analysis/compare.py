@@ -1,3 +1,5 @@
+"""Cross-problem comparison of algorithm performance metrics."""
+
 from pathlib import Path
 import sys
 import pandas as pd

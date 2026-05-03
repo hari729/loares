@@ -1,3 +1,5 @@
+"""Friedman test and post-hoc statistical analysis of algorithm performance."""
+
 from __future__ import annotations
 
 import argparse
