@@ -11,7 +11,7 @@ import numpy as np
 from pymoo.problems.multi import ZDT1
 from pymoo.algorithms.moo.nsga2 import NSGA2
 
-from loares.algorithms.bxr.moo import MO_BMR_py, MO_BWR, MO_BMWR
+from loares.algorithms.bxr.moo import MO_BMR, MO_BWR, MO_BMWR
 from loares.experiments.pymoo_runner import ExperimentRunner, AlgoFactory
 
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     problem = ZDT1()
 
     algorithms = [
-        AlgoFactory(MO_BMR_py, pop_size=ps),
+        AlgoFactory(MO_BMR, pop_size=ps),
         AlgoFactory(MO_BWR, pop_size=ps),
         AlgoFactory(MO_BMWR, pop_size=ps),
         AlgoFactory(NSGA2, pop_size=ps),

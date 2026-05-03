@@ -25,12 +25,12 @@ from loares.experiments.pymoo_process import (
     _stream_snapshots,
 )
 from loares.algorithms.bxr.moo import (
-    MO_BMR_py,
+    MO_BMR,
     MO_BWR,
     MO_BMWR,
-    MO_BMR_Archive_py,
+    MO_BMR_Archive,
     MO_BMR_Opposition,
-    MO_BMR_S_py,
+    MO_BMR_S,
 )
 from loares.algorithms.bxr.soo import SO_BMR, SO_BWR, SO_BMWR
 from pymoo.core.population import Population as PymooPopulation
@@ -73,7 +73,7 @@ class TestAlgoFactory:
         assert algo.name == "Custom-NSGA2"
 
     def test_modular_algorithm_keeps_name(self):
-        factory = AlgoFactory(MO_BMR_py, pop_size=30)
+        factory = AlgoFactory(MO_BMR, pop_size=30)
         algo = factory()
         assert algo.name == "MO-BMR"
         assert algo.pop_size == 30
@@ -100,7 +100,7 @@ class TestAlgoFactory:
 class TestExperimentRunnerMOO:
     def test_single_seed_produces_hdf5(self, tmp_dir):
         problem = ZDT1()
-        factory = AlgoFactory(MO_BMR_py, pop_size=20)
+        factory = AlgoFactory(MO_BMR, pop_size=20)
 
         with patch(
             "loares.experiments.pymoo_runner.inspect.stack",
@@ -135,7 +135,7 @@ class TestExperimentRunnerMOO:
 
     def test_multi_run_produces_seeds_and_info(self, tmp_dir):
         problem = ZDT1()
-        factory = AlgoFactory(MO_BMR_py, pop_size=20)
+        factory = AlgoFactory(MO_BMR, pop_size=20)
 
         with patch(
             "loares.experiments.pymoo_runner.inspect.stack",
@@ -174,7 +174,7 @@ class TestExperimentRunnerMOO:
     def test_problem_info_includes_minmax(self, tmp_dir):
         problem = ZDT1()
         problem.minmax = np.array([1, -1])
-        factory = AlgoFactory(MO_BMR_py, pop_size=20)
+        factory = AlgoFactory(MO_BMR, pop_size=20)
 
         with patch(
             "loares.experiments.pymoo_runner.inspect.stack",
@@ -216,7 +216,7 @@ class TestHDF5Readers:
     @pytest.fixture
     def seed_file(self, tmp_dir):
         problem = ZDT1()
-        factory = AlgoFactory(MO_BMR_py, pop_size=20)
+        factory = AlgoFactory(MO_BMR, pop_size=20)
 
         with patch(
             "loares.experiments.pymoo_runner.inspect.stack",
@@ -317,7 +317,7 @@ class TestPostProcess:
         tf = problem.pareto_front(500)
         seeds = [1, 2, 3]
 
-        for algo_cls in [MO_BMR_py, MO_BWR]:
+        for algo_cls in [MO_BMR, MO_BWR]:
             factory = AlgoFactory(algo_cls, pop_size=20)
             with patch(
                 "loares.experiments.pymoo_runner.inspect.stack",
@@ -414,7 +414,7 @@ class TestAlgorithmVariants:
         return X, F
 
     def test_mo_bmr(self, tmp_dir):
-        X, F = self._run_variant(MO_BMR_py, ZDT1(), tmp_dir)
+        X, F = self._run_variant(MO_BMR, ZDT1(), tmp_dir)
         assert X.shape[1] == 30
         assert F.shape[1] == 2
 
@@ -427,7 +427,7 @@ class TestAlgorithmVariants:
         assert F.shape[1] == 2
 
     def test_mo_bmr_archive(self, tmp_dir):
-        X, F = self._run_variant(MO_BMR_Archive_py, ZDT1(), tmp_dir)
+        X, F = self._run_variant(MO_BMR_Archive, ZDT1(), tmp_dir)
         assert F.shape[1] == 2
 
     def test_mo_bmr_opposition(self, tmp_dir):
@@ -435,7 +435,7 @@ class TestAlgorithmVariants:
         assert F.shape[1] == 2
 
     def test_mo_bmr_samp(self, tmp_dir):
-        X, F = self._run_variant(MO_BMR_S_py, ZDT1(), tmp_dir)
+        X, F = self._run_variant(MO_BMR_S, ZDT1(), tmp_dir)
         assert F.shape[1] == 2
 
     def test_so_bmr(self, tmp_dir):

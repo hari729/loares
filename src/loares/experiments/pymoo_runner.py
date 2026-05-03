@@ -38,7 +38,7 @@ class AlgoFactory:
 
     Usage:
         AlgoFactory(NSGA2, pop_size=100)
-        AlgoFactory(MO_BMR_py, pop_size=50)
+        AlgoFactory(MO_BMR, pop_size=50)
         AlgoFactory(MOEAD, name="MOEAD", ref_dirs=ref_dirs, pop_size=len(ref_dirs))
     """
 

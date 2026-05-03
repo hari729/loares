@@ -101,7 +101,7 @@ BMWR_DInfill = RecombinationVariant(
     repair=ToBoundOutOfBoundsRepair(),
 )
 
-class MO_BMR_py(MORankingCrowding):
+class MO_BMR(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BMR", BMR_DInfill, pop_size, [LocalSearchMod(),EdgeBoostMod()], **kwargs)
 
@@ -152,7 +152,7 @@ BMWR_ArchiveInfill = RecombinationVariant(
     repair=ToBoundOutOfBoundsRepair(),
 )
 
-class MO_BMR_Archive_py(MORankingCrowding):
+class MO_BMR_Archive(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
         archive = MultiObjectiveArchive(
             max_size=pop_size * 2,
@@ -206,17 +206,17 @@ class MORankingCrowdingSP(SubPopAlgorithm):
 
 # ── SAMP variants (adaptive sub-populations) ──
 
-class MO_BMR_S_py(MORankingCrowdingSP):
+class MO_BMR_S(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BMR-SAMP", BMR_DInfill, pop_size, [LocalSearchMod()],
                          HVAdaptiveSplit(), **kwargs)
 
-class MO_BWR_S_py(MORankingCrowdingSP):
+class MO_BWR_S(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BWR-SAMP", BWR_DInfill, pop_size, [LocalSearchMod()],
                          HVAdaptiveSplit(), **kwargs)
 
-class MO_BMWR_S_py(MORankingCrowdingSP):
+class MO_BMWR_S(MORankingCrowdingSP):
     def __init__(self, pop_size=100, **kwargs):
         super().__init__("MO-BMWR-SAMP", BMWR_DInfill, pop_size, [LocalSearchMod()],
                          HVAdaptiveSplit(), **kwargs)
