@@ -21,7 +21,7 @@ def _build_so(name, recombination_cls, pop_size, mods, mutation, sampling, survi
     if pool_selection is None:
         pool_selection = BestWorstSelection()
     if mutation is None:
-        mutation = RandomReinit(prob=0.5, pb=1.0)
+        mutation = RandomReinit(prob=0.5)
     if sampling is None:
         sampling = FloatRandomSampling()
     if survival is None:

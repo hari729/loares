@@ -36,35 +36,15 @@ class RandomReinit(Mutation):
         Probability that an individual is mutated at all.
         This is the outer probability (pymoo's Mutation handles this).
         Corresponds to r4 <= 0.5 check, so default is 0.5.
-    pb : float
-        Per-variable probability of reinitialization within a mutated individual.
-        Set to 1.0 to reinitialize ALL variables (matching paper behavior),
-        or lower for partial reinitialization.
     """
 
-    def __init__(self, prob=0.5, pb=1.0, **kwargs):
+    def __init__(self, prob=0.5, **kwargs):
         super().__init__(prob=prob, **kwargs)
-        self.pb = pb
 
-    # def _do(self, problem, X, random_state=None, **kwargs):
-    #     xl, xu = problem.bounds()
-    #     n, n_var = X.shape
-    #
-    #     # Generate new random solutions
-    #     r = random_state.random((n, n_var))
-    #     new_X = xl + r * (xu - xl)
-    #
-    #     if self.pb < 1.0:
-    #         # Per-variable mask: which variables get reinitialized
-    #         mask = random_state.random((n, n_var)) < self.pb
-    #         return np.where(mask, new_X, X)
-    #     else:
-    #         # Full reinitialization (paper default)
-    #         return new_X
     def _do(self, problem, X, random_state=None, **kwargs):
         xl, xu = problem.bounds()
         n, n_var = X.shape
-        r = random_state.random((n, 1))          # (N, 1) not (N, n_var)
+        r = random_state.random((n, n_var))          # (N, 1) not (N, n_var)
         return xu - r * (xu - xl)                 # matches loares formula
 
 class QOPPReinit(Mutation):
@@ -78,13 +58,10 @@ class QOPPReinit(Mutation):
     ----------
     prob : float
         Probability that an individual is mutated at all.
-    pb : float
-        Per-variable probability of QOPP reinitialization.
     """
 
-    def __init__(self, prob=0.5, pb=1.0, **kwargs):
+    def __init__(self, prob=0.5, **kwargs):
         super().__init__(prob=prob, **kwargs)
-        self.pb = pb
 
     def _do(self, problem, X, random_state=None, **kwargs):
         xl, xu = problem.bounds()
@@ -98,8 +75,4 @@ class QOPPReinit(Mutation):
         r = random_state.random((n, n_var))
         qopp = low + r * (high - low)
 
-        if self.pb < 1.0:
-            mask = random_state.random((n, n_var)) < self.pb
-            return np.where(mask, qopp, X)
-        else:
-            return qopp
+        return qopp

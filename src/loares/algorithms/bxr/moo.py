@@ -85,19 +85,19 @@ class MORankingCrowding(ModularAlgorithm):
 BMR_DInfill = RecombinationVariant(
     pool_selection=BestWorstSelection(),
     recombination=BMR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 BWR_DInfill = RecombinationVariant(
     pool_selection=BestWorstSelection(),
     recombination=BWR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 BMWR_DInfill = RecombinationVariant(
     pool_selection=BestWorstSelection(),
     recombination=BMWR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 
@@ -136,19 +136,19 @@ Crowding_Archive = MultiObjectiveArchive(
 BMR_ArchiveInfill = RecombinationVariant(
     pool_selection=ArchiveBestWorstSelection(),  # reads from algorithm.archive
     recombination=BMR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 BWR_ArchiveInfill = RecombinationVariant(
     pool_selection=ArchiveBestWorstSelection(),  # reads from algorithm.archive
     recombination=BWR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 BMWR_ArchiveInfill = RecombinationVariant(
     pool_selection=ArchiveBestWorstSelection(),  # reads from algorithm.archive
     recombination=BMWR(),
-    mutation=RandomReinit(prob=0.5, pb=1.0),
+    mutation=RandomReinit(prob=0.5),
     repair=ToBoundOutOfBoundsRepair(),
 )
 
