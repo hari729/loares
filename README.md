@@ -97,7 +97,7 @@ algo = ModularAlgorithm(
     infill=RecombinationVariant(
         pool_selection=BestWorstSelection(),
         recombination=BMR(),
-        mutation=RandomReinit(prob=0.5, pb=1.0),
+        mutation=RandomReinit(prob=0.5),
     ),
     mods=[LocalSearchMod()],
 )

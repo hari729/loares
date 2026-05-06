@@ -44,8 +44,8 @@ class RandomReinit(Mutation):
     def _do(self, problem, X, random_state=None, **kwargs):
         xl, xu = problem.bounds()
         n, n_var = X.shape
-        r = random_state.random((n, n_var))          # (N, 1) not (N, n_var)
-        return xu - r * (xu - xl)                 # matches loares formula
+        r = random_state.random((n, n_var))
+        return xu - r * (xu - xl)
 
 class QOPPReinit(Mutation):
     """
