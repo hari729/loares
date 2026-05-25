@@ -130,7 +130,7 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
     plt.close()
 
 def parallel_coordinates_plot(
-    data, filepath, alpha=0.6, axis_mins=None, axis_maxs=None
+    data, filepath, alpha=1, axis_mins=None, axis_maxs=None
 ):
     keys = sorted(
         [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
@@ -179,8 +179,11 @@ def parallel_coordinates_plot(
             return str(v)
         av = abs(v)
         if av != 0 and (av < 1e-3 or av >= 1e4):
-            return f"{v:.2e}"
-        return f"{v:.6g}"
+            # Get standard scientific notation string (e.g., "1.20e+04")
+            base, exp = f"{v:.2e}".split("e")
+            # Convert exponent to int to strip leading zeros and signs like "+04" -> 4
+            return f"${base} \\times 10^{{{int(exp)}}}$"
+        return f"{v:.4g}"
 
     fig_width = max(10, 0.95 * n_dims)
     fig, ax = plt.subplots(figsize=(fig_width, 4.6))
