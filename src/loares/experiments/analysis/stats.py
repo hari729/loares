@@ -1,7 +1,7 @@
 """Friedman test and post-hoc statistical analysis of algorithm performance."""
 
 from __future__ import annotations
-
+import re
 import argparse
 from pathlib import Path
 
@@ -73,7 +73,7 @@ def build_pivot(problem_df: pd.DataFrame, metric: str) -> pd.DataFrame:
 def run(
     final_metrics_dir: str | Path,
     alpha: float = 0.05,
-    metrics: list[str] | None = None,
+    metrics: list[str] | None = None, png=False
 ) -> Path:
     """Run Friedman + Conover-Holm + A12 pipeline on final-metrics CSVs.
 
@@ -176,13 +176,47 @@ def run(
             # Average-rank diagram with non-significant cliques from Holm matrix.
             fig, ax = plt.subplots(figsize=(max(10, int(0.8 * n_algorithms)), 4))
             sp.critical_difference_diagram(avg_ranks, posthoc, ax=ax)
-            ax.grid(False)
+            
+            # Regex to match combined text/rank and inject exact precision ──
+            for text in ax.texts:
+                text_str = text.get_text()
+                
+                # Check for Left-side labels: "AlgorithmName (Rank)"
+                match_left = re.match(r"^(.*?)\s+\(.*\)$", text_str)
+                # Check for Right-side labels: "(Rank) AlgorithmName"
+                match_right = re.match(r"^\(.*\)\s+(.*)$", text_str)
+                
+                algo_name = None
+                is_right = False
+                
+                if match_right:
+                    algo_name = match_right.group(1).strip()
+                    is_right = True
+                elif match_left:
+                    algo_name = match_left.group(1).strip()
+                    
+                # If we successfully parsed an algorithm name and it exists in our ranks
+                if algo_name and algo_name in avg_ranks:
+                    true_rank = avg_ranks[algo_name]
+                    # Rewrite the label using the exact float from avg_ranks
+                    if is_right:
+                        text.set_text(f"({true_rank:.2f}) {algo_name}")
+                    else:
+                        text.set_text(f"{algo_name} ({true_rank:.2f})")
+
             ax.set_title(f"Average Ranks with Holm Cliques ({metric})")
             fig.tight_layout()
-            fig.savefig(
-                statistics_dir / f"{metric}-rank-cliques.pdf",
-                bbox_inches="tight",
-            )
+            if png:
+                fig.savefig(
+                    statistics_dir / f"{metric}-rank-cliques.png",
+                    bbox_inches="tight",
+                    dpi=600  
+                            )
+            else:
+                fig.savefig(
+                    statistics_dir / f"{metric}-rank-cliques.pdf",
+                    bbox_inches="tight",
+                )
             plt.close(fig)
 
     friedman_df = pd.DataFrame(friedman_rows)
