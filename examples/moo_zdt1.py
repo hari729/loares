@@ -17,6 +17,7 @@ from loares.algorithms.bxr.moo import MO_BMR, MO_BWR, MO_BMWR
 from loares.experiments.pymoo_runner import ExperimentRunner, AlgoFactory
 
 from loares.experiments.pymoo_process import PostProcess
+from loares.experiments.analysis.stats import run as run_statistics
 
 if __name__ == "__main__":
     runs = 5
@@ -55,4 +56,7 @@ if __name__ == "__main__":
         plot_convergence=True,
         plot_pareto=True,
     )
-    pp.run(threads=4)
+    dir = pp.run(threads=4)
+    
+    run_statistics(dir / str(ps), alpha=0.05)
+    print(f"Completed pipeline. Outputs: {dir}")
