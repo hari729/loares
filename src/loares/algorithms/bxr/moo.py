@@ -156,7 +156,7 @@ class MO_BMR_Archive(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
         archive = MultiObjectiveArchive(
             max_size=pop_size * 2,
-            truncation_size = pop_size*2,
+            truncate_size = pop_size*2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
         super().__init__("MO-BMR-Archive", BMR_ArchiveInfill, pop_size, [LocalSearchMod()],
@@ -166,7 +166,7 @@ class MO_BWR_Archive(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
         archive = MultiObjectiveArchive(
             max_size=pop_size * 2,
-            truncation_size = pop_size*2,
+            truncate_size = pop_size*2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
         super().__init__("MO-BWR-Archive", BWR_ArchiveInfill, pop_size, [LocalSearchMod()],
@@ -176,7 +176,7 @@ class MO_BMWR_Archive(MORankingCrowding):
     def __init__(self, pop_size=100, **kwargs):
         archive = MultiObjectiveArchive(
             max_size=pop_size * 2,
-            truncation_size = pop_size*2,
+            truncate_size = pop_size*2,
             truncation=SurvivalTruncation(RankAndCrowding()),
         )
         super().__init__("MO-BMWR-Archive", BMWR_ArchiveInfill, pop_size, [LocalSearchMod()],
