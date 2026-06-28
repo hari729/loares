@@ -239,6 +239,7 @@ class PostProcess:
         plot_convergence=True,
         plot_pareto=True,
         pcid=1,
+        resume=False
     ):
         self.test_dir = Path(test_dir)
         self.algo_grps = algo_grps
@@ -249,14 +250,27 @@ class PostProcess:
         self.plot_convergence = plot_convergence
         self.plot_pareto = plot_pareto
         self.pcid = pcid
+        self.resume = resume
 
         self.problem_info = self._discover_problem_info()
         self.n_obj = self.problem_info["n_obj"]
         self.minmax = np.array(self.problem_info.get("minmax", np.ones(self.n_obj)))
-
+   
         self.timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        self.result_dir = self.test_dir.parent / f"analysis-{self.timestamp}"
-        os.makedirs(self.result_dir, exist_ok=True)
+        if resume:
+        # Find latest analysis-* directory
+            existing = sorted(self.test_dir.parent.glob("analysis-*"))
+            if existing:
+                self.result_dir = existing[-1]
+                print(f"Resuming into: {self.result_dir}")
+            else:
+                # fall back to creating new
+                print(f"No existing analysis dir found, creating: {self.result_dir}")
+                self.result_dir = self.test_dir.parent / f"analysis-{self.timestamp}"
+                os.makedirs(self.result_dir, exist_ok=True)
+        else:
+            self.result_dir = self.test_dir.parent / f"analysis-{self.timestamp}"
+            os.makedirs(self.result_dir, exist_ok=True)
 
         if self.n_obj > 1:
             self.recording_interval = 0.05
@@ -392,6 +406,22 @@ class PostProcess:
         max_evals = info["Problem"]["max_evals"]
         pop_dir = self.result_dir / str(psize)
         os.makedirs(pop_dir / "parquets", exist_ok=True)
+
+# Resume: skip if already in net-results.csv
+        if self.resume:
+            net_csv = pop_dir / "net-results.csv"
+            if net_csv.exists():
+                existing = pd.read_csv(net_csv)
+                if name in existing["Algorithm"].values:
+                    print(f"  Skipping {name} (already processed)")
+                    parquet_path = pop_dir / "parquets" / f"{name}-mean-history.parquet"
+                    if parquet_path.exists():
+                        history_df = pd.read_parquet(parquet_path)
+                        config["_history"] = history_df
+                        config["_convergence"] = pd.DataFrame({
+                            "name": [f"{name} (convergence pts)"],
+                        })
+                    return
 
         print(f"  Processing {name} ({len(seed_files)} seeds)")
 
