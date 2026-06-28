@@ -418,9 +418,12 @@ class PostProcess:
                     if parquet_path.exists():
                         history_df = pd.read_parquet(parquet_path)
                         config["_history"] = history_df
-                        config["_convergence"] = pd.DataFrame({
-                            "name": [f"{name} (convergence pts)"],
-                        })
+                        # Reconstruct convergence from parquet columns (nan values are fine for plotting)
+                        metric_keys = [c for c in history_df.columns if c not in ("name", "evals")]
+                        convergence = {"name": f"{name} (convergence pts)"}
+                        for m in metric_keys:
+                            convergence[m] = [np.nan, np.nan]
+                        config["_convergence"] = pd.DataFrame(convergence)
                     return
 
         print(f"  Processing {name} ({len(seed_files)} seeds)")
