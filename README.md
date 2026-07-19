@@ -1,6 +1,6 @@
-# loares
+loares
 
-Library for Optimisation Algorithm Research
+# Library for Optimisation Algorithm Research
 
 [![PyPI](https://img.shields.io/pypi/v/loares)](https://pypi.org/project/loares/)
 
