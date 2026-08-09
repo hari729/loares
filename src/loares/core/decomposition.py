@@ -19,7 +19,7 @@ from pymoo.core.repair import NoRepair
 from pymoo.core.duplicate import NoDuplicateElimination
 from pymoo.util.optimum import filter_optimum
 from pymoo.util.nds.non_dominated_sorting import find_non_dominated
-
+from pymoo.util.normalization import normalize
 
 class NeighborhoodPoolSelection:
     """
@@ -124,6 +124,8 @@ class DecompositionAlgorithm(Algorithm):
     def _initialize_advance(self, infills=None, **kwargs):
         self.pop = infills
         self.z_ = self.pop.get("F").min(axis=0).copy()
+        self.z_nadir = self.pop.get("F").max(axis=0).copy()
+        self.nadir_norm = np.ones(self.pop.get("F").shape[1])
 
     def _infill(self):
         off = self.infill_criterion.do(
@@ -140,6 +142,8 @@ class DecompositionAlgorithm(Algorithm):
         F_off = infills.get("F")
 
         self.z_ = np.minimum(self.z_, F_off.min(axis=0))
+        self.z_nadir = np.maximum(self.z_nadir, F_off.max(axis=0))
+        # self.z_nadir = F_off.max(axis=0)
 
         F_pop = self.pop.get("F").copy()
 
@@ -162,6 +166,14 @@ class DecompositionAlgorithm(Algorithm):
             d1 = np.dot(diff, lam_norm)
             d2 = np.linalg.norm(diff - d1 * lam_norm)
             return d1 + self.pbi_theta * d2
+        elif self.scalarization == "i-pbi":
+            # f_norm = normalize(f, self.z_, self.z_nadir)
+            # diff = self.nadir_norm - f_norm
+            diff = self.z_nadir - f
+            lam_norm = lam / np.linalg.norm(lam)
+            d1 = np.dot(diff, lam_norm)
+            d2 = np.linalg.norm(diff - d1 * lam_norm)
+            return -d1 + self.pbi_theta * d2
 
     def _set_optimum(self):
         F = self.pop.get("F")
