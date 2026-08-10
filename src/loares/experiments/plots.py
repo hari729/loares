@@ -7,18 +7,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import re
+from matplotlib.backends.backend_pdf import PdfPages
 
 colors = sns.color_palette("tab10", 10)
 
 
 def multi_line_plot(
     data,
-    filepath,
-    filename=None,
+    pdf,
     legend_fontsize=8,
     label_fontsize=None,
     tick_fontsize=None,
 ):
+    fig = plt.figure()
     for iy, (xdata, ydata) in enumerate(zip(data["xdata"], data["ydata"])):
         plt.plot(xdata, ydata, linestyle="-", marker="", color=colors[iy])
     if "vline" in data:
@@ -36,9 +37,7 @@ def multi_line_plot(
     if tick_fontsize is not None:
         plt.tick_params(labelsize=tick_fontsize)
     plt.tight_layout()
-    if filename is None:
-        filename = f"{data['ylabel']}-vs-{data['xlabel']}".replace(" ", "-")
-    plt.savefig(f"{filepath}/{filename}.pdf", bbox_inches="tight")
+    pdf.savefig(fig, bbox_inches="tight")
     plt.close()
 
 
@@ -129,9 +128,8 @@ def plot_3d(pareto_dict, filepath, cid=0, mid=0):
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
-def parallel_coordinates_plot(
-    data, filepath, alpha=1, axis_mins=None, axis_maxs=None
-):
+
+def parallel_coordinates_plot(data, filepath, alpha=1, axis_mins=None, axis_maxs=None):
     keys = sorted(
         [k for k in data.keys() if re.fullmatch(r"f\d+", k)], key=lambda x: int(x[1:])
     )
