@@ -208,4 +208,6 @@ __marimo__/
 /examples/zdt1-example-r5-p100
 /sandbox
 /examples/raw_data
-/ZDT1
+/examples/ZDT1
+/examples/statistical-test-1/
+/examples/*.csv
