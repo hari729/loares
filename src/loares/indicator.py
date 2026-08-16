@@ -1,8 +1,6 @@
 from loares.utils import (
     get_spec_path,
     get_spec_info,
-    read_final_state,
-    stream_snapshots,
 )
 from loares.plots import multi_line_plot
 
@@ -80,28 +78,37 @@ def indicator_multi_run(indicator_specs, algorithm_specs, output_dir, n_jobs=4):
     compile_metrics(output_dir, flat)
 
 
-def calculate_indicator_history(config):
-    """Compute indicator values at every recorded snapshot (not just the
-    final state), for one algorithm_spec. Mirrors calculate_indicator but
-    streams the full evaluation history."""
-    indicator_specs, algorithm_spec, source = config
-    spec_path = get_spec_path(algorithm_spec).with_suffix(".h5")
+def calculate_indicator_history(config, input_dir):
+    """Compute indicator values at every recorded snapshot for one run."""
+    indicator_specs, algorithm_spec = config
+    result = unzip_result(
+        Path(input_dir) / get_spec_path(algorithm_spec) / "result.pkl.gz"
+    )
     spec_dict = get_spec_info(algorithm_spec)
     calculated = []
-    for evals, grp in stream_snapshots(spec_path):
-        if source not in grp:
-            continue
-        F = grp[source]["F"][:]
+    for state in result.history:
         for i_spec in indicator_specs:
             calculated.append(
                 {
                     **spec_dict,
-                    "source": source,
+                    "source": "opt",
                     "indicator_name": i_spec["indicator_name"],
-                    "evals": evals,
-                    "indicator_value": i_spec["indicator"](F),
+                    "evals": state.evaluator.n_eval,
+                    "indicator_value": i_spec["indicator"](state.opt.get("F")),
                 }
             )
+            if state.archive is not None and len(state.archive) > 0:
+                calculated.append(
+                    {
+                        **spec_dict,
+                        "source": "archive",
+                        "indicator_name": i_spec["indicator_name"],
+                        "evals": state.evaluator.n_eval,
+                        "indicator_value": i_spec["indicator"](
+                            state.archive.get("F")
+                        ),
+                    }
+                )
     return calculated
 
 
@@ -128,18 +135,19 @@ def compile_history(dir_path, new_rows, history_key_cols=history_key_cols):
 def indicator_history_multi_run(
     indicator_specs,
     algorithm_specs,
+    input_dir,
     output_dir,
-    n_threads=4,
-    source="optimum",
+    n_jobs=4,
 ):
     """Same spec-driven shape as indicator_multi_run, but computes and
     stores the indicator value at every eval snapshot rather than only
     the final one. Written to history.parquet (columnar/typed and far
     smaller than a CSV at this row count -- one row per eval snapshot
     per indicator per seed)."""
-    args = [(indicator_specs, a, source) for a in algorithm_specs]
-    with Pool(processes=n_threads) as pool:
-        output = pool.map(calculate_indicator_history, args)
+    args = [(indicator_specs, a) for a in algorithm_specs]
+    output = Parallel(n_jobs=n_jobs)(
+        delayed(calculate_indicator_history)(arg, input_dir) for arg in args
+    )
     flat = [item for sublist in output for item in sublist]
     compile_history(Path(output_dir), flat)
 

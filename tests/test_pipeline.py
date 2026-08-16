@@ -1,7 +1,6 @@
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -17,7 +16,7 @@ from pymoo.core.population import Population as PymooPopulation
 from pymoo.core.problem import Problem as PymooProblem
 
 from loares.run import parallel_run, pending_specs
-from loares.utils import get_spec_path, get_spec_info, read_final_state
+from loares.utils import get_spec_path, get_spec_info, unzip_result
 from loares.indicator import (
     calculate_indicator,
     indicator_multi_run,
@@ -82,7 +81,7 @@ class TestSpecPaths:
     def test_get_spec_path_layout(self, tmp_dir):
         spec = make_spec(tmp_dir, "NSGA-II", NSGA2(pop_size=10), seed=1, max_evals=60)
         path = get_spec_path(spec)
-        assert path == tmp_dir / "ZDT1" / "n_eval-60" / "NSGA-II" / "10" / "seed_001"
+        assert path == Path("ZDT1/n_eval-60/NSGA-II/10/seed_001")
 
     def test_get_spec_info_fields(self, tmp_dir):
         spec = make_spec(tmp_dir, "NSGA-II", NSGA2(pop_size=10), seed=3, max_evals=60)
@@ -110,52 +109,38 @@ def run_env(tmp_path_factory):
         pop_size=10,
         problem=ZDT1(),
     )
-    parallel_run([spec], n_threads=1)
+    spec["solver_kwargs"]["save_history"] = True
+    parallel_run([spec], out, n_jobs=1)
     return out, spec
 
 
 class TestRun:
-    def test_parallel_run_produces_hdf5_and_csv(self, run_env):
+    def test_parallel_run_produces_result(self, run_env):
         out, spec = run_env
-        h5_path = get_spec_path(spec).with_suffix(".h5")
-        assert h5_path.exists()
-        assert Path(f"{get_spec_path(spec)}_opt.csv").exists()
-        assert h5_path.stat().st_size > 0
+        result_path = out / get_spec_path(spec) / "result.pkl.gz"
+        assert result_path.exists()
+        assert result_path.stat().st_size > 0
 
-    def test_hdf5_contains_snapshots_and_metadata(self, run_env):
+    def test_result_contains_history(self, run_env):
         out, spec = run_env
-        h5_path = get_spec_path(spec).with_suffix(".h5")
-        import h5py
-
-        with h5py.File(h5_path, "r") as f:
-            assert "metadata" in f
-            meta = f["metadata"]
-            import json
-
-            spec_info = json.loads(meta.attrs["spec_info"])
-            assert spec_info["algorithm_name"] == "NSGA-II"
-
-            fe = f["function_evals"]
-            keys = sorted(fe.keys(), key=lambda k: int(k))
-            assert len(keys) >= 2
-            last = fe[keys[-1]]
-            assert "optimum" in last
-            assert last["optimum"]["F"].shape[1] == 2
-            assert last["optimum"]["X"].shape[1] == 30
+        result = unzip_result(out / get_spec_path(spec) / "result.pkl.gz")
+        assert len(result.history) >= 2
+        last = result.history[-1]
+        assert last.opt.get("F").shape[1] == 2
+        assert last.opt.get("X").shape[1] == 30
 
     def test_final_state_readable(self, run_env):
         out, spec = run_env
-        final = read_final_state(get_spec_path(spec).with_suffix(".h5"))
-        assert "optimum" in final
-        assert final["optimum"]["F"].shape[1] == 2
+        result = unzip_result(out / get_spec_path(spec) / "result.pkl.gz")
+        assert result.F.shape[1] == 2
 
     def test_overwrite_false_skips_existing(self, run_env):
         out, spec = run_env
-        assert pending_specs([spec], overwrite=False) == []
+        assert pending_specs([spec], out, overwrite=False) == []
 
     def test_overwrite_true_reruns(self, run_env):
         out, spec = run_env
-        assert pending_specs([spec], overwrite=True) == [spec]
+        assert pending_specs([spec], out, overwrite=True) == [spec]
 
     def test_pending_specs_filters_only_missing(self, tmp_dir):
         existing = make_spec(
@@ -164,9 +149,10 @@ class TestRun:
         missing = make_spec(
             tmp_dir, "MO-BMR", MO_BMR(pop_size=10), problem=ZDT1()
         )
-        get_spec_path(existing).with_suffix(".h5").parent.mkdir(parents=True)
-        get_spec_path(existing).with_suffix(".h5").touch()
-        assert pending_specs([existing, missing], overwrite=False) == [missing]
+        result_path = tmp_dir / get_spec_path(existing) / "result.pkl.gz"
+        result_path.parent.mkdir(parents=True)
+        result_path.touch()
+        assert pending_specs([existing, missing], tmp_dir, overwrite=False) == [missing]
 
 
 # ── Indicators ───────────────────────────────────────────────────────────────
@@ -183,7 +169,7 @@ def indicator_specs():
 class TestIndicators:
     def test_calculate_indicator_uses_indicator_value(self, run_env):
         out, spec = run_env
-        rows = calculate_indicator((indicator_specs(), spec, "optimum"))
+        rows = calculate_indicator((indicator_specs(), spec), out)
         assert len(rows) == 2
         for row in rows:
             assert "indicator_value" in row
@@ -191,8 +177,8 @@ class TestIndicators:
 
     def test_metrics_csv_has_indicator_value_not_value(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_multi_run(indicator_specs(), [spec], tmp_dir, n_threads=1)
-        df = pd.read_csv(tmp_dir / "metrics.csv")
+        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
+        df = pd.read_csv(out / "metrics.csv")
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
         assert "indicator_name" in df.columns
@@ -200,14 +186,14 @@ class TestIndicators:
 
     def test_metrics_dedup_skips_existing_rows(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_multi_run(indicator_specs(), [spec], tmp_dir, n_threads=1)
-        indicator_multi_run(indicator_specs(), [spec], tmp_dir, n_threads=1)
-        df = pd.read_csv(tmp_dir / "metrics.csv")
+        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
+        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
+        df = pd.read_csv(out / "metrics.csv")
         assert len(df) == 2
 
     def test_calculate_indicator_history_uses_indicator_value(self, run_env):
         out, spec = run_env
-        rows = calculate_indicator_history((indicator_specs(), spec, "optimum"))
+        rows = calculate_indicator_history((indicator_specs(), spec), out)
         assert rows
         for row in rows:
             assert "indicator_value" in row
@@ -216,7 +202,7 @@ class TestIndicators:
 
     def test_history_parquet_has_indicator_value(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_history_multi_run(indicator_specs(), [spec], tmp_dir, n_threads=1)
+        indicator_history_multi_run(indicator_specs(), [spec], out, tmp_dir, n_jobs=1)
         df = pd.read_parquet(tmp_dir / "history.parquet")
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
@@ -224,7 +210,7 @@ class TestIndicators:
 
     def test_mean_history_list_columns_and_plot_lookup(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_history_multi_run(indicator_specs(), [spec], tmp_dir, n_threads=1)
+        indicator_history_multi_run(indicator_specs(), [spec], out, tmp_dir, n_jobs=1)
         mean_history_multi_run(tmp_dir / "history.parquet", tmp_dir)
 
         mean_df = pd.read_parquet(tmp_dir / "mean_history.parquet")
@@ -237,7 +223,7 @@ class TestIndicators:
         assert isinstance(curve, (list, np.ndarray))
         assert len(curve) >= 2
 
-        filt = {"indicator_name": "HV", "source": "optimum"}
+        filt = {"indicator_name": "HV", "source": "opt"}
         data = build_convergence_lines(mean_df, {"filter": filt})
         assert len(data["xdata"]) == 1
         assert data["legend"] == ["NSGA-II"]
@@ -260,7 +246,7 @@ class TestIndicators:
                     {
                         "algorithm_name": "A",
                         "indicator_name": "HV",
-                        "source": "optimum",
+                        "source": "opt",
                         "seed": seed,
                         "evals": ev,
                         "indicator_value": 0.5 + 0.01 * ev + seed,
@@ -290,7 +276,7 @@ def synthetic_metrics(tmp_dir, n_seeds=5, rng_seed=0):
                     "termination_metric": "n_eval",
                     "termination_value": 25000,
                     "output_dir": str(tmp_dir),
-                    "source": "optimum",
+                    "source": "opt",
                     "indicator_name": "HV",
                     "indicator_value": base + rng.uniform(-0.01, 0.01),
                 }
@@ -305,7 +291,7 @@ def hv_stat_spec():
             "pop_size": 100,
             "termination_metric": "n_eval",
             "termination_value": 25000,
-            "source": "optimum",
+            "source": "opt",
         },
         "pivot": {
             "index": "seed",
@@ -481,10 +467,9 @@ class TestAlgorithmVariants:
             problem=ZDT1(),
             problem_name="ZDT1",
         )
-        with patch("loares.utils.save_scatter_plots", new=MagicMock()):
-            parallel_run([spec], n_threads=1)
-        final = read_final_state(get_spec_path(spec).with_suffix(".h5"))
-        assert final["optimum"]["F"].shape[1] == 2
+        parallel_run([spec], tmp_dir, n_jobs=1)
+        result = unzip_result(tmp_dir / get_spec_path(spec) / "result.pkl.gz")
+        assert result.F.shape[1] == 2
 
     @pytest.mark.parametrize("name,algo_cls", SO_VARIANTS)
     def test_so_variant_runs(self, tmp_dir, name, algo_cls):
@@ -495,10 +480,9 @@ class TestAlgorithmVariants:
             problem=Sphere(n_var=5),
             problem_name="Sphere",
         )
-        with patch("loares.utils.save_scatter_plots", new=MagicMock()):
-            parallel_run([spec], n_threads=1)
-        final = read_final_state(get_spec_path(spec).with_suffix(".h5"))
-        assert final["optimum"]["F"].shape[1] == 1
+        parallel_run([spec], tmp_dir, n_jobs=1)
+        result = unzip_result(tmp_dir / get_spec_path(spec) / "result.pkl.gz")
+        assert np.asarray(result.F).size == 1
 
 
 # ── Reference front generation (NDS + FPS) ──────────────────────────────────

@@ -34,7 +34,6 @@ if __name__ == "__main__":
         "algorithm_kwargs": {"pop_size": ps},
         "problem_name": "ZDT1",
         "problem": problem,
-        "output_dir": Path(inspect.stack()[0].filename).resolve().parent,
         "plot_kwargs": {},
     }
 
@@ -53,7 +52,12 @@ if __name__ == "__main__":
         for algo in algos
     ]
 
-    parallel_run(algo_specs, n_threads=5)
+    output_dir = Path(inspect.stack()[0].filename).resolve().parent
+    parallel_run(
+        algo_specs,
+        output_dir,
+        n_jobs=5,
+    )
 
     print("\nCompleted ZDT1 MOO experiment")
 
@@ -97,28 +101,7 @@ if __name__ == "__main__":
 
     from loares.indicator import indicator_history_multi_run, plot_convergence
 
-    output_dir = Path(inspect.stack()[0].filename).resolve().parent
-
-    indicator_history_multi_run(indicator_specs, algo_specs, output_dir, n_threads=5)
+    indicator_history_multi_run(
+        indicator_specs, algo_specs, output_dir, output_dir, n_jobs=5
+    )
     mean_history_multi_run(output_dir / "history.parquet", output_dir)
-
-    plot_specs = [
-        {
-            "filter": {  # no algorithm_name here — the group lists supply it
-                "indicator_name": "HV",
-                "problem_name": "ZDT1",
-                "pop_size": 100,
-                "termination_metric": "n_eval",
-                "termination_value": 25000,
-                "source": "optimum",
-            },
-            "xlabel": "Function Evaluations",
-            "ylabel": "Hypervolume",
-            "algo_grps": {
-                "BMR": ["MO-BMR"],
-                "BWR": ["MO-BWR"],
-                "common": ["NSGA-II"],
-            },
-        },
-    ]
-    plot_convergence(plot_specs, output_dir / "mean_history.parquet", output_dir)
