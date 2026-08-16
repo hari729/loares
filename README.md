@@ -102,6 +102,18 @@ statistical_test_1(stat_specs, output_dir / "metrics.csv", output_dir)
 
 Results are written under `statistical-test-1/`, including Friedman results, average ranks, and Vargha-Delaney A12 matrices.
 
+### Reading the heatmaps
+
+Both the A12 and Conover-Holm heatmaps are annotated with the value in each cell and mark
+statistically significant comparisons (p < alpha) with a `*` next to the value.
+
+The A12 heatmap additionally encodes the *direction* of each comparison. A12 > 0.5 always
+means the row algorithm is better (the direction is normalised per indicator, e.g. lower
+is better for `GD`/`IGD`/`Spacing`, higher is better for `HV`), and this is shown in two
+ways: the cell is coloured red (blue when the column algorithm is better, white for a tie
+at 0.5) and a marker is drawn to the right of the value — `^` when the row wins, `v` when
+the column wins.
+
 ## Algorithms
 
 Preconfigured multi-objective BxR variants are available from `loares.algorithms.bxr.moo`:

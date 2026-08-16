@@ -23,11 +23,15 @@ def save_scatter_plots(F, spec, path):
 
 
 class AnnotatedHeatmap(Heatmap):
-    """pymoo Heatmap with the cell value drawn inside each cell."""
+    """pymoo Heatmap with the cell value drawn inside each cell, plus
+    optional direction glyphs (▲/▼ around the midpoint) and significance
+    markers (*)."""
 
-    def __init__(self, fmt=".3f", **kwargs):
+    def __init__(self, fmt=".3f", significance=None, glyph=False, **kwargs):
         super().__init__(**kwargs)
         self.fmt = fmt
+        self.significance = significance
+        self.glyph = glyph
 
     def _do(self):
         super()._do()
@@ -46,25 +50,79 @@ class AnnotatedHeatmap(Heatmap):
                 v = (F[i, j] - lo[j]) / (hi[j] - lo[j])
                 if self.reverse:
                     v = 1.0 - v
-                self.ax.text(
+                significant = bool(
+                    self.significance is not None and self.significance[i, j]
+                )
+                text = f"{F[i, j]:{self.fmt}}"
+                if significant:
+                    text += "*"
+                rgba = self.cmap(v)
+                luminance = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
+                text_color = "white" if luminance < 0.5 else "black"
+                value_text = self.ax.text(
                     j,
                     i,
-                    f"{F[i, j]:{self.fmt}}",
+                    text,
                     ha="center",
                     va="center",
-                    color="white" if v < 0.5 else "black",
+                    color=text_color,
+                    fontweight="bold" if significant else "normal",
                 )
+                if self.glyph:
+                    mid = (lo[j] + hi[j]) / 2
+                    marker = None
+                    if F[i, j] > mid:
+                        marker = "^"
+                    elif F[i, j] < mid:
+                        marker = "v"
+                    if marker is not None:
+                        # Drawn as a geometric marker (not a text glyph) so it
+                        # sits exactly on the value's vertical center, placed
+                        # just right of the measured text extent.
+                        self.fig.canvas.draw()
+                        renderer = self.fig.canvas.get_renderer()
+                        bbox = value_text.get_window_extent(renderer=renderer)
+                        inv = self.ax.transData.inverted()
+                        right = inv.transform((bbox.x1 + 3, bbox.y0))[0]
+                        self.ax.scatter(
+                            right,
+                            i,
+                            marker=marker,
+                            s=28,
+                            color=text_color,
+                            linewidths=0,
+                        )
 
 
-def save_heatmap(F, x_labels, y_labels, path, annotate=False, fmt=".3f"):
+def save_heatmap(
+    F,
+    x_labels,
+    y_labels,
+    path,
+    annotate=False,
+    fmt=".3f",
+    significance=None,
+    glyph=False,
+    cmap="Oranges_r",
+    reverse=True,
+    title="Optimization",
+):
     plot_cls = AnnotatedHeatmap if annotate else Heatmap
+    kwargs = {}
+    if annotate:
+        kwargs = {
+            "fmt": fmt,
+            "significance": significance,
+            "glyph": glyph,
+        }
     plot = plot_cls(
         bounds=[0, 1],
-        title=("Optimization", {"pad": 15}),
-        cmap="Oranges_r",
+        title=title,
+        cmap=cmap,
+        reverse=reverse,
         solution_labels=y_labels,
         labels=x_labels,
-        **({"fmt": fmt} if annotate else {}),
+        **kwargs,
     )
     plot.add(F)
     plot.save(path)

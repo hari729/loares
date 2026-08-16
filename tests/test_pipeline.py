@@ -334,6 +334,55 @@ class TestStatistics:
         assert out.exists()
         assert out.stat().st_size > 1000
 
+    def test_annotated_heatmap_glyph_significance(self):
+        from loares.plots import AnnotatedHeatmap
+
+        matrix = np.array([[0.5, 0.82], [0.18, 0.5]])
+        sig = np.array([[False, True], [False, False]])
+        hm = AnnotatedHeatmap(
+            bounds=[0, 1],
+            cmap="RdBu_r",
+            reverse=False,
+            solution_labels=["A", "B"],
+            labels=["A", "B"],
+            fmt=".3f",
+            significance=sig,
+            glyph=True,
+        )
+        hm.add(matrix)
+        hm.do()
+
+        artists = {t.get_position(): t for t in hm.ax.texts}
+        assert artists[(1, 0)].get_text() == "0.820*"  # >0.5: row wins, significant
+        assert artists[(0, 1)].get_text() == "0.180"  # <0.5: column wins
+        assert artists[(0, 0)].get_text() == "0.500"  # tie: no marker, no asterisk
+        renderer = hm.fig.canvas.get_renderer()
+        inv = hm.ax.transData.inverted()
+        rows = {}
+        for (x, y), artist in artists.items():
+            bbox = artist.get_window_extent(renderer=renderer)
+            right = inv.transform((bbox.x1, bbox.y0))[0]
+            rows.setdefault(y, []).append((x, right))
+        markers = [tuple(o) for c in hm.ax.collections for o in c.get_offsets()]
+        assert len(markers) == 2  # only the two non-tie cells
+        for mx, my in markers:
+            center, right = min(rows[my], key=lambda c: abs(c[0] - mx))
+            assert right < mx < right + 0.5  # marker just right of its text
+
+    def test_annotated_heatmap_no_markers_by_default(self):
+        from loares.plots import AnnotatedHeatmap
+
+        matrix = np.array([[0.5, 0.82], [0.18, 0.5]])
+        hm = AnnotatedHeatmap(
+            bounds=[0, 1],
+            solution_labels=["A", "B"],
+            labels=["A", "B"],
+        )
+        hm.add(matrix)
+        hm.do()
+        texts = {t.get_position(): t.get_text() for t in hm.ax.texts}
+        assert texts[(1, 0)] == "0.820"
+
     def test_vargha_delaney_a12(self):
         x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         y = np.array([6.0, 7.0, 8.0, 9.0, 10.0])

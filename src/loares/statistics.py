@@ -15,7 +15,6 @@ def build_pivot(df, stat_specs):
     pivot = filtered.pivot(**stat_specs["pivot"])
     # Friedman requires complete blocks (same seeds across all algorithms).
     pivot = pivot.dropna(axis=0, how="any")
-    print(pivot)
     return pivot
 
 
@@ -71,7 +70,7 @@ def friedman_connover_holm(pivot, alpha=0.05):
     return result, posthoc
 
 
-def statistical_test_1(stat_specs, input_csv, output_dir):
+def statistical_test_1(stat_specs, input_csv, output_dir, alpha=0.05):
     df = pd.read_csv(input_csv)
     statistics_dir = Path(output_dir) / "statistical-test-1"
     statistics_dir.mkdir(parents=True, exist_ok=True)
@@ -81,7 +80,14 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
         indicator_name = spec["filter"]["indicator_name"]
         ascending = indicator_name != "HV"
 
-        # Descriptive effect size matrix.
+        significance, posthoc = friedman_connover_holm(pivot, alpha=alpha)
+        sig_matrix = None
+        if posthoc is not None:
+            sig_matrix = posthoc.to_numpy(dtype=float) < alpha
+
+        # Descriptive effect size matrix. a12 > 0.5 always means the row
+        # algorithm is better (compute_a12_matrix flips per indicator), so
+        # the diverging colormap and glyphs both encode comparison direction.
         a12_matrix = compute_a12_matrix(pivot, ascending=ascending)
         a12_matrix.to_csv(
             statistics_dir / f"{indicator_name}-a12.csv",
@@ -95,6 +101,11 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
             algorithms,
             statistics_dir / f"{indicator_name}-a12.pdf",
             annotate=True,
+            cmap="RdBu_r",
+            reverse=False,
+            significance=sig_matrix,
+            glyph=True,
+            title=f"{indicator_name} A12",
         )
         # Save average ranks for transparency regardless of significance.
         average_ranks = (
@@ -108,7 +119,6 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
             float_format="%.6f",
         )
 
-        significance, posthoc = friedman_connover_holm(pivot)
         significance["indicator_name"] = indicator_name
         friedman_rows.append(significance)
 
@@ -125,6 +135,9 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
                 statistics_dir / f"{indicator_name}-conover-holm.pdf",
                 annotate=True,
                 fmt=".4f",
+                cmap="Oranges",
+                significance=sig_matrix,
+                title=f"{indicator_name} Conover-Holm",
             )
     friedman_df = pd.DataFrame(friedman_rows)
     friedman_df.to_csv(
