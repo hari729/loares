@@ -64,7 +64,7 @@ def friedman_connover_holm(pivot, alpha=0.05):
         result["P-value"] = p_value
 
         posthoc = None
-        if p_value < alpha:
+        if not (p_value < alpha):
             # Recommended post-hoc for Friedman blocked design.
             posthoc = sp.posthoc_conover_friedman(pivot, p_adjust="holm")
 
