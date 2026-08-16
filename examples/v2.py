@@ -20,7 +20,7 @@ from pymoo.indicators.spacing import SpacingIndicator
 
 from loares.algorithms.bxr.moo import MO_BMR, MO_BWR, MO_BMWR
 from loares.run import parallel_run
-from loares.indicator import indicator_multi_run
+from loares.indicator import indicator_multi_run, mean_history_multi_run
 from loares.statistics import statistical_test_1
 
 if __name__ == "__main__":
@@ -90,3 +90,31 @@ if __name__ == "__main__":
         Path(inspect.stack()[0].filename).resolve().parent / "metrics.csv",
         Path(inspect.stack()[0].filename).resolve().parent,
     )
+
+    from loares.indicator import indicator_history_multi_run, plot_convergence
+
+    output_dir = Path(inspect.stack()[0].filename).resolve().parent
+
+    indicator_history_multi_run(indicator_specs, algo_specs, output_dir, n_threads=5)
+    mean_history_multi_run(output_dir / "history.parquet", output_dir)
+
+    plot_specs = [
+        {
+            "filter": {  # no algorithm_name here — the group lists supply it
+                "indicator_name": "HV",
+                "problem_name": "ZDT1",
+                "pop_size": 100,
+                "termination_metric": "n_eval",
+                "termination_value": 25000,
+                "source": "optimum",
+            },
+            "xlabel": "Function Evaluations",
+            "ylabel": "Hypervolume",
+            "algo_grps": {
+                "BMR": ["MO-BMR"],
+                "BWR": ["MO-BWR"],
+                "common": ["NSGA-II"],
+            },
+        },
+    ]
+    plot_convergence(plot_specs, output_dir / "mean_history.parquet", output_dir)

@@ -7,8 +7,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
-import re
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -40,7 +38,8 @@ colors = sns.color_palette("tab10", 10)
 
 def multi_line_plot(
     data,
-    pdf,
+    pdf=None,
+    path=None,
     legend_fontsize=8,
     label_fontsize=None,
     tick_fontsize=None,
@@ -63,5 +62,10 @@ def multi_line_plot(
     if tick_fontsize is not None:
         plt.tick_params(labelsize=tick_fontsize)
     plt.tight_layout()
-    pdf.savefig(fig, bbox_inches="tight")
+    if pdf is not None:
+        pdf.savefig(fig, bbox_inches="tight")
+    else:
+        if path is None:
+            filename = f"{data['ylabel']}-vs-{data['xlabel']}.pdf".replace(" ", "-")
+            plt.savefig(filename, bbox_inches="tight")
     plt.close()
