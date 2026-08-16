@@ -16,12 +16,11 @@ def unzip_result(path):
 
 def get_spec_path(spec):
     return Path(
-        Path(spec["output_dir"])
-        / spec["problem_name"]
-        / f"{spec['solver_kwargs']['termination'][0]}-{spec['solver_kwargs']['termination'][1]}"
-        / spec["algorithm_name"]
-        / f"{spec['algorithm'].pop_size}"
-        / f"seed_{int(spec['solver_kwargs']['seed']):03d}"
+        spec["problem_name"]
+        + f"/{spec['solver_kwargs']['termination'][0]}-{spec['solver_kwargs']['termination'][1]}/"
+        + spec["algorithm_name"]
+        + f"/{spec['algorithm'].pop_size}"
+        + f"/seed_{int(spec['solver_kwargs']['seed']):03d}"
     )
 
 
@@ -48,7 +47,6 @@ def get_spec_info(spec):
         "seed": spec["solver_kwargs"]["seed"],
         "termination_metric": spec["solver_kwargs"]["termination"][0],
         "termination_value": spec["solver_kwargs"]["termination"][1],
-        "output_dir": str(spec["output_dir"]),
     }
 
 

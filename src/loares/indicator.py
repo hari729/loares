@@ -6,7 +6,7 @@ from loares.utils import (
 )
 from loares.plots import multi_line_plot
 
-from multiprocessing import Pool
+from joblib import Parallel, delayed
 import pandas as pd
 from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
@@ -15,20 +15,31 @@ import numpy as np
 from loares.utils import unzip_result
 
 
-def calculate_indicator(config):
-    indicator_specs, algorithm_spec, source = config
-    result = unzip_result(get_spec_path(algorithm_spec) / "result.pkl.gz")
+def calculate_indicator(config, input_dir):
+    indicator_specs, algorithm_spec = config
+    result = unzip_result(
+        Path(input_dir) / get_spec_path(algorithm_spec) / "result.pkl.gz"
+    )
     spec_dict = get_spec_info(algorithm_spec)
     calculated = []
     for i_spec in indicator_specs:
         calculated.append(
             {
                 **spec_dict,
-                "source": source,
+                "source": "opt",
                 "indicator_name": i_spec["indicator_name"],
                 "indicator_value": i_spec["indicator"](result.F),
             }
         )
+        if result.archive is not None and len(result.archive) > 0:
+            calculated.append(
+                {
+                    **spec_dict,
+                    "source": "archive",
+                    "indicator_name": i_spec["indicator_name"],
+                    "indicator_value": i_spec["indicator"](result.archive.get("F")),
+                }
+            )
     return calculated
 
 
@@ -60,16 +71,11 @@ def compile_metrics(dir_path, new_rows, spec_key_cols=spec_key_cols):
     df.to_csv(existing_path, index=False)
 
 
-def indicator_multi_run(
-    indicator_specs,
-    algorithm_specs,
-    output_dir,
-    n_threads=4,
-    source="optimum",
-):
-    args = [(indicator_specs, a, source) for a in algorithm_specs]
-    with Pool(processes=n_threads) as pool:
-        output = pool.map(calculate_indicator, args)
+def indicator_multi_run(indicator_specs, algorithm_specs, output_dir, n_jobs=4):
+    args = [(indicator_specs, a) for a in algorithm_specs]
+    output = Parallel(n_jobs=n_jobs)(
+        delayed(calculate_indicator)(arg, output_dir) for arg in args
+    )
     flat = [item for sublist in output for item in sublist]
     compile_metrics(output_dir, flat)
 
