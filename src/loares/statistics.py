@@ -94,6 +94,7 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
             algorithms,
             algorithms,
             statistics_dir / f"{indicator_name}-a12.pdf",
+            annotate=True,
         )
         # Save average ranks for transparency regardless of significance.
         average_ranks = (
@@ -122,6 +123,8 @@ def statistical_test_1(stat_specs, input_csv, output_dir):
                 algorithms,
                 algorithms,
                 statistics_dir / f"{indicator_name}-conover-holm.pdf",
+                annotate=True,
+                fmt=".4f",
             )
     friedman_df = pd.DataFrame(friedman_rows)
     friedman_df.to_csv(

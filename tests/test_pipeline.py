@@ -316,6 +316,24 @@ def hv_stat_spec():
 
 
 class TestStatistics:
+    def test_save_heatmap_annotated(self, tmp_dir):
+        from loares.plots import save_heatmap
+
+        matrix = np.array([[0.5, 0.8], [0.2, 0.5]])
+        out = tmp_dir / "hm.pdf"
+        save_heatmap(matrix, ["A", "B"], ["A", "B"], out, annotate=True)
+        assert out.exists()
+        assert out.stat().st_size > 1000
+
+    def test_save_heatmap_annotated_p_values(self, tmp_dir):
+        from loares.plots import save_heatmap
+
+        matrix = np.array([[1.0, 0.0012], [0.0012, 1.0]])
+        out = tmp_dir / "pv.pdf"
+        save_heatmap(matrix, ["A", "B"], ["A", "B"], out, annotate=True, fmt=".4f")
+        assert out.exists()
+        assert out.stat().st_size > 1000
+
     def test_vargha_delaney_a12(self):
         x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         y = np.array([6.0, 7.0, 8.0, 9.0, 10.0])

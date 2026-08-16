@@ -2,6 +2,7 @@ from pymoo.visualization.scatter import Scatter
 from pymoo.visualization.heatmap import Heatmap
 from pymoo.visualization.pcp import PCP
 
+import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
@@ -21,7 +22,10 @@ def save_scatter_plots(F, spec, path):
         plot.save(path)
 
 
-def save_heatmap(F, x_labels, y_labels, path):
+def save_heatmap(F, x_labels, y_labels, path, annotate=False, fmt=".3f"):
+    if annotate:
+        _save_annotated_heatmap(F, x_labels, y_labels, path, fmt)
+        return
     plot = Heatmap(
         bounds=[0, 1],
         title=("Optimization", {"pad": 15}),
@@ -31,6 +35,32 @@ def save_heatmap(F, x_labels, y_labels, path):
     )
     plot.add(F)
     plot.save(path)
+
+
+def _save_annotated_heatmap(F, x_labels, y_labels, path, fmt):
+    """Annotated seaborn heatmap, normalized to [0, 1] like the pymoo
+    Heatmap used in the non-annotated path (suitable for both A12 effect
+    sizes and p-values)."""
+    F = np.asarray(F, dtype=float)
+    n_x, n_y = len(x_labels), len(y_labels)
+    fig, ax = plt.subplots(
+        figsize=(max(3.0, 0.6 * n_x), max(3.0, 0.6 * n_y))
+    )
+    sns.heatmap(
+        F,
+        xticklabels=list(x_labels),
+        yticklabels=list(y_labels),
+        annot=True,
+        fmt=fmt,
+        cmap="Oranges_r",
+        vmin=0.0,
+        vmax=1.0,
+        ax=ax,
+    )
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+    fig.savefig(path, bbox_inches="tight")
+    plt.close(fig)
 
 
 colors = sns.color_palette("tab10", 10)
