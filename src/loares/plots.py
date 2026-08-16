@@ -22,45 +22,52 @@ def save_scatter_plots(F, spec, path):
         plot.save(path)
 
 
+class AnnotatedHeatmap(Heatmap):
+    """pymoo Heatmap with the cell value drawn inside each cell."""
+
+    def __init__(self, fmt=".3f", **kwargs):
+        super().__init__(**kwargs)
+        self.fmt = fmt
+
+    def _do(self):
+        super()._do()
+        F = np.asarray(self.to_plot[0][0], dtype=float)
+        if self.bounds is None:
+            lo, hi = F.min(axis=0), F.max(axis=0)
+        else:
+            bounds = np.asarray(self.bounds, dtype=float)
+            lo, hi = bounds[0], bounds[1]
+        if np.ndim(lo) == 0:
+            lo = np.full(F.shape[1], lo)
+        if np.ndim(hi) == 0:
+            hi = np.full(F.shape[1], hi)
+        for i in range(F.shape[0]):
+            for j in range(F.shape[1]):
+                v = (F[i, j] - lo[j]) / (hi[j] - lo[j])
+                if self.reverse:
+                    v = 1.0 - v
+                self.ax.text(
+                    j,
+                    i,
+                    f"{F[i, j]:{self.fmt}}",
+                    ha="center",
+                    va="center",
+                    color="white" if v < 0.5 else "black",
+                )
+
+
 def save_heatmap(F, x_labels, y_labels, path, annotate=False, fmt=".3f"):
-    if annotate:
-        _save_annotated_heatmap(F, x_labels, y_labels, path, fmt)
-        return
-    plot = Heatmap(
+    plot_cls = AnnotatedHeatmap if annotate else Heatmap
+    plot = plot_cls(
         bounds=[0, 1],
         title=("Optimization", {"pad": 15}),
         cmap="Oranges_r",
         solution_labels=y_labels,
         labels=x_labels,
+        **({"fmt": fmt} if annotate else {}),
     )
     plot.add(F)
     plot.save(path)
-
-
-def _save_annotated_heatmap(F, x_labels, y_labels, path, fmt):
-    """Annotated seaborn heatmap, normalized to [0, 1] like the pymoo
-    Heatmap used in the non-annotated path (suitable for both A12 effect
-    sizes and p-values)."""
-    F = np.asarray(F, dtype=float)
-    n_x, n_y = len(x_labels), len(y_labels)
-    fig, ax = plt.subplots(
-        figsize=(max(3.0, 0.6 * n_x), max(3.0, 0.6 * n_y))
-    )
-    sns.heatmap(
-        F,
-        xticklabels=list(x_labels),
-        yticklabels=list(y_labels),
-        annot=True,
-        fmt=fmt,
-        cmap="Oranges_r",
-        vmin=0.0,
-        vmax=1.0,
-        ax=ax,
-    )
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-    ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-    fig.savefig(path, bbox_inches="tight")
-    plt.close(fig)
 
 
 colors = sns.color_palette("tab10", 10)
