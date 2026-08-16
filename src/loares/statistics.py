@@ -52,6 +52,7 @@ def friedman_connover_holm(pivot, alpha=0.05):
     n_blocks, n_algorithms = pivot.shape
 
     result = {"Blocks": n_blocks, "Algorithms": n_algorithms}
+    posthoc = None
     if n_blocks < 2 or n_algorithms < 2:
         result["Statistic"] = float("nan")
         result["P-value"] = float("nan")
@@ -63,7 +64,6 @@ def friedman_connover_holm(pivot, alpha=0.05):
         result["Statistic"] = statistic
         result["P-value"] = p_value
 
-        posthoc = None
         if p_value < alpha:
             # Recommended post-hoc for Friedman blocked design.
             posthoc = sp.posthoc_conover_friedman(pivot, p_adjust="holm")

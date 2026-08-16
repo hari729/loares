@@ -81,7 +81,11 @@ if __name__ == "__main__":
                 "termination_value": max_evals,
                 "source": "optimum",
             },
-            "pivot": {"index": "seed", "columns": "algorithm_name", "values": "value"},
+            "pivot": {
+                "index": "seed",
+                "columns": "algorithm_name",
+                "values": "indicator_value",
+            },
         }
     ]
 

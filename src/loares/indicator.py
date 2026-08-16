@@ -24,7 +24,7 @@ def calculate_indicator(config):
                 **spec_dict,
                 "source": source,
                 "indicator_name": i_spec["indicator_name"],
-                "value": i_spec["indicator"](final_state[source]["F"][:]),
+                "indicator_value": i_spec["indicator"](final_state[source]["F"][:]),
             }
         )
     return calculated
@@ -91,7 +91,7 @@ def calculate_indicator_history(config):
                     "source": source,
                     "indicator_name": i_spec["indicator_name"],
                     "evals": evals,
-                    "value": i_spec["indicator"](F),
+                    "indicator_value": i_spec["indicator"](F),
                 }
             )
     return calculated
@@ -141,7 +141,7 @@ def _mean_line(group):
     then average -> (eval_grid, mean_values)."""
     eval_grid = np.sort(group["evals"].unique())
     seed_curves = [
-        np.interp(eval_grid, seed_group["evals"], seed_group["value"])
+        np.interp(eval_grid, seed_group["evals"], seed_group["indicator_value"])
         for _, seed_group in group.sort_values("evals").groupby("seed")
     ]
     return eval_grid, np.mean(seed_curves, axis=0)
@@ -154,15 +154,15 @@ def calculate_mean_history(history_df, key_cols=mean_history_key_cols):
     """Collapse history.parquet's per-eval-per-seed rows into one
     interpolated mean curve per group (default group: everything except
     seed -- i.e. one curve per algorithm/problem/pop_size/termination/
-    indicator/source combination). One row per group; 'evals' and 'value'
-    are stored as list columns rather than exploded, since a group's curve
-    isn't the same length as any other group's."""
+    indicator/source combination). One row per group; 'evals' and
+    'indicator_value' are stored as list columns rather than exploded, since
+    a group's curve isn't the same length as any other group's."""
     rows = []
     for key_vals, group in history_df.groupby(key_cols):
         eval_grid, mean_curve = _mean_line(group)
         row = dict(zip(key_cols, key_vals))
         row["evals"] = eval_grid.tolist()
-        row["value"] = mean_curve.tolist()
+        row["indicator_value"] = mean_curve.tolist()
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -222,7 +222,7 @@ def build_convergence_lines(df, plot_spec):
     group_col = plot_spec.get("group_by", "algorithm_name")
 
     xdata = [np.asarray(e) for e in filtered["evals"]]
-    ydata = [np.asarray(v) for v in filtered["value"]]
+    ydata = [np.asarray(v) for v in filtered["indicator_value"]]
     legend = filtered[group_col].tolist()
 
     return {
@@ -230,7 +230,9 @@ def build_convergence_lines(df, plot_spec):
         "ydata": ydata,
         "legend": legend,
         "xlabel": plot_spec.get("xlabel", "Function Evaluations"),
-        "ylabel": plot_spec.get("ylabel", filt.get("indicator_name", "value")),
+        "ylabel": plot_spec.get(
+            "ylabel", filt.get("indicator_name", "indicator_value")
+        ),
     }
 
 
@@ -249,7 +251,7 @@ def build_convergence_lines_for_algos(df, filt, algo_names, xlabel, ylabel):
             continue
         r = row.iloc[0]
         xdata.append(np.asarray(r["evals"]))
-        ydata.append(np.asarray(r["value"]))
+        ydata.append(np.asarray(r["indicator_value"]))
         legend.append(name)
 
     return {
@@ -293,7 +295,9 @@ def plot_convergence(
 
             filt = plot_spec["filter"]
             xlabel = plot_spec.get("xlabel", "Function Evaluations")
-            ylabel = plot_spec.get("ylabel", filt.get("indicator_name", "value"))
+            ylabel = plot_spec.get(
+                "ylabel", filt.get("indicator_name", "indicator_value")
+            )
             common = algo_grps.get("common", [])
             for grp_name, grp_algos in algo_grps.items():
                 if grp_name == "common":

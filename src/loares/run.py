@@ -15,14 +15,17 @@ def single_run(spec):
     write_results(res, spec)
 
 
+def pending_specs(spec_list, overwrite=False):
+    if overwrite:
+        return spec_list
+    return [
+        spec
+        for spec in spec_list
+        if not get_spec_path(spec).with_suffix(".h5").exists()
+    ]
+
+
 def parallel_run(spec_list, n_threads, overwrite=False):
-    if not overwrite:
-        pending_specs = [
-            spec
-            for spec in spec_list
-            if not get_spec_path(spec).with_suffix(".h5").exists()
-        ]
-    else:
-        pending_specs = spec_list
+    specs_to_run = pending_specs(spec_list, overwrite)
     with Pool(processes=n_threads) as pool:
-        pool.map(single_run, pending_specs)
+        pool.map(single_run, specs_to_run)
