@@ -204,10 +204,13 @@ cython_debug/
 # Marimo
 marimo/_static/
 marimo/_lsp/
-__marimo__/
+__marimo__/ 
+
 /examples/zdt1-example-r5-p100
 /sandbox
+/examples/*.pdf
 /examples/raw_data
 /examples/ZDT1
 /examples/statistical-test-1/
 /examples/*.csv
+/examples/*.parquet
