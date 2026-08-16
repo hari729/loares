@@ -1,4 +1,3 @@
-from loares import indicator
 import pandas as pd
 from pathlib import Path
 import scikit_posthocs as sp
