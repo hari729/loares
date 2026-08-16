@@ -1,8 +1,9 @@
 from multiprocessing import Pool
 from pathlib import Path
 from pymoo.optimize import minimize
-
-from loares.utils import write_results, get_spec_path
+import pickle
+import gzip
+from loares.utils import get_spec_path
 
 
 def single_run(spec):
@@ -10,9 +11,12 @@ def single_run(spec):
         spec["problem"],
         spec["algorithm"],
         **spec["solver_kwargs"],
-        save_history=True,
     )
-    write_results(res, spec)
+
+    res_path = get_spec_path(spec)
+    res_path.mkdir(parents=True, exist_ok=True)
+    with gzip.open(res_path / "result.pkl.gz", "wb") as f:
+        pickle.dump(res, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def pending_specs(spec_list, overwrite=False):
@@ -21,7 +25,7 @@ def pending_specs(spec_list, overwrite=False):
     return [
         spec
         for spec in spec_list
-        if not get_spec_path(spec).with_suffix(".h5").exists()
+        if not (get_spec_path(spec) / "result.pkl.gz").exists()
     ]
 
 

@@ -12,10 +12,12 @@ from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
+from loares.utils import unzip_result
+
 
 def calculate_indicator(config):
     indicator_specs, algorithm_spec, source = config
-    final_state = read_final_state(get_spec_path(algorithm_spec).with_suffix(".h5"))
+    result = unzip_result(get_spec_path(algorithm_spec) / "result.pkl.gz")
     spec_dict = get_spec_info(algorithm_spec)
     calculated = []
     for i_spec in indicator_specs:
@@ -24,7 +26,7 @@ def calculate_indicator(config):
                 **spec_dict,
                 "source": source,
                 "indicator_name": i_spec["indicator_name"],
-                "indicator_value": i_spec["indicator"](final_state[source]["F"][:]),
+                "indicator_value": i_spec["indicator"](result.F),
             }
         )
     return calculated

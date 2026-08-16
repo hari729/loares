@@ -5,6 +5,14 @@ import pathlib
 from pathlib import Path
 from loares.plots import save_scatter_plots
 
+import gzip
+import pickle
+
+
+def unzip_result(path):
+    with gzip.open(path, "rb") as f:
+        return pickle.load(f)
+
 
 def get_spec_path(spec):
     return Path(
