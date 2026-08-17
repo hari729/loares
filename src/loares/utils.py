@@ -1,7 +1,7 @@
 import numpy as np
 import pathlib
 from pathlib import Path
-
+import pandas as pd
 import gzip
 import pickle
 
@@ -16,7 +16,7 @@ def get_spec_path(spec):
         spec["problem_name"]
         + f"/{spec['solver_kwargs']['termination'][0]}-{spec['solver_kwargs']['termination'][1]}/"
         + spec["algorithm_name"]
-        + f"/{spec['algorithm'].pop_size}"
+        + f"/{spec['algorithm_kwargs']['pop_size']}"
         + f"/seed_{int(spec['solver_kwargs']['seed']):03d}"
     )
 
@@ -44,6 +44,7 @@ def get_spec_info(spec):
         "seed": spec["solver_kwargs"]["seed"],
         "termination_metric": spec["solver_kwargs"]["termination"][0],
         "termination_value": spec["solver_kwargs"]["termination"][1],
+        "save_history": spec["solver_kwargs"]["save_history"],
     }
 
 
@@ -59,3 +60,19 @@ def json_default(o):
     if isinstance(o, (pathlib.PosixPath,)):
         return str(o)
     raise TypeError(f"Not JSON serializable: {type(o)}")
+
+
+def update_manifest(dir_path, new_rows, spec_key_cols, manifest_name="manifest"):
+    dir_path.mkdir(parents=True, exist_ok=True)
+    existing_path = dir_path / f"{manifest_name}.csv"
+    df = pd.read_csv(existing_path) if existing_path.exists() else pd.DataFrame()
+    new_df = pd.DataFrame(new_rows)
+    if not df.empty:
+        mask = (
+            df[spec_key_cols]
+            .apply(tuple, axis=1)
+            .isin(set(new_df[spec_key_cols].apply(tuple, axis=1)))
+        )
+        df = df[~mask]
+    df = pd.concat([df, new_df], ignore_index=True)
+    df.to_csv(existing_path, index=False)

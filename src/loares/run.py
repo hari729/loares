@@ -1,9 +1,10 @@
+from os import write
 from pathlib import Path
 import pickle
 import gzip
 from joblib import Parallel, delayed
 from pymoo.optimize import minimize
-from loares.utils import get_spec_path
+from loares.utils import get_spec_path, get_spec_info, update_manifest
 
 
 def single_run(spec, output_dir):
@@ -16,6 +17,9 @@ def single_run(spec, output_dir):
     res_path.mkdir(parents=True, exist_ok=True)
     with gzip.open(res_path / "result.pkl.gz", "wb") as f:
         pickle.dump(res, f, protocol=pickle.HIGHEST_PROTOCOL)
+    spec_info = get_spec_info(spec)
+    spec_info["result_path"] = res_path / "result.pkl.gz"
+    return spec_info
 
 
 def pending_specs(spec_list, output_dir, overwrite=False):
@@ -30,6 +34,7 @@ def pending_specs(spec_list, output_dir, overwrite=False):
 
 def parallel_run(spec_list, output_dir, n_jobs, overwrite=False):
     specs_to_run = pending_specs(spec_list, output_dir, overwrite)
-    Parallel(n_jobs=n_jobs)(
+    completed_spec = Parallel(n_jobs=n_jobs)(
         delayed(single_run)(spec, output_dir) for spec in specs_to_run
     )
+    update_manifest(output_dir, completed_spec, ["result_path"], "run_manifest")
