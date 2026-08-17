@@ -69,6 +69,7 @@ def pending_indicators(indicator_specs, run_manifest, metrics_manifest):
 def indicator_multi_run(indicator_specs, output_dir, n_jobs=4):
     output_dir = Path(output_dir)
     run_manifest = pd.read_csv(output_dir / "run_manifest.csv")
+    run_manifest = run_manifest[run_manifest["error"].isna()]
     metrics_path = output_dir / "metrics_manifest.csv"
     metrics_manifest = (
         pd.read_csv(metrics_path) if metrics_path.exists() else pd.DataFrame()
@@ -171,7 +172,9 @@ def indicator_history_multi_run(
 ):
     output_dir = Path(output_dir)
     run_manifest = pd.read_csv(output_dir / "run_manifest.csv")
-    run_manifest = run_manifest[run_manifest["save_history"] == True]
+    run_manifest = run_manifest[
+        (run_manifest["error"].isna()) & run_manifest["save_history"]
+    ]
     history_path = output_dir / "history.parquet"
     existing_df = (
         pd.read_parquet(history_path) if history_path.exists() else pd.DataFrame()
