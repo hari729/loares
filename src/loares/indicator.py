@@ -1,6 +1,7 @@
 from loares.utils import (
     get_spec_path,
     get_spec_info,
+    update_manifest,
 )
 from loares.plots import multi_line_plot
 
@@ -13,31 +14,28 @@ import numpy as np
 from loares.utils import unzip_result
 
 
-def calculate_indicator(config, input_dir):
-    indicator_specs, algorithm_spec = config
-    result = unzip_result(
-        Path(input_dir) / get_spec_path(algorithm_spec) / "result.pkl.gz"
-    )
-    spec_dict = get_spec_info(algorithm_spec)
+def calculate_indicator(config):
+    indicator_spec, run_spec = config
+    result = unzip_result(run_spec["result_path"])
+    spec_dict = {key: value for key, value in run_spec.items() if key != "result_path"}
     calculated = []
-    for i_spec in indicator_specs:
+    calculated.append(
+        {
+            **spec_dict,
+            "source": "opt",
+            "indicator_name": indicator_spec["indicator_name"],
+            "indicator_value": indicator_spec["indicator"](result.F),
+        }
+    )
+    if result.archive is not None and len(result.archive) > 0:
         calculated.append(
             {
                 **spec_dict,
-                "source": "opt",
-                "indicator_name": i_spec["indicator_name"],
-                "indicator_value": i_spec["indicator"](result.F),
+                "source": "archive",
+                "indicator_name": indicator_spec["indicator_name"],
+                "indicator_value": indicator_spec["indicator"](result.archive.get("F")),
             }
         )
-        if result.archive is not None and len(result.archive) > 0:
-            calculated.append(
-                {
-                    **spec_dict,
-                    "source": "archive",
-                    "indicator_name": i_spec["indicator_name"],
-                    "indicator_value": i_spec["indicator"](result.archive.get("F")),
-                }
-            )
     return calculated
 
 
@@ -53,29 +51,35 @@ spec_key_cols = [
 ]
 
 
-def compile_metrics(dir_path, new_rows, spec_key_cols=spec_key_cols):
-    dir_path.mkdir(parents=True, exist_ok=True)
-    existing_path = dir_path / "metrics.csv"
-    df = pd.read_csv(existing_path) if existing_path.exists() else pd.DataFrame()
-    new_df = pd.DataFrame(new_rows)
-    if not df.empty:
-        mask = (
-            df[spec_key_cols]
-            .apply(tuple, axis=1)
-            .isin(set(new_df[spec_key_cols].apply(tuple, axis=1)))
+def pending_indicators(indicator_specs, run_manifest, metrics_manifest):
+    indicator_key_cols = [key for key in spec_key_cols if key != "source"]
+    completed = set()
+    if not metrics_manifest.empty:
+        completed = set(metrics_manifest[indicator_key_cols].apply(tuple, axis=1))
+    return [
+        (indicator_spec, run_spec)
+        for run_spec in run_manifest.to_dict("records")
+        for indicator_spec in indicator_specs
+        if tuple(
+            run_spec[key] if key != "indicator_name" else indicator_spec[key]
+            for key in indicator_key_cols
         )
-        df = df[~mask]
-    df = pd.concat([df, new_df], ignore_index=True)
-    df.to_csv(existing_path, index=False)
+        not in completed
+    ]
 
 
-def indicator_multi_run(indicator_specs, algorithm_specs, output_dir, n_jobs=4):
-    args = [(indicator_specs, a) for a in algorithm_specs]
-    output = Parallel(n_jobs=n_jobs)(
-        delayed(calculate_indicator)(arg, output_dir) for arg in args
+def indicator_multi_run(indicator_specs, output_dir, n_jobs=4):
+    output_dir = Path(output_dir)
+    run_manifest = pd.read_csv(output_dir / "run_manifest.csv")
+    metrics_path = output_dir / "metrics_manifest.csv"
+    metrics_manifest = (
+        pd.read_csv(metrics_path) if metrics_path.exists() else pd.DataFrame()
     )
+    args = pending_indicators(indicator_specs, run_manifest, metrics_manifest)
+    output = Parallel(n_jobs=n_jobs)(delayed(calculate_indicator)(arg) for arg in args)
     flat = [item for sublist in output for item in sublist]
-    compile_metrics(output_dir, flat)
+    if flat:
+        update_manifest(output_dir, flat, spec_key_cols, "metrics")
 
 
 def calculate_indicator_history(config, input_dir):
@@ -104,9 +108,7 @@ def calculate_indicator_history(config, input_dir):
                         "source": "archive",
                         "indicator_name": i_spec["indicator_name"],
                         "evals": state.evaluator.n_eval,
-                        "indicator_value": i_spec["indicator"](
-                            state.archive.get("F")
-                        ),
+                        "indicator_value": i_spec["indicator"](state.archive.get("F")),
                     }
                 )
     return calculated
@@ -189,7 +191,7 @@ def compile_mean_history(
     key_cols=mean_history_key_cols,
     filename="mean_history.parquet",
 ):
-    """Same dedup-on-key-cols shape as compile_metrics/compile_history, but
+    """Same dedup-on-key-cols shape as update_manifest/compile_history, but
     a matching key here means 'replace with the freshly recomputed curve'
     rather than 'skip' -- a mean curve can't be updated incrementally when
     a new seed lands, it has to be rederived from history.parquet in full,

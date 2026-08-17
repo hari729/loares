@@ -37,4 +37,5 @@ def parallel_run(spec_list, output_dir, n_jobs, overwrite=False):
     completed_spec = Parallel(n_jobs=n_jobs)(
         delayed(single_run)(spec, output_dir) for spec in specs_to_run
     )
-    update_manifest(output_dir, completed_spec, ["result_path"], "run_manifest")
+    if completed_spec:
+        update_manifest(output_dir, completed_spec, ["result_path"], "run")

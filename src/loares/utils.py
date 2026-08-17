@@ -62,9 +62,9 @@ def json_default(o):
     raise TypeError(f"Not JSON serializable: {type(o)}")
 
 
-def update_manifest(dir_path, new_rows, spec_key_cols, manifest_name="manifest"):
+def update_manifest(dir_path, new_rows, spec_key_cols, manifest_name=""):
     dir_path.mkdir(parents=True, exist_ok=True)
-    existing_path = dir_path / f"{manifest_name}.csv"
+    existing_path = dir_path / f"{manifest_name}_manifest.csv"
     df = pd.read_csv(existing_path) if existing_path.exists() else pd.DataFrame()
     new_df = pd.DataFrame(new_rows)
     if not df.empty:

@@ -70,7 +70,11 @@ def make_spec(
         "problem": problem,
         "output_dir": output_dir,
         "plot_kwargs": {},
-        "solver_kwargs": {"seed": seed, "termination": ("n_eval", max_evals)},
+        "solver_kwargs": {
+            "seed": seed,
+            "termination": ("n_eval", max_evals),
+            "save_history": False,
+        },
     }
 
 
@@ -169,15 +173,16 @@ def indicator_specs():
 class TestIndicators:
     def test_calculate_indicator_uses_indicator_value(self, run_env):
         out, spec = run_env
-        rows = calculate_indicator((indicator_specs(), spec), out)
-        assert len(rows) == 2
+        run_spec = pd.read_csv(out / "run_manifest.csv").iloc[0].to_dict()
+        rows = calculate_indicator((indicator_specs()[0], run_spec))
+        assert len(rows) == 1
         for row in rows:
             assert "indicator_value" in row
             assert "value" not in row
 
     def test_metrics_csv_has_indicator_value_not_value(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
+        indicator_multi_run(indicator_specs(), out, n_jobs=1)
         df = pd.read_csv(out / "metrics.csv")
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
@@ -186,8 +191,8 @@ class TestIndicators:
 
     def test_metrics_dedup_skips_existing_rows(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
-        indicator_multi_run(indicator_specs(), [spec], out, n_jobs=1)
+        indicator_multi_run(indicator_specs(), out, n_jobs=1)
+        indicator_multi_run(indicator_specs(), out, n_jobs=1)
         df = pd.read_csv(out / "metrics.csv")
         assert len(df) == 2
 
