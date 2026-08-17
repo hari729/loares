@@ -5,12 +5,10 @@ Compares BXR variants (MO-BMR, MO-BWR, MO-BMWR) against NSGA-II,
 runs post-processing, and generates statistical analysis.
 """
 
-import os
 import numpy as np
 from pathlib import Path
 import inspect
 
-from loares import indicator
 from pymoo.problems.multi import ZDT1
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.indicators.hv import HV
