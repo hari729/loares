@@ -183,7 +183,7 @@ class TestIndicators:
     def test_metrics_csv_has_indicator_value_not_value(self, run_env, tmp_dir):
         out, spec = run_env
         indicator_multi_run(indicator_specs(), out, n_jobs=1)
-        df = pd.read_csv(out / "metrics.csv")
+        df = pd.read_csv(out / "metrics_manifest.csv")
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
         assert "indicator_name" in df.columns
@@ -193,12 +193,13 @@ class TestIndicators:
         out, spec = run_env
         indicator_multi_run(indicator_specs(), out, n_jobs=1)
         indicator_multi_run(indicator_specs(), out, n_jobs=1)
-        df = pd.read_csv(out / "metrics.csv")
+        df = pd.read_csv(out / "metrics_manifest.csv")
         assert len(df) == 2
 
     def test_calculate_indicator_history_uses_indicator_value(self, run_env):
         out, spec = run_env
-        rows = calculate_indicator_history((indicator_specs(), spec), out)
+        run_spec = pd.read_csv(out / "run_manifest.csv").iloc[0].to_dict()
+        rows = calculate_indicator_history((indicator_specs()[0], run_spec))
         assert rows
         for row in rows:
             assert "indicator_value" in row
@@ -207,16 +208,16 @@ class TestIndicators:
 
     def test_history_parquet_has_indicator_value(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_history_multi_run(indicator_specs(), [spec], out, tmp_dir, n_jobs=1)
-        df = pd.read_parquet(tmp_dir / "history.parquet")
+        indicator_history_multi_run(indicator_specs(), out, n_jobs=1)
+        df = pd.read_parquet(out / "history.parquet")
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
         assert len(df) > 0
 
     def test_mean_history_list_columns_and_plot_lookup(self, run_env, tmp_dir):
         out, spec = run_env
-        indicator_history_multi_run(indicator_specs(), [spec], out, tmp_dir, n_jobs=1)
-        mean_history_multi_run(tmp_dir / "history.parquet", tmp_dir)
+        indicator_history_multi_run(indicator_specs(), out, n_jobs=1)
+        mean_history_multi_run(out / "history.parquet", tmp_dir)
 
         mean_df = pd.read_parquet(tmp_dir / "mean_history.parquet")
         assert "indicator_value" in mean_df.columns
@@ -344,21 +345,9 @@ class TestStatistics:
         hm.do()
 
         artists = {t.get_position(): t for t in hm.ax.texts}
-        assert artists[(1, 0)].get_text() == "0.820*"  # >0.5: row wins, significant
-        assert artists[(0, 1)].get_text() == "0.180"  # <0.5: column wins
-        assert artists[(0, 0)].get_text() == "0.500"  # tie: no marker, no asterisk
-        renderer = hm.fig.canvas.get_renderer()
-        inv = hm.ax.transData.inverted()
-        rows = {}
-        for (x, y), artist in artists.items():
-            bbox = artist.get_window_extent(renderer=renderer)
-            right = inv.transform((bbox.x1, bbox.y0))[0]
-            rows.setdefault(y, []).append((x, right))
-        markers = [tuple(o) for c in hm.ax.collections for o in c.get_offsets()]
-        assert len(markers) == 2  # only the two non-tie cells
-        for mx, my in markers:
-            center, right = min(rows[my], key=lambda c: abs(c[0] - mx))
-            assert right < mx < right + 0.5  # marker just right of its text
+        assert artists[(1, 0)].get_text() == "0.820$^{\\ast\\blacktriangle}$"  # >mid, significant
+        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"  # <mid
+        assert artists[(0, 0)].get_text() == "0.500"  # tie: no glyph
 
     def test_annotated_heatmap_no_markers_by_default(self):
         from loares.plots import AnnotatedHeatmap

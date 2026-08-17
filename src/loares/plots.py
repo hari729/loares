@@ -53,45 +53,29 @@ class AnnotatedHeatmap(Heatmap):
                 significant = bool(
                     self.significance is not None and self.significance[i, j]
                 )
-                text = f"{F[i, j]:{self.fmt}}"
+                sup = ""
+                if self.glyph:
+                    mid = (lo[j] + hi[j]) / 2
+                    if F[i, j] > mid:
+                        sup = "\\blacktriangle"
+                    elif F[i, j] < mid:
+                        sup = "\\blacktriangledown"
                 if significant:
-                    text += "*"
+                    sup = f"$^{{\\ast{sup}}}$" if sup else "$^{\\ast}$"
+                elif sup:
+                    sup = f"$^{{{sup}}}$"
+                text = f"{F[i, j]:{self.fmt}}{sup}"
                 rgba = self.cmap(v)
                 luminance = 0.299 * rgba[0] + 0.587 * rgba[1] + 0.114 * rgba[2]
                 text_color = "white" if luminance < 0.5 else "black"
-                value_text = self.ax.text(
+                self.ax.text(
                     j,
                     i,
                     text,
                     ha="center",
                     va="center",
                     color=text_color,
-                    fontweight="bold" if significant else "normal",
                 )
-                if self.glyph:
-                    mid = (lo[j] + hi[j]) / 2
-                    marker = None
-                    if F[i, j] > mid:
-                        marker = "^"
-                    elif F[i, j] < mid:
-                        marker = "v"
-                    if marker is not None:
-                        # Drawn as a geometric marker (not a text glyph) so it
-                        # sits exactly on the value's vertical center, placed
-                        # just right of the measured text extent.
-                        self.fig.canvas.draw()
-                        renderer = self.fig.canvas.get_renderer()
-                        bbox = value_text.get_window_extent(renderer=renderer)
-                        inv = self.ax.transData.inverted()
-                        right = inv.transform((bbox.x1 + 3, bbox.y0))[0]
-                        self.ax.scatter(
-                            right,
-                            i,
-                            marker=marker,
-                            s=28,
-                            color=text_color,
-                            linewidths=0,
-                        )
 
 
 def save_heatmap(

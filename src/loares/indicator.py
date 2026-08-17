@@ -1,6 +1,4 @@
 from loares.utils import (
-    get_spec_path,
-    get_spec_info,
     update_manifest,
 )
 from loares.plots import multi_line_plot
@@ -82,35 +80,44 @@ def indicator_multi_run(indicator_specs, output_dir, n_jobs=4):
         update_manifest(output_dir, flat, spec_key_cols, "metrics")
 
 
-def calculate_indicator_history(config, input_dir):
+def calculate_indicator_history(config):
     """Compute indicator values at every recorded snapshot for one run."""
-    indicator_specs, algorithm_spec = config
-    result = unzip_result(
-        Path(input_dir) / get_spec_path(algorithm_spec) / "result.pkl.gz"
-    )
-    spec_dict = get_spec_info(algorithm_spec)
+    indicator_spec, run_spec = config
+    result = unzip_result(run_spec["result_path"])
+    spec_dict = {
+        key: value
+        for key, value in run_spec.items()
+        if key not in ("result_path", "save_history")
+    }
     calculated = []
     for state in result.history:
-        for i_spec in indicator_specs:
+        try:
+            value = indicator_spec["indicator"](state.opt.get("F"))
+        except Exception:
+            value = np.nan
+        calculated.append(
+            {
+                **spec_dict,
+                "source": "opt",
+                "indicator_name": indicator_spec["indicator_name"],
+                "evals": state.evaluator.n_eval,
+                "indicator_value": value,
+            }
+        )
+        if state.archive is not None and len(state.archive) > 0:
+            try:
+                value = indicator_spec["indicator"](state.archive.get("F"))
+            except Exception:
+                value = np.nan
             calculated.append(
                 {
                     **spec_dict,
-                    "source": "opt",
-                    "indicator_name": i_spec["indicator_name"],
+                    "source": "archive",
+                    "indicator_name": indicator_spec["indicator_name"],
                     "evals": state.evaluator.n_eval,
-                    "indicator_value": i_spec["indicator"](state.opt.get("F")),
+                    "indicator_value": value,
                 }
             )
-            if state.archive is not None and len(state.archive) > 0:
-                calculated.append(
-                    {
-                        **spec_dict,
-                        "source": "archive",
-                        "indicator_name": i_spec["indicator_name"],
-                        "evals": state.evaluator.n_eval,
-                        "indicator_value": i_spec["indicator"](state.archive.get("F")),
-                    }
-                )
     return calculated
 
 
@@ -134,24 +141,48 @@ def compile_history(dir_path, new_rows, history_key_cols=history_key_cols):
     df.to_parquet(existing_path, index=False)
 
 
+def pending_history(indicator_specs, run_manifest, existing_df):
+    history_key_cols_no_source = [
+        c for c in history_key_cols if c not in ("source", "evals")
+    ]
+    completed = set()
+    if not existing_df.empty:
+        completed = set(
+            existing_df[history_key_cols_no_source]
+            .drop_duplicates()
+            .apply(tuple, axis=1)
+        )
+    return [
+        (indicator_spec, run_spec)
+        for run_spec in run_manifest.to_dict("records")
+        for indicator_spec in indicator_specs
+        if tuple(
+            run_spec[key] if key != "indicator_name" else indicator_spec[key]
+            for key in history_key_cols_no_source
+        )
+        not in completed
+    ]
+
+
 def indicator_history_multi_run(
     indicator_specs,
-    algorithm_specs,
-    input_dir,
     output_dir,
     n_jobs=4,
 ):
-    """Same spec-driven shape as indicator_multi_run, but computes and
-    stores the indicator value at every eval snapshot rather than only
-    the final one. Written to history.parquet (columnar/typed and far
-    smaller than a CSV at this row count -- one row per eval snapshot
-    per indicator per seed)."""
-    args = [(indicator_specs, a) for a in algorithm_specs]
+    output_dir = Path(output_dir)
+    run_manifest = pd.read_csv(output_dir / "run_manifest.csv")
+    run_manifest = run_manifest[run_manifest["save_history"] == True]
+    history_path = output_dir / "history.parquet"
+    existing_df = (
+        pd.read_parquet(history_path) if history_path.exists() else pd.DataFrame()
+    )
+    args = pending_history(indicator_specs, run_manifest, existing_df)
     output = Parallel(n_jobs=n_jobs)(
-        delayed(calculate_indicator_history)(arg, input_dir) for arg in args
+        delayed(calculate_indicator_history)(arg) for arg in args
     )
     flat = [item for sublist in output for item in sublist]
-    compile_history(Path(output_dir), flat)
+    if flat:
+        compile_history(output_dir, flat)
 
 
 def _mean_line(group):
