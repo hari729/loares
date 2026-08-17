@@ -34,7 +34,6 @@ if __name__ == "__main__":
         "algorithm_kwargs": {"pop_size": ps},
         "problem_name": "ZDT1",
         "problem": problem,
-        "plot_kwargs": {},
     }
 
     algos = [
@@ -44,7 +43,11 @@ if __name__ == "__main__":
     ]
     algo_specs = [
         {
-            "solver_kwargs": {"seed": s, "termination": ("n_eval", max_evals)},
+            "solver_kwargs": {
+                "seed": s,
+                "termination": ("n_eval", max_evals),
+                "save_history": True,
+            },
             **common,
             **algo,
         }
@@ -72,36 +75,36 @@ if __name__ == "__main__":
 
     indicator_multi_run(
         indicator_specs,
-        algo_specs,
-        Path(inspect.stack()[0].filename).resolve().parent,
+        output_dir,
+        n_jobs=5,
     )
-
-    stat_specs = [
-        {
-            "filter": {
-                "indicator_name": "HV",
-                "pop_size": ps,
-                "termination_metric": "n_eval",
-                "termination_value": max_evals,
-                "source": "optimum",
-            },
-            "pivot": {
-                "index": "seed",
-                "columns": "algorithm_name",
-                "values": "indicator_value",
-            },
-        }
-    ]
-
-    statistical_test_1(
-        stat_specs,
-        Path(inspect.stack()[0].filename).resolve().parent / "metrics.csv",
-        Path(inspect.stack()[0].filename).resolve().parent,
-    )
-
-    from loares.indicator import indicator_history_multi_run, plot_convergence
-
-    indicator_history_multi_run(
-        indicator_specs, algo_specs, output_dir, output_dir, n_jobs=5
-    )
-    mean_history_multi_run(output_dir / "history.parquet", output_dir)
+    #
+    # stat_specs = [
+    #     {
+    #         "filter": {
+    #             "indicator_name": "HV",
+    #             "pop_size": ps,
+    #             "termination_metric": "n_eval",
+    #             "termination_value": max_evals,
+    #             "source": "optimum",
+    #         },
+    #         "pivot": {
+    #             "index": "seed",
+    #             "columns": "algorithm_name",
+    #             "values": "indicator_value",
+    #         },
+    #     }
+    # ]
+    #
+    # statistical_test_1(
+    #     stat_specs,
+    #     Path(inspect.stack()[0].filename).resolve().parent / "metrics.csv",
+    #     Path(inspect.stack()[0].filename).resolve().parent,
+    # )
+    #
+    # from loares.indicator import indicator_history_multi_run, plot_convergence
+    #
+    # indicator_history_multi_run(
+    #     indicator_specs, algo_specs, output_dir, output_dir, n_jobs=5
+    # )
+    # mean_history_multi_run(output_dir / "history.parquet", output_dir)
