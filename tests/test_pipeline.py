@@ -83,12 +83,12 @@ def make_spec(
 
 class TestSpecPaths:
     def test_get_spec_path_layout(self, tmp_dir):
-        spec = make_spec(tmp_dir, "NSGA-II", NSGA2(pop_size=10), seed=1, max_evals=60)
+        spec = make_spec(tmp_dir, "NSGA-II", NSGA2, seed=1, max_evals=60)
         path = get_spec_path(spec)
         assert path == Path("ZDT1/n_eval-60/NSGA-II/10/seed_001")
 
     def test_get_spec_info_fields(self, tmp_dir):
-        spec = make_spec(tmp_dir, "NSGA-II", NSGA2(pop_size=10), seed=3, max_evals=60)
+        spec = make_spec(tmp_dir, "NSGA-II", NSGA2, seed=3, max_evals=60)
         info = get_spec_info(spec)
         assert info["algorithm_name"] == "NSGA-II"
         assert info["problem_name"] == "ZDT1"
@@ -107,7 +107,7 @@ def run_env(tmp_path_factory):
     spec = make_spec(
         out,
         "NSGA-II",
-        NSGA2(pop_size=10),
+        NSGA2,
         seed=1,
         max_evals=60,
         pop_size=10,
@@ -138,6 +138,12 @@ class TestRun:
         result = unzip_result(out / get_spec_path(spec) / "result.pkl.gz")
         assert result.F.shape[1] == 2
 
+    def test_run_manifest_has_error_column(self, run_env):
+        out, spec = run_env
+        df = pd.read_csv(out / "run_manifest.csv")
+        assert "error" in df.columns
+        assert df["error"].isna().all()
+
     def test_overwrite_false_skips_existing(self, run_env):
         out, spec = run_env
         assert pending_specs([spec], out, overwrite=False) == []
@@ -147,16 +153,25 @@ class TestRun:
         assert pending_specs([spec], out, overwrite=True) == [spec]
 
     def test_pending_specs_filters_only_missing(self, tmp_dir):
-        existing = make_spec(
-            tmp_dir, "NSGA-II", NSGA2(pop_size=10), problem=ZDT1()
-        )
-        missing = make_spec(
-            tmp_dir, "MO-BMR", MO_BMR(pop_size=10), problem=ZDT1()
-        )
+        existing = make_spec(tmp_dir, "NSGA-II", NSGA2, problem=ZDT1())
+        missing = make_spec(tmp_dir, "MO-BMR", MO_BMR, problem=ZDT1())
         result_path = tmp_dir / get_spec_path(existing) / "result.pkl.gz"
         result_path.parent.mkdir(parents=True)
         result_path.touch()
         assert pending_specs([existing, missing], tmp_dir, overwrite=False) == [missing]
+
+    def test_single_run_error_captured(self, tmp_dir):
+        def broken_algorithm(**kwargs):
+            raise RuntimeError("deliberate failure")
+
+        spec = make_spec(tmp_dir, "Broken", broken_algorithm, problem=ZDT1())
+        parallel_run([spec], tmp_dir, n_jobs=1)
+        df = pd.read_csv(tmp_dir / "run_manifest.csv")
+        row = df.iloc[0]
+        assert pd.notna(row["error"])
+        assert "RuntimeError" in row["error"]
+        result_path = tmp_dir / get_spec_path(spec) / "result.pkl.gz"
+        assert not result_path.exists()
 
 
 # ── Indicators ───────────────────────────────────────────────────────────────
@@ -179,6 +194,14 @@ class TestIndicators:
         for row in rows:
             assert "indicator_value" in row
             assert "value" not in row
+
+    def test_indicator_multi_run_filters_error_rows(self, run_env):
+        out, spec = run_env
+        df = pd.read_csv(out / "run_manifest.csv")
+        assert "error" in df.columns
+        indicator_multi_run(indicator_specs(), out, n_jobs=1)
+        metrics = pd.read_csv(out / "metrics_manifest.csv")
+        assert len(metrics) > 0
 
     def test_metrics_csv_has_indicator_value_not_value(self, run_env, tmp_dir):
         out, spec = run_env
@@ -213,6 +236,25 @@ class TestIndicators:
         assert "indicator_value" in df.columns
         assert "value" not in df.columns
         assert len(df) > 0
+
+    def test_calculate_indicator_history_nan_on_degenerate_input(self, run_env):
+        out, spec = run_env
+        run_spec = pd.read_csv(out / "run_manifest.csv").iloc[0].to_dict()
+
+        class FailOnSmallF:
+            def __call__(self, F):
+                if len(F) < 5:
+                    raise ValueError("too few points")
+                return float(F.mean())
+
+        rows = calculate_indicator_history(
+            ({"indicator_name": "Guarded", "indicator": FailOnSmallF()}, run_spec)
+        )
+        assert rows
+        nan_rows = [r for r in rows if np.isnan(r["indicator_value"])]
+        non_nan_rows = [r for r in rows if not np.isnan(r["indicator_value"])]
+        assert len(nan_rows) > 0, "expected NaN from early small populations"
+        assert len(non_nan_rows) > 0, "expected valid values from later states"
 
     def test_mean_history_list_columns_and_plot_lookup(self, run_env, tmp_dir):
         out, spec = run_env
@@ -326,7 +368,7 @@ class TestStatistics:
         assert out.exists()
         assert out.stat().st_size > 1000
 
-    def test_annotated_heatmap_glyph_significance(self):
+    def test_annotated_heatmap_glyph_and_significance(self):
         from loares.plots import AnnotatedHeatmap
 
         matrix = np.array([[0.5, 0.82], [0.18, 0.5]])
@@ -345,9 +387,52 @@ class TestStatistics:
         hm.do()
 
         artists = {t.get_position(): t for t in hm.ax.texts}
-        assert artists[(1, 0)].get_text() == "0.820$^{\\ast\\blacktriangle}$"  # >mid, significant
-        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"  # <mid
-        assert artists[(0, 0)].get_text() == "0.500"  # tie: no glyph
+        assert artists[(1, 0)].get_text() == "0.820$^{\\ast\\blacktriangle}$"
+        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"
+        assert artists[(0, 0)].get_text() == "0.500"
+
+    def test_annotated_heatmap_glyph_only(self):
+        from loares.plots import AnnotatedHeatmap
+
+        matrix = np.array([[0.5, 0.82], [0.18, 0.5]])
+        hm = AnnotatedHeatmap(
+            bounds=[0, 1],
+            cmap="RdBu_r",
+            reverse=False,
+            solution_labels=["A", "B"],
+            labels=["A", "B"],
+            fmt=".3f",
+            glyph=True,
+        )
+        hm.add(matrix)
+        hm.do()
+
+        artists = {t.get_position(): t for t in hm.ax.texts}
+        assert artists[(1, 0)].get_text() == "0.820$^{\\blacktriangle}$"
+        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"
+        assert artists[(0, 0)].get_text() == "0.500"
+
+    def test_annotated_heatmap_significance_only(self):
+        from loares.plots import AnnotatedHeatmap
+
+        matrix = np.array([[0.5, 0.82], [0.18, 0.5]])
+        sig = np.array([[False, True], [False, False]])
+        hm = AnnotatedHeatmap(
+            bounds=[0, 1],
+            cmap="RdBu_r",
+            reverse=False,
+            solution_labels=["A", "B"],
+            labels=["A", "B"],
+            fmt=".3f",
+            significance=sig,
+        )
+        hm.add(matrix)
+        hm.do()
+
+        artists = {t.get_position(): t for t in hm.ax.texts}
+        assert artists[(1, 0)].get_text() == "0.820$^{\\ast}$"
+        assert artists[(0, 1)].get_text() == "0.180"
+        assert artists[(0, 0)].get_text() == "0.500"
 
     def test_annotated_heatmap_no_markers_by_default(self):
         from loares.plots import AnnotatedHeatmap
@@ -457,7 +542,7 @@ class TestAlgorithmVariants:
         spec = make_spec(
             tmp_dir,
             name,
-            algo_cls(pop_size=10),
+            algo_cls,
             problem=ZDT1(),
             problem_name="ZDT1",
         )
@@ -470,7 +555,7 @@ class TestAlgorithmVariants:
         spec = make_spec(
             tmp_dir,
             name,
-            algo_cls(pop_size=10),
+            algo_cls,
             problem=Sphere(n_var=5),
             problem_name="Sphere",
         )

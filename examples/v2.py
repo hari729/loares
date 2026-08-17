@@ -5,21 +5,26 @@ Compares BXR variants (MO-BMR, MO-BWR, MO-BMWR) against NSGA-II,
 runs post-processing, and generates statistical analysis.
 """
 
-import numpy as np
-from pathlib import Path
 import inspect
+from pathlib import Path
 
-from pymoo.problems.multi import ZDT1
+import numpy as np
+
+from loares.algorithms.bxr.moo import MO_BMR, MO_BMWR, MO_BWR
+from loares.indicator import (
+    indicator_multi_run,
+    indicator_history_multi_run,
+    mean_history_multi_run,
+    plot_convergence,
+)
+from loares.run import parallel_run
+from loares.statistics import statistical_test_1
 from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.indicators.hv import HV
 from pymoo.indicators.gd import GD
+from pymoo.indicators.hv import HV
 from pymoo.indicators.igd import IGD
 from pymoo.indicators.spacing import SpacingIndicator
-
-from loares.algorithms.bxr.moo import MO_BMR, MO_BWR, MO_BMWR
-from loares.run import parallel_run
-from loares.indicator import indicator_multi_run, mean_history_multi_run
-from loares.statistics import statistical_test_1
+from pymoo.problems.multi import ZDT1
 
 if __name__ == "__main__":
     runs = 10
@@ -35,10 +40,10 @@ if __name__ == "__main__":
     }
 
     algos = [
-        {"algorithm_name": "MO-BMR", "algorithm": MO_BMR(pop_size=ps)},
-        {"algorithm_name": "MO-BWR", "algorithm": MO_BWR(pop_size=ps)},
-        {"algorithm_name": "MO-BMWR", "algorithm": MO_BMWR(pop_size=ps)},
-        {"algorithm_name": "NSGA-II", "algorithm": NSGA2(pop_size=ps)},
+        {"algorithm_name": "MO-BMR", "algorithm": MO_BMR},
+        {"algorithm_name": "MO-BWR", "algorithm": MO_BWR},
+        {"algorithm_name": "MO-BMWR", "algorithm": MO_BMWR},
+        {"algorithm_name": "NSGA-II", "algorithm": NSGA2},
     ]
     algo_specs = [
         {
@@ -100,8 +105,6 @@ if __name__ == "__main__":
         output_dir / "metrics_manifest.csv",
         output_dir,
     )
-
-    from loares.indicator import indicator_history_multi_run, plot_convergence
 
     indicator_history_multi_run(indicator_specs, output_dir, n_jobs=5)
     mean_history_multi_run(output_dir / "history.parquet", output_dir)

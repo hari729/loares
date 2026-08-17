@@ -1,4 +1,3 @@
-from os import write
 from pathlib import Path
 import pickle
 import gzip
@@ -24,7 +23,11 @@ def single_run(spec, output_dir):
     spec_info["result_path"] = res_path / "result.pkl.gz"
     spec_info["error"] = ""
     try:
-        res = minimize(spec["problem"], spec["algorithm"], **spec["solver_kwargs"])
+        res = minimize(
+            spec["problem"],
+            spec["algorithm"](**spec["algorithm_kwargs"]),
+            **spec["solver_kwargs"],
+        )
     except Exception as e:
         spec_info["error"] = f"{type(e).__name__}: {e}"
         return spec_info
