@@ -1,5 +1,6 @@
 from loares.utils import (
     update_manifest,
+    tqdm_joblib,
 )
 from loares.plots import multi_line_plot
 
@@ -8,6 +9,7 @@ import pandas as pd
 from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
+from tqdm import tqdm
 
 from loares.utils import unzip_result
 
@@ -75,7 +77,16 @@ def indicator_multi_run(indicator_specs, output_dir, n_jobs=4):
         pd.read_csv(metrics_path) if metrics_path.exists() else pd.DataFrame()
     )
     args = pending_indicators(indicator_specs, run_manifest, metrics_manifest)
-    output = Parallel(n_jobs=n_jobs)(delayed(calculate_indicator)(arg) for arg in args)
+    pbar = tqdm(
+        desc="Indicators",
+        total=len(args),
+        ascii=" -",
+        bar_format="{desc}: {bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+    )
+    with tqdm_joblib(pbar):
+        output = Parallel(n_jobs=n_jobs)(
+            delayed(calculate_indicator)(arg) for arg in args
+        )
     flat = [item for sublist in output for item in sublist]
     if flat:
         update_manifest(output_dir, flat, spec_key_cols, "metrics")
@@ -94,7 +105,7 @@ def calculate_indicator_history(config):
     for state in result.history:
         try:
             value = indicator_spec["indicator"](state.opt.get("F"))
-        except Exception:
+        except (ValueError, IndexError):
             value = np.nan
         calculated.append(
             {
@@ -108,7 +119,7 @@ def calculate_indicator_history(config):
         if state.archive is not None and len(state.archive) > 0:
             try:
                 value = indicator_spec["indicator"](state.archive.get("F"))
-            except Exception:
+            except (ValueError, IndexError):
                 value = np.nan
             calculated.append(
                 {
@@ -180,9 +191,16 @@ def indicator_history_multi_run(
         pd.read_parquet(history_path) if history_path.exists() else pd.DataFrame()
     )
     args = pending_history(indicator_specs, run_manifest, existing_df)
-    output = Parallel(n_jobs=n_jobs)(
-        delayed(calculate_indicator_history)(arg) for arg in args
+    pbar = tqdm(
+        desc="Indicator history",
+        total=len(args),
+        ascii=" -",
+        bar_format="{desc}: {bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
     )
+    with tqdm_joblib(pbar):
+        output = Parallel(n_jobs=n_jobs)(
+            delayed(calculate_indicator_history)(arg) for arg in args
+        )
     flat = [item for sublist in output for item in sublist]
     if flat:
         compile_history(output_dir, flat)
@@ -293,23 +311,18 @@ def build_convergence_lines_for_algos(df, filt, algo_names, xlabel, ylabel):
     algorithm_name (in the given order) instead of by grouping every distinct
     value in the filtered set. `filt` should not itself constrain
     algorithm_name -- that's what algo_names is for."""
-    mask = (df[list(filt.keys())] == pd.Series(filt)).all(axis=1)
-    filtered = df[mask]
-
-    xdata, ydata, legend = [], [], []
-    for name in algo_names:
-        row = filtered[filtered["algorithm_name"] == name]
-        if row.empty:
-            continue
-        r = row.iloc[0]
-        xdata.append(np.asarray(r["evals"]))
-        ydata.append(np.asarray(r["indicator_value"]))
-        legend.append(name)
-
+    data = build_convergence_lines(df, {"filter": filt, "group_by": "algorithm_name"})
+    order = {name: i for i, name in enumerate(algo_names)}
+    indexed = [
+        (order.get(name, float("inf")), i, name)
+        for i, name in enumerate(data["legend"])
+    ]
+    indexed.sort()
+    keep = [(i, name) for rank, i, name in indexed if rank < float("inf")]
     return {
-        "xdata": xdata,
-        "ydata": ydata,
-        "legend": legend,
+        "xdata": [data["xdata"][i] for i, _ in keep],
+        "ydata": [data["ydata"][i] for i, _ in keep],
+        "legend": [name for _, name in keep],
         "xlabel": xlabel,
         "ylabel": ylabel,
     }
