@@ -6,12 +6,12 @@ import pandas as pd
 import gzip
 import pickle
 import joblib
-from tqdm import tqdm
 
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar."""
+
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
         def __call__(self, *args, **kwargs):
             tqdm_object.update(n=self.batch_size)
