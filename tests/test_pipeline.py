@@ -7,7 +7,6 @@ import pandas as pd
 import pytest
 
 from pymoo.problems.multi import ZDT1
-from pymoo.problems.single import Sphere
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.indicators.gd import GD
 from pymoo.indicators.hv import HV
@@ -34,15 +33,7 @@ from loares.statistics import (
     friedman_connover_holm,
     statistical_test_1,
 )
-from loares.algorithms.bxr.moo import (
-    MO_BMR,
-    MO_BWR,
-    MO_BMWR,
-    MO_BMR_Archive,
-    MO_BMR_Opposition,
-    MO_BMR_S,
-)
-from loares.algorithms.bxr.soo import SO_BMR, SO_BWR, SO_BMWR
+from loares.algorithms.moo.mobxr_cd import MO_BMR_CD, MO_BWR_CD, MO_BMWR_CD
 
 
 @pytest.fixture
@@ -78,7 +69,7 @@ def make_spec(
     }
 
 
-# ── Spec path / info ─────────────────────────────────────────────────────────
+# -- Spec path / info --------------------------------------------------------
 
 
 class TestSpecPaths:
@@ -98,7 +89,7 @@ class TestSpecPaths:
         assert info["termination_value"] == 60
 
 
-# ── parallel_run + write_results ─────────────────────────────────────────────
+# -- parallel_run + write_results -------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -154,7 +145,7 @@ class TestRun:
 
     def test_pending_specs_filters_only_missing(self, tmp_dir):
         existing = make_spec(tmp_dir, "NSGA-II", NSGA2, problem=ZDT1())
-        missing = make_spec(tmp_dir, "MO-BMR", MO_BMR, problem=ZDT1())
+        missing = make_spec(tmp_dir, "MO-BMR", MO_BMR_CD, problem=ZDT1())
         result_path = tmp_dir / get_spec_path(existing) / "result.pkl.gz"
         result_path.parent.mkdir(parents=True)
         result_path.touch()
@@ -174,7 +165,7 @@ class TestRun:
         assert not result_path.exists()
 
 
-# ── Indicators ───────────────────────────────────────────────────────────────
+# -- Indicators --------------------------------------------------------------
 
 
 def indicator_specs():
@@ -306,7 +297,7 @@ class TestIndicators:
         assert len(mean.iloc[0]["indicator_value"]) == 3
 
 
-# ── Statistics ───────────────────────────────────────────────────────────────
+# -- Statistics --------------------------------------------------------------
 
 
 def synthetic_metrics(tmp_dir, n_seeds=5, rng_seed=0):
@@ -387,8 +378,8 @@ class TestStatistics:
         hm.do()
 
         artists = {t.get_position(): t for t in hm.ax.texts}
-        assert artists[(1, 0)].get_text() == "0.820$^{\\ast\\blacktriangle}$"
-        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"
+        assert artists[(1, 0)].get_text() == r"0.820$^{\ast\blacktriangle}$"
+        assert artists[(0, 1)].get_text() == r"0.180$^{\blacktriangledown}$"
         assert artists[(0, 0)].get_text() == "0.500"
 
     def test_annotated_heatmap_glyph_only(self):
@@ -408,8 +399,8 @@ class TestStatistics:
         hm.do()
 
         artists = {t.get_position(): t for t in hm.ax.texts}
-        assert artists[(1, 0)].get_text() == "0.820$^{\\blacktriangle}$"
-        assert artists[(0, 1)].get_text() == "0.180$^{\\blacktriangledown}$"
+        assert artists[(1, 0)].get_text() == r"0.820$^{\blacktriangle}$"
+        assert artists[(0, 1)].get_text() == r"0.180$^{\blacktriangledown}$"
         assert artists[(0, 0)].get_text() == "0.500"
 
     def test_annotated_heatmap_significance_only(self):
@@ -430,7 +421,7 @@ class TestStatistics:
         hm.do()
 
         artists = {t.get_position(): t for t in hm.ax.texts}
-        assert artists[(1, 0)].get_text() == "0.820$^{\\ast}$"
+        assert artists[(1, 0)].get_text() == r"0.820$^{\ast}$"
         assert artists[(0, 1)].get_text() == "0.180"
         assert artists[(0, 0)].get_text() == "0.500"
 
@@ -517,22 +508,13 @@ class TestStatistics:
         assert friedman.iloc[0]["indicator_name"] == "HV"
 
 
-# ── Algorithm variants smoke tests ───────────────────────────────────────────
+# -- Algorithm variants smoke tests ------------------------------------------
 
 
 MO_VARIANTS = [
-    ("MO-BMR", MO_BMR),
-    ("MO-BWR", MO_BWR),
-    ("MO-BMWR", MO_BMWR),
-    ("MO-BMR-Archive", MO_BMR_Archive),
-    ("MO-BMR-Opposition", MO_BMR_Opposition),
-    ("MO-BMR-SAMP", MO_BMR_S),
-]
-
-SO_VARIANTS = [
-    ("SO-BMR", SO_BMR),
-    ("SO-BWR", SO_BWR),
-    ("SO-BMWR", SO_BMWR),
+    ("MO-BMR-CD", MO_BMR_CD),
+    ("MO-BWR-CD", MO_BWR_CD),
+    ("MO-BMWR-CD", MO_BMWR_CD),
 ]
 
 
@@ -550,21 +532,8 @@ class TestAlgorithmVariants:
         result = unzip_result(tmp_dir / get_spec_path(spec) / "result.pkl.gz")
         assert result.F.shape[1] == 2
 
-    @pytest.mark.parametrize("name,algo_cls", SO_VARIANTS)
-    def test_so_variant_runs(self, tmp_dir, name, algo_cls):
-        spec = make_spec(
-            tmp_dir,
-            name,
-            algo_cls,
-            problem=Sphere(n_var=5),
-            problem_name="Sphere",
-        )
-        parallel_run([spec], tmp_dir, n_jobs=1)
-        result = unzip_result(tmp_dir / get_spec_path(spec) / "result.pkl.gz")
-        assert np.asarray(result.F).size == 1
 
-
-# ── Reference front generation (NDS + FPS) ──────────────────────────────────
+# -- Reference front generation (NDS + FPS) ---------------------------------
 
 
 class TestNDSFarthestPointSurvival:
@@ -587,7 +556,7 @@ class TestNDSFarthestPointSurvival:
         return _Dummy(n_var=n_vars, n_obj=n_obj, n_ieq_constr=n_constr)
 
     def test_returns_only_non_dominated_when_n_survive_large(self):
-        from loares.operators.sorting import NDSFarthestPointSurvival
+        from loares.operators.survivial import NDSFarthestPointSurvival
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
@@ -608,7 +577,7 @@ class TestNDSFarthestPointSurvival:
             assert match, f"Point {ndf_F[i]} is not on the non-dominated front"
 
     def test_respects_n_survive(self):
-        from loares.operators.sorting import NDSFarthestPointSurvival
+        from loares.operators.survivial import NDSFarthestPointSurvival
 
         np.random.seed(42)
         pop = self._make_pop(n=200, n_obj=2)
@@ -619,7 +588,7 @@ class TestNDSFarthestPointSurvival:
         assert len(survivors) == 15
 
     def test_fills_from_multiple_fronts(self):
-        from loares.operators.sorting import NDSFarthestPointSurvival
+        from loares.operators.survivial import NDSFarthestPointSurvival
         from pymoo.util.nds.non_dominated_sorting import find_non_dominated
 
         np.random.seed(42)
@@ -639,12 +608,12 @@ class TestNDSFarthestPointSurvival:
         assert np.max(ranks) >= 1
 
 
-# ── FPS selection quality ────────────────────────────────────────────────────
+# -- FPS selection quality ---------------------------------------------------
 
 
 class TestFPSQuality:
     def test_fps_no_duplicate_indices(self):
-        from loares.operators.sorting import farthest_point_sampling
+        from loares.operators.survivial import farthest_point_sampling
 
         np.random.seed(7)
         for ndim, n_pts, n_samples in [(2, 300, 50), (3, 500, 80)]:
@@ -653,7 +622,7 @@ class TestFPSQuality:
             assert len(selected) == len(set(selected))
 
     def test_fps_deterministic(self):
-        from loares.operators.sorting import farthest_point_sampling
+        from loares.operators.survivial import farthest_point_sampling
 
         np.random.seed(0)
         points = np.random.rand(200, 2)
@@ -662,7 +631,7 @@ class TestFPSQuality:
         assert s1 == s2
 
     def test_fps_preserves_extreme_points(self):
-        from loares.operators.sorting import farthest_point_sampling
+        from loares.operators.survivial import farthest_point_sampling
 
         np.random.seed(42)
         for ndim in [2, 3]:
@@ -674,7 +643,7 @@ class TestFPSQuality:
                 assert np.isclose(selected_pts[:, j].max(), points[:, j].max())
 
     def test_fps_spread_better_than_random(self):
-        from loares.operators.sorting import farthest_point_sampling
+        from loares.operators.survivial import farthest_point_sampling
         from scipy.spatial.distance import cdist
 
         np.random.seed(42)
