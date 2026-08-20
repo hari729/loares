@@ -47,6 +47,7 @@ class RandomReinit(Mutation):
         r = random_state.random((n, n_var))
         return xu - r * (xu - xl)
 
+
 class QOPPReinit(Mutation):
     """
     Quasi-Opposition-based Population reinitialization mutation.
