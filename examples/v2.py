@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from loares.algorithms.bxr.moo import MO_BMR, MO_BMWR, MO_BWR
+from loares.algorithms.moo.mobxr_cd import MO_BMR_CD, MO_BMWR_CD, MO_BWR_CD
 from loares.indicator import (
     indicator_multi_run,
     indicator_history_multi_run,
@@ -27,7 +27,7 @@ from pymoo.indicators.spacing import SpacingIndicator
 from pymoo.problems.multi import ZDT1
 
 if __name__ == "__main__":
-    runs = 10
+    runs = 25
     seeds = np.arange(1, runs + 1, 1)
     ps = 100
     max_evals = 25000
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     }
 
     algos = [
-        {"algorithm_name": "MO-BMR", "algorithm": MO_BMR},
-        {"algorithm_name": "MO-BWR", "algorithm": MO_BWR},
-        {"algorithm_name": "MO-BMWR", "algorithm": MO_BMWR},
+        {"algorithm_name": "MO-BMR", "algorithm": MO_BMR_CD},
+        {"algorithm_name": "MO-BWR", "algorithm": MO_BWR_CD},
+        {"algorithm_name": "MO-BMWR", "algorithm": MO_BMWR_CD},
         {"algorithm_name": "NSGA-II", "algorithm": NSGA2},
     ]
     algo_specs = [
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         for algo in algos
     ]
 
-    output_dir = Path(inspect.stack()[0].filename).resolve().parent
+    output_dir = Path(inspect.stack()[0].filename).resolve().parent / "v2"
     parallel_run(
         algo_specs,
         output_dir,

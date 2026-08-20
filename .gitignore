@@ -214,3 +214,4 @@ __marimo__/
 /examples/statistical-test-1/
 /examples/*.csv
 /examples/*.parquet
+/examples/v2/
